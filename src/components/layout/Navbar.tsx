@@ -9,9 +9,9 @@ import Logo from "@/components/shared/Logo";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 
 const navLinks = [
-  { label: "Funktionen", href: "#funktionen" },
-  { label: "PrüfCheck AI", href: "#ai" },
-  { label: "Preise", href: "#preise" },
+  { label: "Funktionen", href: "/funktionen" },
+  { label: "PrüfCheck AI", href: "/#ai" },
+  { label: "Preise", href: "/preise" },
 ];
 
 export function Navbar() {
@@ -26,13 +26,13 @@ export function Navbar() {
 
         <nav className="hidden items-center gap-8 md:flex">
           {navLinks.map((link) => (
-            <a
+            <Link
               key={link.href}
               href={link.href}
               className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               {link.label}
-            </a>
+            </Link>
           ))}
         </nav>
 
@@ -66,13 +66,13 @@ export function Navbar() {
           <ul className="flex flex-col gap-1">
             {navLinks.map((link) => (
               <li key={link.href}>
-                <a
+                <Link
                   href={link.href}
                   onClick={() => setOpen(false)}
                   className="block rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
                 >
                   {link.label}
-                </a>
+                </Link>
               </li>
             ))}
           </ul>

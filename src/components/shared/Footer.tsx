@@ -6,9 +6,9 @@ const footerLinks = [
   {
     heading: "Produkt",
     links: [
-      { label: "Funktionen", href: "#funktionen" },
-      { label: "PrüfCheck AI", href: "#ai" },
-      { label: "Preise", href: "#preise" },
+      { label: "Funktionen", href: "/funktionen" },
+      { label: "PrüfCheck AI", href: "/#ai" },
+      { label: "Preise", href: "/preise" },
     ],
   },
   {
