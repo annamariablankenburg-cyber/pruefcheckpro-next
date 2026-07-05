@@ -1,14 +1,18 @@
-export type UserRole = "Azubi" | "Mitarbeiter" | "Ausbilder" | "Laborleiter" | "Administrator";
+export type UserRole = "azubi" | "mitarbeiter" | "ausbilder" | "laborleiter" | "admin";
+
+export type SubscriptionPlan = "azubi" | "professional" | "enterprise";
 
 export interface AppUser {
   id: string;
-  firstName: string;
-  lastName: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   role: UserRole;
-  companyId: string | null;
-  avatar: string | null;
-  language: string;
-  createdAt: Date;
-  lastLogin: Date | null;
+  plan: SubscriptionPlan;
+  companyId?: string;
+  laboratoryId?: string;
+  language: "de" | "en";
+  theme: "light" | "dark" | "system";
+  createdAt?: string;
+  lastLogin?: string;
 }
