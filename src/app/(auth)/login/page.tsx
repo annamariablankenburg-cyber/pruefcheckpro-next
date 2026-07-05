@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { Info } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { CircleAlert, Info, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,8 +16,31 @@ import {
 import { Input } from "@/components/ui/input";
 import { AuthDivider } from "@/components/shared/AuthDivider";
 import { GoogleIcon } from "@/components/shared/GoogleIcon";
+import { getAuthErrorMessage, loginWithEmail } from "@/lib/firebase/auth";
+import { updateLastLogin } from "@/lib/firebase/users";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      const credential = await loginWithEmail(email, password);
+      await updateLastLogin(credential.user.uid);
+      router.push("/dashboard");
+    } catch (err) {
+      setError(getAuthErrorMessage(err));
+      setIsLoading(false);
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -31,12 +56,27 @@ export default function LoginPage() {
 
         <AuthDivider label="oder mit E-Mail" />
 
-        <form className="flex flex-col gap-4" onSubmit={(event) => event.preventDefault()}>
+        {error && (
+          <div className="flex items-start gap-2 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            <CircleAlert className="mt-0.5 size-4 shrink-0" />
+            <p>{error}</p>
+          </div>
+        )}
+
+        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
           <div className="flex flex-col gap-1.5">
             <label htmlFor="email" className="text-sm font-medium text-foreground">
               E-Mail
             </label>
-            <Input id="email" name="email" type="email" placeholder="du@beispiel.de" required />
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              placeholder="du@beispiel.de"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+            />
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -56,11 +96,14 @@ export default function LoginPage() {
               name="password"
               type="password"
               placeholder="••••••••"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
               required
             />
           </div>
 
-          <Button type="submit" className="w-full">
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading && <Loader2 className="size-4 animate-spin" />}
             Anmelden
           </Button>
         </form>
@@ -79,10 +122,6 @@ export default function LoginPage() {
             voraus. Neue Konten starten automatisch im kostenlosen Azubi-Plan.
           </p>
         </div>
-
-        <p className="text-center text-xs text-muted-foreground">
-          Die Anmeldung wird in einem späteren Schritt mit Firebase Authentication verbunden.
-        </p>
       </CardContent>
     </Card>
   );

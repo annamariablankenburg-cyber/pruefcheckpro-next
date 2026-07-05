@@ -1,14 +1,29 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { Bell } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Bell, LogOut } from "lucide-react";
 
 import Logo from "@/components/shared/Logo";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { logout } from "@/lib/firebase/auth";
 
 export function Topbar() {
+  const router = useRouter();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  async function handleLogout() {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      router.push("/login");
+    }
+  }
+
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-md sm:px-6">
       <Link href="/dashboard" className="md:hidden">
@@ -22,6 +37,16 @@ export function Topbar() {
           <Bell className="size-4" />
         </Button>
         <ThemeToggle />
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label="Abmelden"
+          onClick={handleLogout}
+          disabled={isLoggingOut}
+        >
+          <LogOut className="size-4" />
+        </Button>
         <Avatar>
           <AvatarFallback>AM</AvatarFallback>
         </Avatar>
