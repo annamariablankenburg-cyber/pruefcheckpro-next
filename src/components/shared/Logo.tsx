@@ -8,9 +8,9 @@ export default function Logo() {
       </div>
 
       <div>
-        <h1 className="text-xl font-bold tracking-tight">
+        <span className="block text-xl font-bold tracking-tight">
           PrüfCheckPro
-        </h1>
+        </span>
 
         <p className="text-xs text-muted-foreground">
           Baustoffprüfung neu gedacht
