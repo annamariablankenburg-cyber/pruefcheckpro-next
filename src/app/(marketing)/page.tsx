@@ -1,13 +1,20 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowRight,
+  Box,
   Building2,
   CalendarDays,
   CircleCheckBig,
+  Cloud,
   FlaskConical,
+  GraduationCap,
   Layers,
   Mountain,
   BookOpen,
+  Route,
+  ShieldCheck,
+  Smartphone,
   Sparkles,
 } from "lucide-react";
 
@@ -23,6 +30,7 @@ import {
 import { CtaSection } from "@/components/shared/CtaSection";
 import { SectionHeading } from "@/components/shared/SectionHeading";
 import { FeatureCard } from "@/components/shared/FeatureCard";
+import { DisciplineCard } from "@/components/shared/DisciplineCard";
 import { PricingCard } from "@/components/shared/PricingCard";
 import { pricingPlans } from "@/config/pricing";
 
@@ -61,6 +69,46 @@ const features = [
   },
 ];
 
+const heroFeatures = [
+  { icon: GraduationCap, label: "Für Azubis & Profis" },
+  { icon: ShieldCheck, label: "DSGVO-konform" },
+  { icon: Cloud, label: "Cloud-basiert" },
+  { icon: Smartphone, label: "Überall verfügbar" },
+];
+
+const disciplines = [
+  {
+    image: "/images/betonpruefung-hero.png",
+    icon: Box,
+    iconClassName: "bg-primary",
+    title: "Betonprüfung",
+    description:
+      "Proben verwalten, Druckfestigkeit prüfen, Ergebnisse dokumentieren und Berichte automatisch erstellen.",
+    items: ["Druckfestigkeit", "Würfel & Zylinder", "Frischbeton", "Expositionsklassen"],
+    href: "/beton",
+  },
+  {
+    image: "/images/asphaltpruefung-hero.png",
+    icon: Route,
+    iconClassName: "bg-foreground",
+    title: "Asphaltprüfung",
+    description:
+      "Marshall, Hohlraumgehalt, Bindemittel & Siebung – alle Prüfungen digital an einem Ort organisieren.",
+    items: ["Marshall-Prüfung", "Hohlraumgehalt", "Siebung", "Bindemittelgehalt"],
+    href: "/asphalt",
+  },
+  {
+    image: "/images/geotechnik-hero.png",
+    icon: Layers,
+    iconClassName: "bg-success",
+    title: "Geotechnik",
+    description:
+      "Bodenarten bestimmen, Proctor-Versuch durchführen und geotechnische Kennwerte sicher dokumentieren.",
+    items: ["Kornverteilung", "Proctor-Versuch", "Atterberg-Grenzen", "Bodenklassifikation"],
+    href: "/geotechnik",
+  },
+];
+
 const aiCapabilities = [
   "Prüfverfahren erklären",
   "DIN-Normen erklären",
@@ -74,32 +122,92 @@ export default function Home() {
   return (
     <>
       {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-8 px-4 py-20 text-center sm:px-6 sm:py-28 lg:px-8">
-          <Badge variant="secondary" className="gap-1.5">
-            <Sparkles className="size-3" />
-            Neu: PrüfCheck AI
-          </Badge>
+      <section className="relative overflow-hidden bg-[#0f172a]">
+        <div className="absolute inset-y-0 right-0 hidden w-[58%] lg:block">
+          <Image
+            src="/images/betonpruefung-hero.png"
+            alt="Betonprüfung im digitalen Labor mit PrüfCheckPro"
+            fill
+            sizes="60vw"
+            preload
+            className="object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0f172a] via-[#0f172a]/50 to-transparent" />
+        </div>
 
-          <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-            Baustoffprüfung digital.
-          </h1>
+        <div className="relative mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
+          <div className="flex max-w-2xl flex-col items-start gap-6 text-left lg:max-w-xl">
+            <span className="text-sm font-semibold tracking-wide text-primary uppercase">
+              Die All-in-One Plattform
+            </span>
 
-          <p className="max-w-2xl text-lg text-muted-foreground sm:text-xl">
-            Lernen, Prüfverfahren, Probekörperverwaltung und KI-Unterstützung – alles in
-            einer modernen Plattform für Azubis, Baustofflabore und Bauunternehmen.
-          </p>
+            <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
+              Digitales Labor.
+              <br />
+              Echte <span className="text-primary">Ergebnisse.</span>
+            </h1>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Button size="lg" asChild>
-              <Link href="/login">
-                Kostenlos starten
-                <ArrowRight className="size-4" />
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" asChild>
-              <a href="#funktionen">Funktionen entdecken</a>
-            </Button>
+            <p className="max-w-xl text-lg text-slate-300 sm:text-xl">
+              PrüfCheckPro unterstützt Baustoffprüfer, Labore und Unternehmen bei der
+              Verwaltung, Prüfung und Analyse von Proben – effizient, sicher und digital.
+            </p>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button size="lg" asChild>
+                <Link href="/login">Kostenlos starten</Link>
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-white/20 bg-transparent text-white hover:bg-white/10"
+                asChild
+              >
+                <a href="#demo">Live Demo ansehen</a>
+              </Button>
+            </div>
+
+            <div className="mt-2 w-full overflow-hidden rounded-3xl lg:hidden">
+              <div className="relative h-56 w-full sm:h-72">
+                <Image
+                  src="/images/betonpruefung-hero.png"
+                  alt="Betonprüfung im digitalen Labor mit PrüfCheckPro"
+                  fill
+                  sizes="100vw"
+                  className="object-cover"
+                />
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center gap-x-8 gap-y-4">
+              {heroFeatures.map(({ icon: Icon, label }) => (
+                <div key={label} className="flex items-center gap-2 text-sm text-slate-300">
+                  <Icon className="size-4 text-primary" />
+                  {label}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Fachbereiche */}
+      <section className="border-t border-border">
+        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+          <SectionHeading
+            eyebrow="Ein System. Drei Fachbereiche."
+            title={
+              <>
+                Für alle Bereiche der{" "}
+                <span className="text-primary">Baustoffprüfung</span>
+              </>
+            }
+            description="Ob Beton, Asphalt oder Geotechnik – PrüfCheckPro digitalisiert deine Arbeitsabläufe und schafft mehr Zeit für das, was wirklich zählt."
+          />
+
+          <div className="mt-12 grid gap-8 lg:grid-cols-3 lg:items-stretch">
+            {disciplines.map((discipline) => (
+              <DisciplineCard key={discipline.title} {...discipline} />
+            ))}
           </div>
         </div>
       </section>
