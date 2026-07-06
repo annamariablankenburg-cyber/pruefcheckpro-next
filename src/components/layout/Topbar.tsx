@@ -3,8 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, LogOut } from "lucide-react";
+import { Bell, LogOut, Sparkles } from "lucide-react";
 
+import { AiChatDrawer } from "@/components/layout/AiChatDrawer";
 import Logo from "@/components/shared/Logo";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -14,6 +15,7 @@ import { logout } from "@/lib/firebase/auth";
 export function Topbar() {
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
 
   async function handleLogout() {
     setIsLoggingOut(true);
@@ -33,6 +35,10 @@ export function Topbar() {
       <div className="hidden md:block" />
 
       <div className="flex items-center gap-2">
+        <Button type="button" size="sm" onClick={() => setAiOpen(true)}>
+          <Sparkles className="size-4" />
+          <span className="hidden sm:inline">KI öffnen</span>
+        </Button>
         <Button type="button" variant="ghost" size="icon" aria-label="Benachrichtigungen">
           <Bell className="size-4" />
         </Button>
@@ -51,6 +57,8 @@ export function Topbar() {
           <AvatarFallback>AM</AvatarFallback>
         </Avatar>
       </div>
+
+      <AiChatDrawer open={aiOpen} onOpenChange={setAiOpen} />
     </header>
   );
 }
