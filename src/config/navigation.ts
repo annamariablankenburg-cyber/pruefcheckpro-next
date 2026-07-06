@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Layers,
   Mountain,
+  NotebookText,
   Package,
   Settings,
   Sparkles,
@@ -59,6 +60,7 @@ export const navGroups: NavGroup[] = [
       { label: "Kalender", href: "/kalender", icon: CalendarDays },
       { label: "Statistiken", href: "/statistiken", icon: BarChart3 },
       { label: "PDF-Export", href: "/pdf-export", icon: FileDown },
+      { label: "Laborbuch", href: "/laborbuch", icon: NotebookText },
     ],
   },
   {
