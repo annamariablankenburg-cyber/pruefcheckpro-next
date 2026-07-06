@@ -55,7 +55,7 @@ export const navGroups: NavGroup[] = [
   {
     label: "Verwaltung",
     items: [
-      { label: "Probekörper", href: "/probekoerper", icon: Package },
+      { label: "Probenmanager", href: "/probekoerper", icon: Package },
       { label: "Kalender", href: "/kalender", icon: CalendarDays },
       { label: "Statistiken", href: "/statistiken", icon: BarChart3 },
       { label: "PDF-Export", href: "/pdf-export", icon: FileDown },
