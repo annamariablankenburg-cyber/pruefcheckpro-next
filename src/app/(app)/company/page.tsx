@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { CreditCard, Info, Palette, UserCog, Users } from "lucide-react";
+import { CreditCard, Palette, UserCog, Users } from "lucide-react";
 
-import { Card, CardContent } from "@/components/ui/card";
 import { CompanyActivityFeed } from "@/components/shared/CompanyActivityFeed";
 import { CompanyEmployeesList } from "@/components/shared/CompanyEmployeesList";
 import { CompanyHeaderCard } from "@/components/shared/CompanyHeaderCard";
@@ -18,6 +17,7 @@ import { EmployeesView } from "@/components/shared/EmployeesView";
 import { InvitationsView } from "@/components/shared/InvitationsView";
 import { InviteEmployeeDialog } from "@/components/shared/InviteEmployeeDialog";
 import { NewLocationDialog } from "@/components/shared/NewLocationDialog";
+import { RolesView } from "@/components/shared/RolesView";
 import {
   companyActivities,
   companyEmployees,
@@ -44,20 +44,6 @@ const quickActions: CompanyQuickAction[] = [
   { label: "Mitarbeiter verwalten", icon: UserCog },
   { label: "Abrechnung öffnen", icon: CreditCard },
 ];
-
-function TabPlaceholder({ label }: { label: string }) {
-  return (
-    <Card>
-      <CardContent className="flex flex-col items-center gap-2 py-16 text-center">
-        <Info className="size-5 text-muted-foreground" />
-        <p className="text-sm font-medium text-foreground">{label} folgt in einem späteren Sprint</p>
-        <p className="text-sm text-muted-foreground">
-          Diese Ansicht ist noch nicht Teil des aktuellen Sprints.
-        </p>
-      </CardContent>
-    </Card>
-  );
-}
 
 export default function CompanyPage() {
   const [activeTab, setActiveTab] = useState("uebersicht");
@@ -116,7 +102,7 @@ export default function CompanyPage() {
         <EmployeesView onInvite={() => setIsInviteOpen(true)} />
       )}
       {activeTab === "einladungen" && <InvitationsView />}
-      {activeTab === "rollen" && <TabPlaceholder label="Rollen & Rechte" />}
+      {activeTab === "rollen" && <RolesView />}
 
       <NewLocationDialog open={isNewLocationOpen} onOpenChange={setIsNewLocationOpen} />
       <InviteEmployeeDialog open={isInviteOpen} onOpenChange={setIsInviteOpen} />
