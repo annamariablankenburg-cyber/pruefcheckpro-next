@@ -84,6 +84,105 @@ function withDetails(
   });
 }
 
+// Wie withDetails, aber überfällige Prüfungen werden per Index statt per Label
+// zugewiesen — nötig, weil Monatsnamen in einer mehrjährigen Zeitleiste
+// mehrfach vorkommen (z. B. "Sep" in zwei verschiedenen Jahren).
+function withDetailsByIndex(
+  data: Omit<BarChartDatum, "details">[],
+  betonShare: number,
+  asphaltShare: number,
+  ueberfaelligByIndex: Record<number, number> = {}
+): BarChartDatum[] {
+  return data.map((datum, index) => {
+    const beton = Math.round(datum.value * betonShare);
+    const asphalt = Math.round(datum.value * asphaltShare);
+    const geotechnik = Math.max(datum.value - beton - asphalt, 0);
+    const abgeschlossen = Math.round(datum.value * 0.75);
+    const ueberfaellig = ueberfaelligByIndex[index] ?? 0;
+    const offen = Math.max(datum.value - abgeschlossen, ueberfaellig);
+
+    return {
+      ...datum,
+      details: {
+        beton,
+        asphalt,
+        geotechnik,
+        abgeschlossen,
+        offen,
+        ueberfaellig,
+        beispiele: pickBeispiele(index),
+      },
+    };
+  });
+}
+
+const monthNames = [
+  "Jan",
+  "Feb",
+  "Mär",
+  "Apr",
+  "Mai",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Okt",
+  "Nov",
+  "Dez",
+];
+
+// Rollierende Monats-Zeitleiste für das "365 Tage"-Diagramm: 24 aufeinander-
+// folgende Monate (2 Jahre), damit sich der sichtbare 12-Monatsbereich per
+// Pfeiltasten verschieben lässt. Index 6 ist der echte aktuelle Monat (aus
+// new Date() abgeleitet) und steht damit standardmäßig am Anfang des
+// sichtbaren Fensters.
+export const MONTHLY_TIMELINE_DEFAULT_START = 6;
+
+const currentMonthIndex = new Date().getMonth();
+
+function monthLabelAt(rawIndex: number): string {
+  const offsetFromToday = rawIndex - MONTHLY_TIMELINE_DEFAULT_START;
+  const monthIndex = (((currentMonthIndex + offsetFromToday) % 12) + 12) % 12;
+  return monthNames[monthIndex];
+}
+
+const monthlyTimelineValues: Omit<BarChartDatum, "details" | "label">[] = [
+  { value: 110, heightClass: "h-24" },
+  { value: 120, heightClass: "h-28" },
+  { value: 97, heightClass: "h-20" },
+  { value: 78, heightClass: "h-16" },
+  { value: 90, heightClass: "h-20" },
+  { value: 96, heightClass: "h-20" },
+  { value: 128, heightClass: "h-28" },
+  { value: 115, heightClass: "h-28" },
+  { value: 120, heightClass: "h-28" },
+  { value: 132, heightClass: "h-28" },
+  { value: 118, heightClass: "h-28" },
+  { value: 98, heightClass: "h-20" },
+  { value: 126, heightClass: "h-28" },
+  { value: 138, heightClass: "h-32", highlight: true },
+  { value: 112, heightClass: "h-24" },
+  { value: 90, heightClass: "h-20" },
+  { value: 104, heightClass: "h-24" },
+  { value: 110, heightClass: "h-24" },
+  { value: 137, heightClass: "h-32" },
+  { value: 123, heightClass: "h-28" },
+  { value: 128, heightClass: "h-28" },
+  { value: 141, heightClass: "h-32" },
+  { value: 126, heightClass: "h-28" },
+  { value: 105, heightClass: "h-24" },
+];
+
+export const monthlyTimeline: BarChartDatum[] = withDetailsByIndex(
+  monthlyTimelineValues.map((datum, index) => ({
+    ...datum,
+    label: monthLabelAt(index),
+  })),
+  0.55,
+  0.3,
+  { 9: 1, 11: 1, 12: 1, 13: 1, 14: 1, 15: 1 }
+);
+
 export const statisticsByRange: Record<RangeKey, RangeData> = {
   today: {
     kpiCards: [
@@ -95,12 +194,17 @@ export const statisticsByRange: Record<RangeKey, RangeData> = {
       { label: "Laborauslastung", value: "62%", tone: "warning" },
     ],
     chartTitle: "Prüfungen nach Tageszeit",
-    weeklyExams: [
-      { label: "Vormittag", value: 1, heightClass: "h-8" },
-      { label: "Mittag", value: 1, heightClass: "h-8" },
-      { label: "Nachmittag", value: 3, heightClass: "h-32", highlight: true },
-      { label: "Abend", value: 1, heightClass: "h-8" },
-    ],
+    weeklyExams: withDetails(
+      [
+        { label: "Vormittag", value: 1, heightClass: "h-8" },
+        { label: "Mittag", value: 1, heightClass: "h-8" },
+        { label: "Nachmittag", value: 3, heightClass: "h-32", highlight: true },
+        { label: "Abend", value: 1, heightClass: "h-8" },
+      ],
+      0.5,
+      0.33,
+      { Nachmittag: 1 }
+    ),
     materialDistribution: [
       { label: "Beton", value: 50, dotClass: "bg-primary" },
       { label: "Asphalt", value: 33, dotClass: "bg-warning" },
@@ -136,15 +240,20 @@ export const statisticsByRange: Record<RangeKey, RangeData> = {
       { label: "Laborauslastung", value: "74%", tone: "warning" },
     ],
     chartTitle: "Prüfungen pro Wochentag",
-    weeklyExams: [
-      { label: "Mo", value: 3, heightClass: "h-16" },
-      { label: "Di", value: 5, heightClass: "h-28" },
-      { label: "Mi", value: 4, heightClass: "h-20" },
-      { label: "Do", value: 6, heightClass: "h-32", highlight: true },
-      { label: "Fr", value: 4, heightClass: "h-20" },
-      { label: "Sa", value: 1, heightClass: "h-4" },
-      { label: "So", value: 1, heightClass: "h-4" },
-    ],
+    weeklyExams: withDetails(
+      [
+        { label: "Mo", value: 3, heightClass: "h-16" },
+        { label: "Di", value: 5, heightClass: "h-28" },
+        { label: "Mi", value: 4, heightClass: "h-20" },
+        { label: "Do", value: 6, heightClass: "h-32", highlight: true },
+        { label: "Fr", value: 4, heightClass: "h-20" },
+        { label: "Sa", value: 1, heightClass: "h-4" },
+        { label: "So", value: 1, heightClass: "h-4" },
+      ],
+      0.54,
+      0.29,
+      { Mi: 1, Do: 1 }
+    ),
     materialDistribution: [
       { label: "Beton", value: 54, dotClass: "bg-primary" },
       { label: "Asphalt", value: 29, dotClass: "bg-warning" },
@@ -182,12 +291,17 @@ export const statisticsByRange: Record<RangeKey, RangeData> = {
       { label: "Laborauslastung", value: "78%", tone: "warning" },
     ],
     chartTitle: "Prüfungen pro Woche",
-    weeklyExams: [
-      { label: "Woche 1", value: 28, heightClass: "h-24" },
-      { label: "Woche 2", value: 34, heightClass: "h-28" },
-      { label: "Woche 3", value: 38, heightClass: "h-32", highlight: true },
-      { label: "Woche 4", value: 28, heightClass: "h-24" },
-    ],
+    weeklyExams: withDetails(
+      [
+        { label: "Woche 1", value: 28, heightClass: "h-24" },
+        { label: "Woche 2", value: 34, heightClass: "h-28" },
+        { label: "Woche 3", value: 38, heightClass: "h-32", highlight: true },
+        { label: "Woche 4", value: 28, heightClass: "h-24" },
+      ],
+      0.52,
+      0.32,
+      { "Woche 3": 1, "Woche 4": 1 }
+    ),
     materialDistribution: [
       { label: "Beton", value: 52, dotClass: "bg-primary" },
       { label: "Asphalt", value: 32, dotClass: "bg-warning" },
@@ -226,20 +340,25 @@ export const statisticsByRange: Record<RangeKey, RangeData> = {
       { label: "Laborauslastung", value: "81%", tone: "warning" },
     ],
     chartTitle: "Prüfungen pro Monat",
-    weeklyExams: [
-      { label: "Jan", value: 104, heightClass: "h-24" },
-      { label: "Feb", value: 110, heightClass: "h-24" },
-      { label: "Mär", value: 128, heightClass: "h-28" },
-      { label: "Apr", value: 115, heightClass: "h-28" },
-      { label: "Mai", value: 120, heightClass: "h-28" },
-      { label: "Jun", value: 132, heightClass: "h-28" },
-      { label: "Jul", value: 118, heightClass: "h-28" },
-      { label: "Aug", value: 98, heightClass: "h-20" },
-      { label: "Sep", value: 126, heightClass: "h-28" },
-      { label: "Okt", value: 138, heightClass: "h-32", highlight: true },
-      { label: "Nov", value: 112, heightClass: "h-24" },
-      { label: "Dez", value: 90, heightClass: "h-20" },
-    ],
+    weeklyExams: withDetails(
+      [
+        { label: "Jan", value: 104, heightClass: "h-24" },
+        { label: "Feb", value: 110, heightClass: "h-24" },
+        { label: "Mär", value: 128, heightClass: "h-28" },
+        { label: "Apr", value: 115, heightClass: "h-28" },
+        { label: "Mai", value: 120, heightClass: "h-28" },
+        { label: "Jun", value: 132, heightClass: "h-28" },
+        { label: "Jul", value: 118, heightClass: "h-28" },
+        { label: "Aug", value: 98, heightClass: "h-20" },
+        { label: "Sep", value: 126, heightClass: "h-28" },
+        { label: "Okt", value: 138, heightClass: "h-32", highlight: true },
+        { label: "Nov", value: 112, heightClass: "h-24" },
+        { label: "Dez", value: 90, heightClass: "h-20" },
+      ],
+      0.55,
+      0.3,
+      { Jun: 1, Aug: 1, Sep: 1, Okt: 1, Nov: 1, Dez: 1 }
+    ),
     materialDistribution: [
       { label: "Beton", value: 55, dotClass: "bg-primary" },
       { label: "Asphalt", value: 30, dotClass: "bg-warning" },
@@ -277,12 +396,17 @@ export const statisticsByRange: Record<RangeKey, RangeData> = {
       { label: "Laborauslastung", value: "76%", tone: "warning" },
     ],
     chartTitle: "Prüfungen pro Jahr",
-    weeklyExams: [
-      { label: "2023", value: 820, heightClass: "h-20" },
-      { label: "2024", value: 1150, heightClass: "h-24" },
-      { label: "2025", value: 1450, heightClass: "h-32", highlight: true },
-      { label: "2026*", value: 440, heightClass: "h-8" },
-    ],
+    weeklyExams: withDetails(
+      [
+        { label: "2023", value: 820, heightClass: "h-20" },
+        { label: "2024", value: 1150, heightClass: "h-24" },
+        { label: "2025", value: 1450, heightClass: "h-32", highlight: true },
+        { label: "2026*", value: 440, heightClass: "h-8" },
+      ],
+      0.58,
+      0.28,
+      { "2023": 2, "2024": 3, "2025": 4, "2026*": 2 }
+    ),
     materialDistribution: [
       { label: "Beton", value: 58, dotClass: "bg-primary" },
       { label: "Asphalt", value: 28, dotClass: "bg-warning" },
@@ -348,13 +472,15 @@ export const labStatus = {
   activeSamples: 28,
   completedThisWeek: 24,
   trend: "+8 % ggü. Vorwoche",
+  // heightClass darf den h-16-Balkenrahmen in LabStatusSummaryCard nie
+  // überschreiten, sonst ragen Balken optisch aus dem Diagramm heraus.
   week: [
-    { label: "Mo", count: 3, heightClass: "h-16" },
-    { label: "Di", count: 5, heightClass: "h-28" },
-    { label: "Mi", count: 4, heightClass: "h-20" },
-    { label: "Do", count: 6, heightClass: "h-32", isToday: true },
-    { label: "Fr", count: 4, heightClass: "h-20" },
-    { label: "Sa", count: 1, heightClass: "h-4" },
-    { label: "So", count: 1, heightClass: "h-4" },
+    { label: "Mo", count: 3, heightClass: "h-8" },
+    { label: "Di", count: 5, heightClass: "h-12" },
+    { label: "Mi", count: 4, heightClass: "h-10" },
+    { label: "Do", count: 6, heightClass: "h-16", isToday: true },
+    { label: "Fr", count: 4, heightClass: "h-10" },
+    { label: "Sa", count: 1, heightClass: "h-3" },
+    { label: "So", count: 1, heightClass: "h-3" },
   ],
 };

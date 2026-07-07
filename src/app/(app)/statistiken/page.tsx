@@ -4,6 +4,8 @@ import { useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   Download,
   FlaskConical,
@@ -13,17 +15,20 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FakeBarChart } from "@/components/shared/FakeBarChart";
+import { BarChartDetailPanel } from "@/components/shared/BarChartDetailPanel";
+import { FakeBarChart, type BarChartDatum } from "@/components/shared/FakeBarChart";
 import { FakeDonutChart } from "@/components/shared/FakeDonutChart";
 import { InsightsCard } from "@/components/shared/InsightsCard";
-import { LabStatusCard } from "@/components/shared/LabStatusCard";
+import { LabStatusSummaryCard } from "@/components/shared/LabStatusSummaryCard";
 import { PerformanceTable } from "@/components/shared/PerformanceTable";
 import { ProgressRanking } from "@/components/shared/ProgressRanking";
 import { StatCard } from "@/components/shared/StatCard";
 import { TrendCard } from "@/components/shared/TrendCard";
 import { cn } from "@/lib/utils";
 import {
+  MONTHLY_TIMELINE_DEFAULT_START,
   labStatus,
+  monthlyTimeline,
   performanceRows,
   statisticsByRange,
   trendCards,
@@ -34,9 +39,38 @@ import {
 
 const kpiIcons = [FlaskConical, Package, AlertTriangle, CheckCircle2, Clock, Gauge];
 
+const MONTH_WINDOW_SIZE = 12;
+const MONTH_OFFSET_MIN = -MONTHLY_TIMELINE_DEFAULT_START;
+const MONTH_OFFSET_MAX = monthlyTimeline.length - MONTH_WINDOW_SIZE - MONTHLY_TIMELINE_DEFAULT_START;
+
 export default function StatistikenPage() {
   const [zeitraum, setZeitraum] = useState<ZeitraumOption>("30 Tage");
+  const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
+  const [monthOffset, setMonthOffset] = useState(0);
   const range = statisticsByRange[zeitraumToRangeKey[zeitraum]];
+  const isYearView = zeitraum === "365 Tage";
+
+  const monthWindowStart = MONTHLY_TIMELINE_DEFAULT_START + monthOffset;
+  const visibleMonths = monthlyTimeline.slice(monthWindowStart, monthWindowStart + MONTH_WINDOW_SIZE);
+  const chartData = isYearView ? visibleMonths : range.weeklyExams;
+  const selectedDatum = chartData.find((datum) => datum.label === selectedLabel) ?? null;
+
+  function handleZeitraumChange(option: ZeitraumOption) {
+    setZeitraum(option);
+    setSelectedLabel(null);
+    setMonthOffset(0);
+  }
+
+  function handleBarSelect(datum: BarChartDatum) {
+    setSelectedLabel((current) => (current === datum.label ? null : datum.label));
+  }
+
+  function handleMonthWindowShift(direction: 1 | -1) {
+    setMonthOffset((current) =>
+      Math.min(Math.max(current + direction, MONTH_OFFSET_MIN), MONTH_OFFSET_MAX)
+    );
+    setSelectedLabel(null);
+  }
 
   return (
     <div className="flex flex-col gap-6 p-4 sm:p-6 lg:p-8">
@@ -56,7 +90,7 @@ export default function StatistikenPage() {
               <button
                 key={option}
                 type="button"
-                onClick={() => setZeitraum(option)}
+                onClick={() => handleZeitraumChange(option)}
                 className={cn(
                   "rounded-md px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors",
                   zeitraum === option
@@ -93,10 +127,43 @@ export default function StatistikenPage() {
           <div className="grid gap-6 lg:grid-cols-3">
             <Card className="lg:col-span-1">
               <CardHeader>
-                <CardTitle className="text-base">{range.chartTitle}</CardTitle>
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle className="text-base">{range.chartTitle}</CardTitle>
+                  {isYearView && (
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={() => handleMonthWindowShift(-1)}
+                        disabled={monthOffset <= MONTH_OFFSET_MIN}
+                        aria-label="Vorherigen Monat anzeigen"
+                      >
+                        <ChevronLeft className="size-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={() => handleMonthWindowShift(1)}
+                        disabled={monthOffset >= MONTH_OFFSET_MAX}
+                        aria-label="Nächsten Monat anzeigen"
+                      >
+                        <ChevronRight className="size-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </CardHeader>
-              <CardContent>
-                <FakeBarChart data={range.weeklyExams} />
+              <CardContent className="flex flex-col gap-4">
+                <FakeBarChart
+                  data={chartData}
+                  selectedLabel={selectedLabel ?? undefined}
+                  onSelect={handleBarSelect}
+                />
+                {selectedDatum && (
+                  <BarChartDetailPanel datum={selectedDatum} onClose={() => setSelectedLabel(null)} />
+                )}
               </CardContent>
             </Card>
 
@@ -160,7 +227,7 @@ export default function StatistikenPage() {
         </div>
 
         <div className="flex flex-col gap-6">
-          <LabStatusCard
+          <LabStatusSummaryCard
             capacity={labStatus.capacity}
             activeSamples={labStatus.activeSamples}
             completedThisWeek={labStatus.completedThisWeek}
