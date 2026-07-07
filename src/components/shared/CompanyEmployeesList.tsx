@@ -9,15 +9,20 @@ import type { CompanyEmployee } from "@/types/company";
 interface CompanyEmployeesListProps {
   employees: CompanyEmployee[];
   onViewAll?: () => void;
+  onNewEmployee?: () => void;
 }
 
-export function CompanyEmployeesList({ employees, onViewAll }: CompanyEmployeesListProps) {
+export function CompanyEmployeesList({
+  employees,
+  onViewAll,
+  onNewEmployee,
+}: CompanyEmployeesListProps) {
   return (
     <Card className="h-full">
       <CardHeader>
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-base">Mitarbeiter</CardTitle>
-          <Button type="button" variant="outline" size="sm">
+          <Button type="button" variant="outline" size="sm" onClick={onNewEmployee}>
             Neuer Mitarbeiter
           </Button>
         </div>

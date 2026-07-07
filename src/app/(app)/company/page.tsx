@@ -14,6 +14,8 @@ import { CompanyLocationsView } from "@/components/shared/CompanyLocationsView";
 import { CompanyPrimaryLocationCard } from "@/components/shared/CompanyPrimaryLocationCard";
 import { CompanyQuickActions } from "@/components/shared/CompanyQuickActions";
 import { CompanyTabs, type CompanyTab } from "@/components/shared/CompanyTabs";
+import { EmployeesView } from "@/components/shared/EmployeesView";
+import { InviteEmployeeDialog } from "@/components/shared/InviteEmployeeDialog";
 import { NewLocationDialog } from "@/components/shared/NewLocationDialog";
 import {
   companyActivities,
@@ -59,6 +61,7 @@ function TabPlaceholder({ label }: { label: string }) {
 export default function CompanyPage() {
   const [activeTab, setActiveTab] = useState("uebersicht");
   const [isNewLocationOpen, setIsNewLocationOpen] = useState(false);
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
 
   return (
     <div className="flex flex-col gap-6 p-4 sm:p-6 lg:p-8">
@@ -86,6 +89,7 @@ export default function CompanyPage() {
             <CompanyEmployeesList
               employees={companyEmployees}
               onViewAll={() => setActiveTab("mitarbeiter")}
+              onNewEmployee={() => setIsInviteOpen(true)}
             />
             <div className="flex flex-col gap-6">
               <CompanyQuickActions actions={quickActions} />
@@ -107,11 +111,14 @@ export default function CompanyPage() {
       {activeTab === "standorte" && (
         <CompanyLocationsView onNewLocation={() => setIsNewLocationOpen(true)} />
       )}
-      {activeTab === "mitarbeiter" && <TabPlaceholder label="Mitarbeiter" />}
+      {activeTab === "mitarbeiter" && (
+        <EmployeesView onInvite={() => setIsInviteOpen(true)} />
+      )}
       {activeTab === "einladungen" && <TabPlaceholder label="Einladungen" />}
       {activeTab === "rollen" && <TabPlaceholder label="Rollen & Rechte" />}
 
       <NewLocationDialog open={isNewLocationOpen} onOpenChange={setIsNewLocationOpen} />
+      <InviteEmployeeDialog open={isInviteOpen} onOpenChange={setIsInviteOpen} />
     </div>
   );
 }
