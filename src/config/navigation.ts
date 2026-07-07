@@ -7,6 +7,7 @@ import {
   FileDown,
   FlaskConical,
   LayoutDashboard,
+  Landmark,
   Layers,
   Mountain,
   NotebookText,
@@ -62,6 +63,10 @@ export const navGroups: NavGroup[] = [
       { label: "PDF-Export", href: "/pdf-export", icon: FileDown },
       { label: "Laborbuch", href: "/laborbuch", icon: NotebookText },
     ],
+  },
+  {
+    label: "Unternehmen",
+    items: [{ label: "Unternehmen", href: "/company", icon: Landmark }],
   },
   {
     label: "Konto",
