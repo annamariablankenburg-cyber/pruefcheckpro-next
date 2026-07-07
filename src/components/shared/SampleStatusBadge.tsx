@@ -3,11 +3,12 @@ import { cn } from "@/lib/utils";
 import type { SampleStatus } from "@/types/sample";
 
 const statusStyles: Record<SampleStatus, string> = {
+  Offen: "bg-muted text-muted-foreground",
   "In Prüfung": "bg-primary/10 text-primary",
   Vorbereitung: "bg-warning/10 text-warning",
   Überfällig: "bg-destructive/10 text-destructive",
   Abgeschlossen: "bg-success/10 text-success",
-  Archiviert: "bg-muted text-muted-foreground",
+  Archiviert: "border border-border bg-transparent text-muted-foreground",
 };
 
 interface SampleStatusBadgeProps {

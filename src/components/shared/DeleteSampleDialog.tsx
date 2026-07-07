@@ -1,5 +1,3 @@
-import { ShieldAlert } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -26,19 +24,10 @@ export function DeleteSampleDialog({ sample, onOpenChange, onConfirm }: DeleteSa
         <DialogHeader>
           <DialogTitle>Probe wirklich löschen?</DialogTitle>
           <DialogDescription>
-            {sample && (
-              <>
-                {sample.id} ({sample.bezeichnung}) wird unwiderruflich entfernt. Diese Aktion
-                kann später im Audit-Log dokumentiert werden.
-              </>
-            )}
+            Diese Aktion kann später im Audit-Log dokumentiert werden. Löschen ist später nur für
+            Rollen außer Azubi erlaubt.
           </DialogDescription>
         </DialogHeader>
-
-        <div className="flex items-start gap-2 rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-2.5 text-sm text-warning">
-          <ShieldAlert className="mt-0.5 size-4 shrink-0" />
-          Löschen ist später nur für Rollen außer Azubi erlaubt.
-        </div>
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

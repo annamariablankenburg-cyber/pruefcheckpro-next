@@ -8,9 +8,12 @@ export const sampleFilterOptions = [
   "Beton",
   "Asphalt",
   "Geotechnik",
+  "Offen",
+  "Vorbereitung",
+  "In Prüfung",
   "Überfällig",
-  "Heute fällig",
   "Abgeschlossen",
+  "Archiviert",
 ] as const;
 
 export type SampleFilter = (typeof sampleFilterOptions)[number];

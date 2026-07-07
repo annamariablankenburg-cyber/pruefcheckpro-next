@@ -1,4 +1,15 @@
-import { Archive, Eye, MoreHorizontal, Pencil, Trash2, TestTubeDiagonal } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  CheckCircle2,
+  Eye,
+  MoreHorizontal,
+  Pencil,
+  PlayCircle,
+  RotateCcw,
+  TestTubeDiagonal,
+  Trash2,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -8,24 +19,40 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { Sample } from "@/types/sample";
 
 interface SampleActionsMenuProps {
-  sampleId: string;
+  sample: Sample;
   onViewDetails: () => void;
   onEdit: () => void;
   onEnterValues: () => void;
+  onStart: () => void;
+  onComplete: () => void;
+  onReopen: () => void;
   onArchive: () => void;
+  onReactivate: () => void;
   onDelete: () => void;
 }
 
 export function SampleActionsMenu({
-  sampleId,
+  sample,
   onViewDetails,
   onEdit,
   onEnterValues,
+  onStart,
+  onComplete,
+  onReopen,
   onArchive,
+  onReactivate,
   onDelete,
 }: SampleActionsMenuProps) {
+  const { status } = sample;
+  const canStart = status === "Offen" || status === "Vorbereitung";
+  const canComplete = status === "In Prüfung" || status === "Überfällig";
+  const canReopen = status === "Abgeschlossen";
+  const canArchive = status !== "Archiviert";
+  const canReactivate = status === "Archiviert";
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -33,7 +60,7 @@ export function SampleActionsMenu({
           type="button"
           variant="ghost"
           size="icon"
-          aria-label={`Aktionen für ${sampleId}`}
+          aria-label={`Aktionen für ${sample.id}`}
         >
           <MoreHorizontal className="size-4" />
         </Button>
@@ -51,10 +78,40 @@ export function SampleActionsMenu({
           <TestTubeDiagonal />
           Prüfwerte eintragen
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onArchive}>
-          <Archive />
-          Archivieren
-        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
+        {canStart && (
+          <DropdownMenuItem onSelect={onStart}>
+            <PlayCircle />
+            In Prüfung starten
+          </DropdownMenuItem>
+        )}
+        {canComplete && (
+          <DropdownMenuItem onSelect={onComplete}>
+            <CheckCircle2 />
+            Abschließen
+          </DropdownMenuItem>
+        )}
+        {canReopen && (
+          <DropdownMenuItem onSelect={onReopen}>
+            <RotateCcw />
+            Wieder öffnen
+          </DropdownMenuItem>
+        )}
+        {canArchive && (
+          <DropdownMenuItem onSelect={onArchive}>
+            <Archive />
+            Archivieren
+          </DropdownMenuItem>
+        )}
+        {canReactivate && (
+          <DropdownMenuItem onSelect={onReactivate}>
+            <ArchiveRestore />
+            Reaktivieren
+          </DropdownMenuItem>
+        )}
+
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={onDelete}>
           <Trash2 />

@@ -14,14 +14,35 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import type { Sample, SampleField, SampleType } from "@/types/sample";
 
 const pruefalterOptions = ["2 Tage", "7 Tage", "28 Tage", "56 Tage", "eigenes Prüfdatum"] as const;
+const fachbereichOptions: SampleField[] = ["Beton", "Asphalt", "Geotechnik"];
+const probenartOptions: SampleType[] = [
+  "Würfel",
+  "Prisma",
+  "Bohrkern",
+  "Boden",
+  "Asphalt",
+  "Sonstige",
+];
 
 interface NewSampleDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  // Wenn gesetzt, öffnet sich der Dialog im Bearbeiten-Modus, vorbefüllt mit
+  // den Daten dieser Probe.
+  sample?: Sample | null;
+  onSave?: (sampleId: string, changes: Partial<Sample>) => void;
 }
 
 function FieldLabel({ children, required }: { children: string; required?: boolean }) {
@@ -33,18 +54,53 @@ function FieldLabel({ children, required }: { children: string; required?: boole
   );
 }
 
-export function NewSampleDialog({ open, onOpenChange }: NewSampleDialogProps) {
-  const [pruefalter, setPruefalter] = useState<(typeof pruefalterOptions)[number]>("28 Tage");
-  const [qrCode, setQrCode] = useState(false);
-  const [barcode, setBarcode] = useState(false);
+export function NewSampleDialog({ open, onOpenChange, sample, onSave }: NewSampleDialogProps) {
+  const isEditMode = Boolean(sample);
+
+  const [id, setId] = useState(sample?.id ?? "");
+  const [bezeichnung, setBezeichnung] = useState(sample?.bezeichnung ?? "");
+  const [projekt, setProjekt] = useState(sample?.projekt ?? "");
+  const [kunde, setKunde] = useState(sample?.kunde ?? "");
+  const [fachbereich, setFachbereich] = useState<SampleField>(
+    sample?.fachbereich ?? fachbereichOptions[0]
+  );
+  const [probenart, setProbenart] = useState<SampleType>(sample?.probenart ?? probenartOptions[0]);
+  const [entnahmedatum, setEntnahmedatum] = useState(sample?.entnahmedatum ?? "");
+  const [pruefer, setPruefer] = useState(sample?.pruefer ?? "");
+  const [pruefalter, setPruefalter] =
+    useState<(typeof pruefalterOptions)[number]>("28 Tage");
+  const [pruefdatum, setPruefdatum] = useState(sample?.pruefdatum ?? "");
+  const [qrCode, setQrCode] = useState(sample?.qrCode ?? false);
+  const [barcode, setBarcode] = useState(sample?.barcode ?? false);
+
+  function handleSave() {
+    if (isEditMode && sample && onSave) {
+      onSave(sample.id, {
+        id,
+        bezeichnung,
+        projekt,
+        kunde,
+        fachbereich,
+        probenart,
+        entnahmedatum,
+        pruefer,
+        pruefdatum,
+        qrCode,
+        barcode,
+      });
+    }
+    onOpenChange(false);
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent key={sample?.id ?? "new"} className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Neue Probe anlegen</DialogTitle>
+          <DialogTitle>{isEditMode ? "Probe bearbeiten" : "Neue Probe anlegen"}</DialogTitle>
           <DialogDescription>
-            Erfasse die Stammdaten der Probe. Noch keine echte Speicherung – reine UI-Vorschau.
+            {isEditMode
+              ? "Passe die Stammdaten der Probe an. Änderungen wirken nur lokal – keine echte Speicherung."
+              : "Erfasse die Stammdaten der Probe. Noch keine echte Speicherung – reine UI-Vorschau."}
           </DialogDescription>
         </DialogHeader>
 
@@ -52,27 +108,83 @@ export function NewSampleDialog({ open, onOpenChange }: NewSampleDialogProps) {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <FieldLabel required>Projekt/Baustelle</FieldLabel>
-              <Input placeholder="z. B. Neubau Wohnanlage" required />
+              <Input
+                value={projekt}
+                onChange={(event) => setProjekt(event.target.value)}
+                placeholder="z. B. Neubau Wohnanlage"
+                required
+              />
             </div>
             <div className="flex flex-col gap-1.5">
               <FieldLabel required>Auftraggeber/Kunde</FieldLabel>
-              <Input placeholder="z. B. Musterbau GmbH" required />
+              <Input
+                value={kunde}
+                onChange={(event) => setKunde(event.target.value)}
+                placeholder="z. B. Musterbau GmbH"
+                required
+              />
             </div>
             <div className="flex flex-col gap-1.5">
               <FieldLabel required>Probennummer</FieldLabel>
-              <Input placeholder="z. B. BET-2026-015" required />
+              <Input
+                value={id}
+                onChange={(event) => setId(event.target.value)}
+                placeholder="z. B. BET-2026-015"
+                required
+              />
             </div>
             <div className="flex flex-col gap-1.5">
               <FieldLabel required>Probenart</FieldLabel>
-              <Input placeholder="z. B. Würfel 150 mm" required />
+              <Select value={probenart} onValueChange={(value) => setProbenart(value as SampleType)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {probenartOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex flex-col gap-1.5">
               <FieldLabel required>Erstellungsdatum</FieldLabel>
-              <Input type="date" required />
+              <Input
+                type="date"
+                value={entnahmedatum}
+                onChange={(event) => setEntnahmedatum(event.target.value)}
+                required
+              />
             </div>
             <div className="flex flex-col gap-1.5">
               <FieldLabel>Freie Probenbezeichnung / Sorte</FieldLabel>
-              <Input placeholder="z. B. Beton C25/30" />
+              <Input
+                value={bezeichnung}
+                onChange={(event) => setBezeichnung(event.target.value)}
+                placeholder="z. B. Beton C25/30"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <FieldLabel required>Fachbereich</FieldLabel>
+            <div className="flex flex-wrap gap-2">
+              {fachbereichOptions.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setFachbereich(option)}
+                  className={cn(
+                    "rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
+                    fachbereich === option
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                  )}
+                >
+                  {option}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -99,7 +211,11 @@ export function NewSampleDialog({ open, onOpenChange }: NewSampleDialogProps) {
             {pruefalter === "eigenes Prüfdatum" ? (
               <div className="mt-1 flex flex-col gap-1.5 sm:max-w-xs">
                 <FieldLabel>Prüfdatum</FieldLabel>
-                <Input type="date" />
+                <Input
+                  type="date"
+                  value={pruefdatum}
+                  onChange={(event) => setPruefdatum(event.target.value)}
+                />
               </div>
             ) : (
               <div className="mt-1 flex items-start gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-2.5 text-sm text-primary">
@@ -120,7 +236,11 @@ export function NewSampleDialog({ open, onOpenChange }: NewSampleDialogProps) {
             </div>
             <div className="flex flex-col gap-1.5">
               <FieldLabel>Prüfer</FieldLabel>
-              <Input placeholder="Name des zuständigen Prüfers" />
+              <Input
+                value={pruefer}
+                onChange={(event) => setPruefer(event.target.value)}
+                placeholder="Name des zuständigen Prüfers"
+              />
             </div>
             <div className="flex flex-col gap-1.5">
               <FieldLabel>Lagerort</FieldLabel>
@@ -163,8 +283,8 @@ export function NewSampleDialog({ open, onOpenChange }: NewSampleDialogProps) {
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Abbrechen
           </Button>
-          <Button type="button" onClick={() => onOpenChange(false)}>
-            Probe anlegen
+          <Button type="button" onClick={handleSave}>
+            {isEditMode ? "Änderungen speichern" : "Probe anlegen"}
           </Button>
         </DialogFooter>
       </DialogContent>

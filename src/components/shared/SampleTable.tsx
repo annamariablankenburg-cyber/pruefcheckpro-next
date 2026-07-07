@@ -3,19 +3,27 @@ import { SampleActionsMenu } from "@/components/shared/SampleActionsMenu";
 import { SampleStatusBadge } from "@/components/shared/SampleStatusBadge";
 import type { Sample } from "@/types/sample";
 
-interface SampleTableProps {
-  samples: Sample[];
+interface SampleTableActionHandlers {
   onViewDetails: (sample: Sample) => void;
   onEdit: (sample: Sample) => void;
   onEnterValues: (sample: Sample) => void;
+  onStart: (sample: Sample) => void;
+  onComplete: (sample: Sample) => void;
+  onReopen: (sample: Sample) => void;
   onArchive: (sample: Sample) => void;
+  onReactivate: (sample: Sample) => void;
   onDelete: (sample: Sample) => void;
+}
+
+interface SampleTableProps extends SampleTableActionHandlers {
+  samples: Sample[];
 }
 
 const columns = [
   "Proben-ID",
   "Bezeichnung",
   "Fachbereich",
+  "Probenart",
   "Kunde",
   "Projekt/Baustelle",
   "Entnahmedatum",
@@ -26,14 +34,7 @@ const columns = [
   "",
 ];
 
-export function SampleTable({
-  samples,
-  onViewDetails,
-  onEdit,
-  onEnterValues,
-  onArchive,
-  onDelete,
-}: SampleTableProps) {
+export function SampleTable({ samples, ...handlers }: SampleTableProps) {
   if (samples.length === 0) {
     return (
       <Card>
@@ -49,7 +50,7 @@ export function SampleTable({
       {/* Desktop/Tablet: Tabelle */}
       <Card className="hidden overflow-hidden py-0 md:block">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1000px] text-sm">
+          <table className="w-full min-w-[1180px] text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/40 text-left text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 {columns.map((column) => (
@@ -65,14 +66,23 @@ export function SampleTable({
                   key={sample.id}
                   className="border-b border-border last:border-0 hover:bg-muted/30"
                 >
-                  <td className="px-4 py-3 font-medium whitespace-nowrap text-foreground">
-                    {sample.id}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <button
+                      type="button"
+                      onClick={() => handlers.onViewDetails(sample)}
+                      className="font-medium text-foreground hover:underline"
+                    >
+                      {sample.id}
+                    </button>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-foreground">
                     {sample.bezeichnung}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
                     {sample.fachbereich}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
+                    {sample.probenart}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
                     {sample.kunde}
@@ -97,12 +107,16 @@ export function SampleTable({
                   </td>
                   <td className="px-4 py-3 text-right whitespace-nowrap">
                     <SampleActionsMenu
-                      sampleId={sample.id}
-                      onViewDetails={() => onViewDetails(sample)}
-                      onEdit={() => onEdit(sample)}
-                      onEnterValues={() => onEnterValues(sample)}
-                      onArchive={() => onArchive(sample)}
-                      onDelete={() => onDelete(sample)}
+                      sample={sample}
+                      onViewDetails={() => handlers.onViewDetails(sample)}
+                      onEdit={() => handlers.onEdit(sample)}
+                      onEnterValues={() => handlers.onEnterValues(sample)}
+                      onStart={() => handlers.onStart(sample)}
+                      onComplete={() => handlers.onComplete(sample)}
+                      onReopen={() => handlers.onReopen(sample)}
+                      onArchive={() => handlers.onArchive(sample)}
+                      onReactivate={() => handlers.onReactivate(sample)}
+                      onDelete={() => handlers.onDelete(sample)}
                     />
                   </td>
                 </tr>
@@ -118,21 +132,31 @@ export function SampleTable({
           <Card key={sample.id}>
             <CardContent className="flex flex-col gap-3">
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-semibold text-foreground">{sample.id}</p>
-                  <p className="truncate text-sm text-muted-foreground">
+                <button
+                  type="button"
+                  onClick={() => handlers.onViewDetails(sample)}
+                  className="min-w-0 text-left"
+                >
+                  <span className="block truncate font-semibold text-foreground">
+                    {sample.id}
+                  </span>
+                  <span className="block truncate text-sm text-muted-foreground">
                     {sample.bezeichnung}
-                  </p>
-                </div>
+                  </span>
+                </button>
                 <div className="flex shrink-0 items-center gap-1">
                   <SampleStatusBadge status={sample.status} />
                   <SampleActionsMenu
-                    sampleId={sample.id}
-                    onViewDetails={() => onViewDetails(sample)}
-                    onEdit={() => onEdit(sample)}
-                    onEnterValues={() => onEnterValues(sample)}
-                    onArchive={() => onArchive(sample)}
-                    onDelete={() => onDelete(sample)}
+                    sample={sample}
+                    onViewDetails={() => handlers.onViewDetails(sample)}
+                    onEdit={() => handlers.onEdit(sample)}
+                    onEnterValues={() => handlers.onEnterValues(sample)}
+                    onStart={() => handlers.onStart(sample)}
+                    onComplete={() => handlers.onComplete(sample)}
+                    onReopen={() => handlers.onReopen(sample)}
+                    onArchive={() => handlers.onArchive(sample)}
+                    onReactivate={() => handlers.onReactivate(sample)}
+                    onDelete={() => handlers.onDelete(sample)}
                   />
                 </div>
               </div>
@@ -143,8 +167,8 @@ export function SampleTable({
                   <p className="font-medium text-foreground">{sample.fachbereich}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Prüfalter</p>
-                  <p className="font-medium text-foreground">{sample.pruefalter}</p>
+                  <p className="text-muted-foreground">Probenart</p>
+                  <p className="font-medium text-foreground">{sample.probenart}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Kunde</p>
