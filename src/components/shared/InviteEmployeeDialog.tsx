@@ -30,6 +30,8 @@ const expiryOptions = ["3 Tage", "7 Tage", "14 Tage", "30 Tage"];
 interface InviteEmployeeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  title?: string;
+  description?: string;
 }
 
 function FieldLabel({ children, required }: { children: string; required?: boolean }) {
@@ -41,7 +43,12 @@ function FieldLabel({ children, required }: { children: string; required?: boole
   );
 }
 
-export function InviteEmployeeDialog({ open, onOpenChange }: InviteEmployeeDialogProps) {
+export function InviteEmployeeDialog({
+  open,
+  onOpenChange,
+  title = "Mitarbeiter einladen",
+  description = "Lade eine neue Person zu PrüfCheckPro ein. Noch keine echte Speicherung – reine UI-Vorschau.",
+}: InviteEmployeeDialogProps) {
   const [role, setRole] = useState<EmployeeRole>(employeeRoles[2]);
   const [location, setLocation] = useState(locationNames[0]);
   const [expiry, setExpiry] = useState(expiryOptions[1]);
@@ -51,11 +58,8 @@ export function InviteEmployeeDialog({ open, onOpenChange }: InviteEmployeeDialo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Mitarbeiter einladen</DialogTitle>
-          <DialogDescription>
-            Lade eine neue Person zu PrüfCheckPro ein. Noch keine echte Speicherung – reine
-            UI-Vorschau.
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-5">

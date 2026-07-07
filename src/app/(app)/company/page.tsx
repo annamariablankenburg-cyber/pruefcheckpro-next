@@ -15,6 +15,7 @@ import { CompanyPrimaryLocationCard } from "@/components/shared/CompanyPrimaryLo
 import { CompanyQuickActions } from "@/components/shared/CompanyQuickActions";
 import { CompanyTabs, type CompanyTab } from "@/components/shared/CompanyTabs";
 import { EmployeesView } from "@/components/shared/EmployeesView";
+import { InvitationsView } from "@/components/shared/InvitationsView";
 import { InviteEmployeeDialog } from "@/components/shared/InviteEmployeeDialog";
 import { NewLocationDialog } from "@/components/shared/NewLocationDialog";
 import {
@@ -114,7 +115,7 @@ export default function CompanyPage() {
       {activeTab === "mitarbeiter" && (
         <EmployeesView onInvite={() => setIsInviteOpen(true)} />
       )}
-      {activeTab === "einladungen" && <TabPlaceholder label="Einladungen" />}
+      {activeTab === "einladungen" && <InvitationsView />}
       {activeTab === "rollen" && <TabPlaceholder label="Rollen & Rechte" />}
 
       <NewLocationDialog open={isNewLocationOpen} onOpenChange={setIsNewLocationOpen} />
