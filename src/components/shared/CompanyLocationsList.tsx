@@ -7,15 +7,20 @@ import type { CompanyLocation } from "@/types/company";
 interface CompanyLocationsListProps {
   locations: CompanyLocation[];
   onViewAll?: () => void;
+  onNewLocation?: () => void;
 }
 
-export function CompanyLocationsList({ locations, onViewAll }: CompanyLocationsListProps) {
+export function CompanyLocationsList({
+  locations,
+  onViewAll,
+  onNewLocation,
+}: CompanyLocationsListProps) {
   return (
     <Card className="h-full">
       <CardHeader>
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-base">Standorte</CardTitle>
-          <Button type="button" variant="outline" size="sm">
+          <Button type="button" variant="outline" size="sm" onClick={onNewLocation}>
             Neuer Standort
           </Button>
         </div>

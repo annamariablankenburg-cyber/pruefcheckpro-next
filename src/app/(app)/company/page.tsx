@@ -10,9 +10,11 @@ import { CompanyHeaderCard } from "@/components/shared/CompanyHeaderCard";
 import { CompanyInfoCard } from "@/components/shared/CompanyInfoCard";
 import { CompanyLicenseCard } from "@/components/shared/CompanyLicenseCard";
 import { CompanyLocationsList } from "@/components/shared/CompanyLocationsList";
+import { CompanyLocationsView } from "@/components/shared/CompanyLocationsView";
 import { CompanyPrimaryLocationCard } from "@/components/shared/CompanyPrimaryLocationCard";
 import { CompanyQuickActions } from "@/components/shared/CompanyQuickActions";
 import { CompanyTabs, type CompanyTab } from "@/components/shared/CompanyTabs";
+import { NewLocationDialog } from "@/components/shared/NewLocationDialog";
 import {
   companyActivities,
   companyEmployees,
@@ -56,6 +58,7 @@ function TabPlaceholder({ label }: { label: string }) {
 
 export default function CompanyPage() {
   const [activeTab, setActiveTab] = useState("uebersicht");
+  const [isNewLocationOpen, setIsNewLocationOpen] = useState(false);
 
   return (
     <div className="flex flex-col gap-6 p-4 sm:p-6 lg:p-8">
@@ -78,6 +81,7 @@ export default function CompanyPage() {
             <CompanyLocationsList
               locations={companyLocations}
               onViewAll={() => setActiveTab("standorte")}
+              onNewLocation={() => setIsNewLocationOpen(true)}
             />
             <CompanyEmployeesList
               employees={companyEmployees}
@@ -100,10 +104,14 @@ export default function CompanyPage() {
         </div>
       )}
 
-      {activeTab === "standorte" && <TabPlaceholder label="Standorte" />}
+      {activeTab === "standorte" && (
+        <CompanyLocationsView onNewLocation={() => setIsNewLocationOpen(true)} />
+      )}
       {activeTab === "mitarbeiter" && <TabPlaceholder label="Mitarbeiter" />}
       {activeTab === "einladungen" && <TabPlaceholder label="Einladungen" />}
       {activeTab === "rollen" && <TabPlaceholder label="Rollen & Rechte" />}
+
+      <NewLocationDialog open={isNewLocationOpen} onOpenChange={setIsNewLocationOpen} />
     </div>
   );
 }
