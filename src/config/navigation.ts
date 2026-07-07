@@ -6,6 +6,7 @@ import {
   CalendarDays,
   FileDown,
   FlaskConical,
+  FolderKanban,
   LayoutDashboard,
   Landmark,
   Layers,
@@ -59,6 +60,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: "Probenmanager", href: "/probekoerper", icon: Package },
       { label: "Kalender", href: "/kalender", icon: CalendarDays },
+      { label: "Projekte", href: "/projekte", icon: FolderKanban },
       { label: "Statistiken", href: "/statistiken", icon: BarChart3 },
       { label: "PDF-Export", href: "/pdf-export", icon: FileDown },
       { label: "Laborbuch", href: "/laborbuch", icon: NotebookText },
