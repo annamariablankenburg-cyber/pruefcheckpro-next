@@ -20,6 +20,8 @@ export interface Project {
   name: string;
   number: string;
   customer: string;
+  // Verknüpft das Projekt mit dem echten Kundendatensatz (config/customers.ts).
+  customerId?: string;
   address: string;
   field: ProjectField;
   status: ProjectStatus;

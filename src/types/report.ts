@@ -39,7 +39,11 @@ export interface Report {
   berichtstyp: ReportTemplate;
   format: ReportFormat;
   projekt: string;
+  // Verknüpft den Bericht mit dem echten Projekt (config/projects.ts).
+  projectId?: string;
   kunde: string;
+  // Verknüpft den Bericht mit dem echten Kundendatensatz (config/customers.ts).
+  customerId?: string;
   standort?: string;
   probeId?: string;
   fachbereich: SampleField;

@@ -20,9 +20,15 @@ export interface LaborbookEntry {
   titel: string;
   beschreibung: string;
   projekt?: string;
+  // Verknüpft den Eintrag mit dem echten Projekt (config/projects.ts).
+  projectId?: string;
   kunde?: string;
+  // Verknüpft den Eintrag mit dem echten Kundendatensatz (config/customers.ts).
+  customerId?: string;
   probeId?: string;
   geraet?: string;
+  // Verknüpft den Eintrag mit dem echten Gerät (config/devices.ts).
+  deviceId?: string;
   mitarbeiter: string;
   status: LaborbookStatus;
   fotos: RecordListItem[];

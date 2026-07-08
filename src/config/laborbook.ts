@@ -1,8 +1,12 @@
+import { devices } from "@/config/devices";
+import { samples } from "@/config/samples";
 import type { LaborbookEntry } from "@/types/laborbook";
 
 // Mock-Daten für das Laborbuch (/laborbuch). Eigenständiger Datensatz,
-// keine Firebase-Anbindung. Proben-/Projekt-/Kunden-/Gerätenamen bewusst
-// konsistent mit config/samples.ts und config/devices.ts gehalten.
+// keine Firebase-Anbindung. `projekt`/`kunde`/`fachbereich` werden für
+// probenbezogene Einträge aus der echten Probe (config/samples.ts)
+// übernommen, `deviceId` wird aus dem echten Gerät (config/devices.ts)
+// abgeleitet, statt unabhängig gepflegt zu werden.
 
 export const HEUTE = "03.03.2026";
 export const DIESE_WOCHE = [
@@ -15,7 +19,7 @@ export const DIESE_WOCHE = [
   "08.03.2026",
 ];
 
-export const laborbookEntries: LaborbookEntry[] = [
+const laborbookEntrySeeds: LaborbookEntry[] = [
   {
     id: "LOG-2026-001",
     datum: "03.03.2026",
@@ -356,3 +360,22 @@ export const laborbookEntries: LaborbookEntry[] = [
     ],
   },
 ];
+
+function deviceIdFromLabel(geraet?: string): string | undefined {
+  if (!geraet) return undefined;
+  return devices.find((device) => geraet.includes(device.inventoryNumber))?.id;
+}
+
+export const laborbookEntries: LaborbookEntry[] = laborbookEntrySeeds.map((seed) => {
+  const sample = seed.probeId ? samples.find((s) => s.id === seed.probeId) : undefined;
+
+  return {
+    ...seed,
+    projekt: sample?.projekt ?? seed.projekt,
+    kunde: sample?.kunde ?? seed.kunde,
+    fachbereich: sample?.fachbereich ?? seed.fachbereich,
+    projectId: sample?.projectId,
+    customerId: sample?.customerId,
+    deviceId: deviceIdFromLabel(seed.geraet),
+  };
+});

@@ -1,4 +1,6 @@
-import type { CalendarEvent } from "@/types/calendarEvent";
+import { samples } from "@/config/samples";
+import type { CalendarEvent, CalendarEventStatus, CalendarPriority } from "@/types/calendarEvent";
+import type { Sample, SampleStatus } from "@/types/sample";
 
 // Mocked "heute" passend zu den Proben-/Prüfwerte-Mockdaten dieser Sprints.
 export const HEUTE = "03.03.2026";
@@ -15,7 +17,9 @@ export const weekDates = [
 
 export const weekDayLabels = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 
-export const calendarEvents: CalendarEvent[] = [
+// Nicht-probenbezogene Termine (Kalibrierung, Besprechungen, Wareneingang) –
+// eigenständige Kalendereinträge ohne Bezug zu einer Probe.
+const standaloneEvents: CalendarEvent[] = [
   {
     id: "cal-01",
     title: "Kalibrierung Druckprüfmaschine",
@@ -27,68 +31,6 @@ export const calendarEvents: CalendarEvent[] = [
     description: "Jährliche Kalibrierung der Druckprüfmaschine im Betonlabor.",
   },
   {
-    id: "cal-02",
-    title: "Sieblinie ASP-2026-007",
-    date: "02.03.2026",
-    time: "11:00",
-    duration: "45 min",
-    field: "Asphalt",
-    status: "abgeschlossen",
-    sampleId: "ASP-2026-007",
-    bezeichnung: "Asphaltmischgut",
-    projekt: "L 342 Fahrbahnerneuerung",
-    kunde: "Straßenbau Nord",
-    pruefer: "S. Wolf",
-    description: "Siebanalyse zur Bestimmung der Korngrößenverteilung des Asphaltmischguts.",
-  },
-  {
-    id: "cal-03",
-    title: "28-Tage-Prüfung BET-2026-014",
-    date: "03.03.2026",
-    time: "09:00",
-    duration: "60 min",
-    field: "Beton",
-    status: "in Arbeit",
-    priority: "hoch",
-    sampleId: "BET-2026-014",
-    bezeichnung: "Beton C25/30",
-    projekt: "Neubau Wohnanlage",
-    kunde: "Musterbau GmbH",
-    pruefer: "A. Meier",
-    description: "Druckfestigkeitsprüfung der Betonwürfel nach 28 Tagen Nachbehandlung.",
-  },
-  {
-    id: "cal-04",
-    title: "7-Tage-Prüfung PR-2026-008",
-    date: "03.03.2026",
-    time: "10:30",
-    duration: "45 min",
-    field: "Beton",
-    status: "geplant",
-    sampleId: "PR-2026-008",
-    bezeichnung: "Betonprisma",
-    projekt: "Brückensanierung B17",
-    kunde: "Baresel AG",
-    pruefer: "T. Keller",
-    description: "Biegezug- und Druckfestigkeitsprüfung am Betonprisma nach 7 Tagen.",
-  },
-  {
-    id: "cal-05",
-    title: "Proctor-Versuch GEO-2026-021",
-    date: "03.03.2026",
-    time: "13:00",
-    duration: "90 min",
-    field: "Geotechnik",
-    status: "überfällig",
-    priority: "hoch",
-    sampleId: "GEO-2026-021",
-    bezeichnung: "Bodenprobe Sand",
-    projekt: "Baugebiet Nord",
-    kunde: "Musterbau GmbH",
-    pruefer: "A. Meier",
-    description: "Ermittlung von Proctordichte und optimalem Wassergehalt der Bodenprobe.",
-  },
-  {
     id: "cal-06",
     title: "Laborbericht prüfen",
     date: "03.03.2026",
@@ -97,21 +39,6 @@ export const calendarEvents: CalendarEvent[] = [
     field: "Sonstiges",
     status: "geplant",
     description: "Prüfberichte der Woche gegenlesen und freigeben.",
-  },
-  {
-    id: "cal-07",
-    title: "Asphaltbohrkern ASP-2026-011",
-    date: "04.03.2026",
-    time: "15:00",
-    duration: "60 min",
-    field: "Asphalt",
-    status: "in Arbeit",
-    sampleId: "ASP-2026-011",
-    bezeichnung: "Asphaltbohrkern",
-    projekt: "L 342 Fahrbahnerneuerung",
-    kunde: "Straßenbau Nord",
-    pruefer: "S. Wolf",
-    description: "Marshall-Prüfung zur Bestimmung von Stabilität und Fließwert.",
   },
   {
     id: "cal-08",
@@ -134,3 +61,71 @@ export const calendarEvents: CalendarEvent[] = [
     description: "Wöchentliche Abstimmung im Laborteam zu offenen Prüfungen.",
   },
 ];
+
+// Uhrzeit/Dauer sind im Sample-Datensatz nicht modelliert (nur das
+// Prüfdatum) – hier bewusst je Probe fest hinterlegt, damit Termine am
+// selben Tag nicht kollidieren. Titel, Fachbereich, Status, Projekt, Kunde
+// und Prüfer stammen dagegen direkt aus der Probe (config/samples.ts).
+const scheduleBySampleId: Record<string, { time: string; duration: string }> = {
+  "BET-2026-014": { time: "09:00", duration: "60 min" },
+  "PR-2026-008": { time: "10:30", duration: "45 min" },
+  "ASP-2026-011": { time: "15:00", duration: "60 min" },
+  "GEO-2026-021": { time: "13:00", duration: "90 min" },
+  "ASP-2026-007": { time: "11:00", duration: "45 min" },
+  "BET-2026-022": { time: "09:30", duration: "60 min" },
+  "GEO-2026-033": { time: "14:00", duration: "60 min" },
+  "ASP-2026-044": { time: "10:00", duration: "45 min" },
+  "PR-2026-055": { time: "08:30", duration: "45 min" },
+};
+
+function statusFromSample(status: SampleStatus): CalendarEventStatus {
+  if (status === "Abgeschlossen") return "abgeschlossen";
+  if (status === "Überfällig") return "überfällig";
+  if (status === "In Prüfung") return "in Arbeit";
+  return "geplant";
+}
+
+function priorityFromSample(sample: Sample): CalendarPriority {
+  if (sample.status === "Überfällig") return "hoch";
+  if (sample.pruefdatum === HEUTE) return "hoch";
+  return "normal";
+}
+
+function eventFromSample(sample: Sample): CalendarEvent | null {
+  const schedule = scheduleBySampleId[sample.id];
+  if (!schedule) return null;
+
+  return {
+    id: `cal-${sample.id}`,
+    title: `${sample.pruefverfahren} ${sample.id}`,
+    date: sample.pruefdatum,
+    time: schedule.time,
+    duration: schedule.duration,
+    field: sample.fachbereich,
+    status: statusFromSample(sample.status),
+    priority: priorityFromSample(sample),
+    sampleId: sample.id,
+    bezeichnung: sample.bezeichnung,
+    projekt: sample.projekt,
+    kunde: sample.kunde,
+    pruefer: sample.pruefer,
+    description: `${sample.pruefverfahren} für ${sample.bezeichnung} (${sample.id}).`,
+  };
+}
+
+// Kalendereinträge für Proben werden aus config/samples.ts abgeleitet (über
+// das Prüfdatum), archivierte Proben erzeugen bewusst keinen Termin mehr.
+const sampleEvents: CalendarEvent[] = samples
+  .filter((sample) => sample.status !== "Archiviert")
+  .map(eventFromSample)
+  .filter((event): event is CalendarEvent => event !== null);
+
+function toSortableDate(ddmmyyyy: string): string {
+  const [day, month, year] = ddmmyyyy.split(".");
+  return `${year}-${month}-${day}`;
+}
+
+export const calendarEvents: CalendarEvent[] = [...standaloneEvents, ...sampleEvents].sort((a, b) => {
+  const dateCompare = toSortableDate(a.date).localeCompare(toSortableDate(b.date));
+  return dateCompare === 0 ? a.time.localeCompare(b.time) : dateCompare;
+});

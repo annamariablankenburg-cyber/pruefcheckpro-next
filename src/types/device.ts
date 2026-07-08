@@ -36,6 +36,8 @@ export interface Device {
   serialNumber?: string;
   yearBuilt?: string;
   location: string;
+  // Verknüpft das Gerät mit dem echten Standort (config/locations.ts).
+  locationId?: string;
   status: DeviceStatus;
   responsiblePerson?: string;
   responsiblePersonInitials?: string;

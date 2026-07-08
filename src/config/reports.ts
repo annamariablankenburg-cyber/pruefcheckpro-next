@@ -1,9 +1,27 @@
-import type { Report } from "@/types/report";
+import { samples } from "@/config/samples";
+import type { Report, ReportPruefungRef } from "@/types/report";
 
 // Mocked "heute" passend zu den übrigen Mockdaten dieses Prototyps.
 export const HEUTE = "03.03.2026";
 
-export const reports: Report[] = [
+// `probeId` verknüpft jeden Bericht mit einer echten Probe aus
+// config/samples.ts. `pruefungen`, `fachbereich` und `standort` werden aus
+// dieser Probe abgeleitet statt unabhängig im Bericht gepflegt zu werden –
+// ein Bericht zeigt so immer dieselben Prüfungen wie die zugehörige Probe.
+
+function pruefungenFromSample(probeId: string): ReportPruefungRef[] {
+  const sample = samples.find((s) => s.id === probeId);
+  if (!sample) return [];
+  return sample.pruefungen.map((pruefung) => ({
+    id: pruefung.id,
+    name: pruefung.name,
+    included: true,
+  }));
+}
+
+type ReportSeed = Omit<Report, "pruefungen" | "fachbereich" | "standort">;
+
+const reportSeeds: ReportSeed[] = [
   {
     id: "RPT-2026-001",
     titel: "Prüfbericht – Betonwürfel Druckfestigkeit",
@@ -11,19 +29,15 @@ export const reports: Report[] = [
     berichtstyp: "Standard-Prüfbericht",
     format: "PDF",
     projekt: "Neubau Wohnanlage Parkblick",
+    projectId: "proj-parkblick",
     kunde: "Musterbau GmbH",
-    standort: "Labor Stuttgart",
+    customerId: "cust-musterbau",
     probeId: "BET-2026-014",
-    fachbereich: "Beton",
     pruefer: "Anna Neumann",
     bearbeiter: "Anna Neumann",
     sprache: "Deutsch",
     erstelltAm: "27.02.2026",
     status: "Entwurf",
-    pruefungen: [
-      { id: "pw-1", name: "Druckfestigkeit – Würfel 1-3", included: true },
-      { id: "pw-2", name: "Rohdichte", included: true },
-    ],
     fotos: [
       { id: "f-1", title: "Foto Probe.jpg", date: "27.02.2026" },
       { id: "f-2", title: "Foto Bruchbild.jpg", date: "27.02.2026" },
@@ -45,16 +59,15 @@ export const reports: Report[] = [
     berichtstyp: "Laborbericht",
     format: "PDF",
     projekt: "L 342 Fahrbahnerneuerung",
+    projectId: "proj-l342",
     kunde: "Straßenbau Nord",
-    standort: "Labor Remseck",
+    customerId: "cust-strassenbau-nord",
     probeId: "ASP-2026-011",
-    fachbereich: "Asphalt",
     pruefer: "S. Wolf",
     bearbeiter: "S. Wolf",
     sprache: "Englisch",
     erstelltAm: "25.02.2026",
     status: "Fertig",
-    pruefungen: [{ id: "pw-3", name: "Marshall-Prüfung", included: true }],
     fotos: [{ id: "f-3", title: "Foto Probekörper.jpg", date: "25.02.2026" }],
     dokumente: [{ id: "d-2", title: "Prüfprotokoll.pdf", date: "26.02.2026" }],
     lieferscheine: [{ id: "l-2", title: "LS-2026-003 Asphaltmischgut", date: "24.02.2026" }],
@@ -76,19 +89,15 @@ export const reports: Report[] = [
     berichtstyp: "Prüfprotokoll",
     format: "PDF",
     projekt: "Baugebiet Nord",
+    projectId: "proj-baugebiet-nord",
     kunde: "Musterbau GmbH",
-    standort: "Labor Stuttgart",
+    customerId: "cust-musterbau",
     probeId: "GEO-2026-021",
-    fachbereich: "Geotechnik",
     pruefer: "A. Meier",
     bearbeiter: "A. Meier",
     sprache: "Deutsch",
     erstelltAm: "20.02.2026",
     status: "PDF exportiert",
-    pruefungen: [
-      { id: "pw-4", name: "Proctorversuch", included: true },
-      { id: "pw-5", name: "Wassergehalt", included: true },
-    ],
     fotos: [],
     dokumente: [
       { id: "d-3", title: "Prüfprotokoll.pdf", date: "21.02.2026" },
@@ -114,16 +123,15 @@ export const reports: Report[] = [
     berichtstyp: "Standard-Prüfbericht",
     format: "PDF & Excel",
     projekt: "Brückensanierung B17",
+    projectId: "proj-b17",
     kunde: "Baresel AG",
-    standort: "Labor Stuttgart",
+    customerId: "cust-baresel",
     probeId: "PR-2026-008",
-    fachbereich: "Beton",
     pruefer: "T. Keller",
     bearbeiter: "T. Keller",
     sprache: "Deutsch",
     erstelltAm: HEUTE,
     status: "Entwurf",
-    pruefungen: [{ id: "pw-6", name: "Biegezug", included: true }],
     fotos: [],
     dokumente: [],
     lieferscheine: [],
@@ -142,16 +150,15 @@ export const reports: Report[] = [
     berichtstyp: "Kompaktbericht",
     format: "Excel",
     projekt: "L 342 Fahrbahnerneuerung",
+    projectId: "proj-l342",
     kunde: "Straßenbau Nord",
-    standort: "Labor Remseck",
+    customerId: "cust-strassenbau-nord",
     probeId: "ASP-2026-044",
-    fachbereich: "Asphalt",
     pruefer: "S. Wolf",
     bearbeiter: "S. Wolf",
     sprache: "Deutsch",
     erstelltAm: "01.03.2026",
     status: "Fertig",
-    pruefungen: [{ id: "pw-7", name: "Sieblinie", included: true }],
     fotos: [{ id: "f-4", title: "Foto Mischgut.jpg", date: "01.03.2026" }],
     dokumente: [{ id: "d-5", title: "Prüfprotokoll.pdf", date: "01.03.2026" }],
     lieferscheine: [],
@@ -173,16 +180,15 @@ export const reports: Report[] = [
     berichtstyp: "Baustellenbericht",
     format: "PDF",
     projekt: "Baugebiet Nord",
+    projectId: "proj-baugebiet-nord",
     kunde: "Musterbau GmbH",
-    standort: "Labor Stuttgart",
+    customerId: "cust-musterbau",
     probeId: "GEO-2026-033",
-    fachbereich: "Geotechnik",
     pruefer: "A. Meier",
     bearbeiter: "A. Meier",
     sprache: "Deutsch",
     erstelltAm: "01.03.2026",
     status: "Entwurf",
-    pruefungen: [{ id: "pw-8", name: "Wassergehalt", included: true }],
     fotos: [],
     dokumente: [],
     lieferscheine: [],
@@ -201,19 +207,15 @@ export const reports: Report[] = [
     berichtstyp: "Kundenbericht",
     format: "Excel",
     projekt: "Neubau Wohnanlage Parkblick",
+    projectId: "proj-parkblick",
     kunde: "Musterbau GmbH",
-    standort: "Labor Stuttgart",
+    customerId: "cust-musterbau",
     probeId: "BET-2026-022",
-    fachbereich: "Beton",
     pruefer: "Anna Neumann",
     bearbeiter: "Anna Neumann",
     sprache: "Deutsch",
     erstelltAm: "15.02.2026",
     status: "Excel exportiert",
-    pruefungen: [
-      { id: "pw-9", name: "Druckfestigkeit – Sammelauswertung", included: true },
-      { id: "pw-10", name: "Rohdichte – Sammelauswertung", included: true },
-    ],
     fotos: [{ id: "f-5", title: "Foto Serie.jpg", date: "15.02.2026" }],
     dokumente: [{ id: "d-6", title: "Sammelbericht.pdf", date: "16.02.2026" }],
     lieferscheine: [
@@ -239,16 +241,15 @@ export const reports: Report[] = [
     berichtstyp: "Standard-Prüfbericht",
     format: "PDF",
     projekt: "Brückensanierung B17",
+    projectId: "proj-b17",
     kunde: "Baresel AG",
-    standort: "Labor Stuttgart",
+    customerId: "cust-baresel",
     probeId: "PR-2026-055",
-    fachbereich: "Beton",
     pruefer: "T. Keller",
     bearbeiter: "T. Keller",
     sprache: "Deutsch",
     erstelltAm: "27.01.2026",
     status: "Archiviert",
-    pruefungen: [{ id: "pw-11", name: "Biegezug", included: true }],
     fotos: [],
     dokumente: [{ id: "d-7", title: "Prüfprotokoll.pdf", date: "28.01.2026" }],
     lieferscheine: [],
@@ -266,3 +267,13 @@ export const reports: Report[] = [
     ],
   },
 ];
+
+export const reports: Report[] = reportSeeds.map((seed) => {
+  const sample = seed.probeId ? samples.find((s) => s.id === seed.probeId) : undefined;
+  return {
+    ...seed,
+    fachbereich: sample?.fachbereich ?? "Beton",
+    standort: sample?.standort,
+    pruefungen: seed.probeId ? pruefungenFromSample(seed.probeId) : [],
+  };
+});

@@ -1,22 +1,27 @@
+import { customers } from "@/config/customers";
+import { samples } from "@/config/samples";
 import type { Project } from "@/types/project";
 
 // Mock-Daten für die Projektverwaltung (/projekte). Eigenständiger Datensatz,
-// keine Firebase-Anbindung. Kunden bewusst als reine Textwerte gepflegt, damit
-// sie sich später an eine echte Kundenverwaltung anschließen lassen.
+// keine Firebase-Anbindung. `customer`/`customerId` referenzieren echte
+// Datensätze aus config/customers.ts. `sampleCount`/`testCount` werden aus
+// den tatsächlich verknüpften Proben (config/samples.ts, via `projectId`)
+// abgeleitet statt unabhängig gepflegt zu werden.
 
-export const projects: Project[] = [
+type ProjectSeed = Omit<Project, "sampleCount" | "testCount">;
+
+const projectSeeds: ProjectSeed[] = [
   {
     id: "proj-parkblick",
     name: "Neubau Wohnanlage Parkblick",
     number: "P-2026-0457",
     customer: "Musterbau GmbH",
+    customerId: "cust-musterbau",
     address: "Parkstraße 15, Stuttgart",
     field: "Beton",
     status: "Aktiv",
     startDate: "15.01.2026",
     dueDate: "30.11.2026",
-    sampleCount: 34,
-    testCount: 28,
     progress: 45,
     projectLead: "Anna Neumann",
     projectLeadInitials: "AN",
@@ -41,13 +46,12 @@ export const projects: Project[] = [
     name: "Brückensanierung B17",
     number: "P-2026-0412",
     customer: "Baresel AG",
+    customerId: "cust-baresel",
     address: "B17 Remseck",
     field: "Mehrere",
     status: "Aktiv",
     startDate: "01.02.2026",
     dueDate: "31.08.2026",
-    sampleCount: 22,
-    testCount: 19,
     progress: 60,
     projectLead: "Tom Müller",
     projectLeadInitials: "TM",
@@ -67,13 +71,12 @@ export const projects: Project[] = [
     name: "L 342 Fahrbahnerneuerung",
     number: "P-2026-0388",
     customer: "Straßenbau Nord",
+    customerId: "cust-strassenbau-nord",
     address: "L342",
     field: "Asphalt",
     status: "Aktiv",
     startDate: "10.02.2026",
     dueDate: "15.06.2026",
-    sampleCount: 18,
-    testCount: 15,
     progress: 35,
     projectLead: "S. Wolf",
     projectLeadInitials: "SW",
@@ -89,14 +92,13 @@ export const projects: Project[] = [
     name: "Baugebiet Nord",
     number: "P-2026-0321",
     customer: "Musterbau GmbH",
+    customerId: "cust-musterbau",
     address: "Stuttgart Nord",
     field: "Geotechnik",
     status: "Aktiv",
     overdue: true,
     startDate: "05.01.2026",
     dueDate: "28.02.2026",
-    sampleCount: 12,
-    testCount: 9,
     progress: 70,
     projectLead: "A. Meier",
     projectLeadInitials: "AM",
@@ -115,13 +117,12 @@ export const projects: Project[] = [
     name: "Gewerbepark Ost",
     number: "P-2025-0290",
     customer: "Industriebau Süd GmbH",
+    customerId: "cust-industriebau-sued",
     address: "Gewerbepark Ost",
     field: "Beton",
     status: "Abgeschlossen",
     startDate: "01.06.2025",
     dueDate: "20.12.2025",
-    sampleCount: 45,
-    testCount: 45,
     progress: 100,
     projectLead: "T. Keller",
     projectLeadInitials: "TK",
@@ -137,3 +138,23 @@ export const projects: Project[] = [
     ],
   },
 ];
+
+// customerId zur Laufzeit gegen config/customers.ts validieren, statt sich
+// blind auf die Literale in projectSeeds zu verlassen.
+projectSeeds.forEach((seed) => {
+  const customerExists = customers.some((customer) => customer.id === seed.customerId);
+  if (!customerExists && process.env.NODE_ENV !== "production") {
+    console.warn(`[projects.ts] Unbekannte customerId "${seed.customerId}" bei Projekt "${seed.name}".`);
+  }
+});
+
+export const projects: Project[] = projectSeeds.map((seed) => {
+  const projectSamples = samples.filter((sample) => sample.projectId === seed.id);
+  const testCount = projectSamples.reduce((sum, sample) => sum + sample.pruefungen.length, 0);
+
+  return {
+    ...seed,
+    sampleCount: projectSamples.length,
+    testCount,
+  };
+});

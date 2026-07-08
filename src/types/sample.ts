@@ -34,7 +34,11 @@ export interface Sample {
   probenart: SampleType;
   pruefverfahren: string;
   kunde: string;
+  // Verknüpft die Probe mit dem echten Kundendatensatz (config/customers.ts).
+  customerId?: string;
   projekt: string;
+  // Verknüpft die Probe mit dem echten Projekt (config/projects.ts).
+  projectId?: string;
   standort?: string;
   entnahmedatum: string;
   pruefdatum: string;
