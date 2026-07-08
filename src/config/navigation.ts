@@ -16,6 +16,7 @@ import {
   Mountain,
   NotebookText,
   Package,
+  Plug,
   Settings,
   Sparkles,
   Target,
@@ -81,6 +82,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: "Profil", href: "/profil", icon: User },
       { label: "Einstellungen", href: "/einstellungen", icon: Settings },
+      { label: "Integrationen", href: "/integrationen", icon: Plug },
       { label: "Administration", href: "/admin", icon: Users },
     ],
   },
