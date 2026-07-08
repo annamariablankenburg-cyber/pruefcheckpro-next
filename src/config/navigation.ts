@@ -9,6 +9,7 @@ import {
   FileDown,
   FlaskConical,
   FolderKanban,
+  HardHat,
   LayoutDashboard,
   Landmark,
   Layers,
@@ -61,6 +62,7 @@ export const navGroups: NavGroup[] = [
     label: "Verwaltung",
     items: [
       { label: "Probenmanager", href: "/probekoerper", icon: Package },
+      { label: "Baustellenmodus", href: "/baustellenmodus", icon: HardHat },
       { label: "Kalender", href: "/kalender", icon: CalendarDays },
       { label: "Projekte", href: "/projekte", icon: FolderKanban },
       { label: "Kunden", href: "/kunden", icon: Contact },
@@ -90,5 +92,5 @@ export const primaryMobileNavItems: NavItem[] = [
   navGroups[0].items[0],
   navGroups[1].items[0],
   navGroups[0].items[1],
-  navGroups[3].items[1],
+  navGroups[3].items[2],
 ];
