@@ -3,31 +3,35 @@ import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-export const labbookFilterOptions = [
+export const laborbookFilterOptions = [
   "Alle",
+  "Prüfungen",
+  "Geräte",
+  "Kalibrierungen",
+  "Wartungen",
+  "Notizen",
+  "Ereignisse",
+  "Archiviert",
   "Beton",
   "Asphalt",
   "Geotechnik",
-  "Heute",
-  "Diese Woche",
-  "Abgeschlossen",
 ] as const;
 
-export type LabbookFilter = (typeof labbookFilterOptions)[number];
+export type LaborbookFilter = (typeof laborbookFilterOptions)[number];
 
-interface LabbookFiltersProps {
+interface LaborbookFiltersProps {
   search: string;
   onSearchChange: (value: string) => void;
-  filter: LabbookFilter;
-  onFilterChange: (filter: LabbookFilter) => void;
+  filter: LaborbookFilter;
+  onFilterChange: (filter: LaborbookFilter) => void;
 }
 
-export function LabbookFilters({
+export function LaborbookFilters({
   search,
   onSearchChange,
   filter,
   onFilterChange,
-}: LabbookFiltersProps) {
+}: LaborbookFiltersProps) {
   return (
     <div className="flex flex-col gap-3">
       <div className="relative">
@@ -35,13 +39,13 @@ export function LabbookFilters({
         <Input
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Probe, Kunde, Projekt oder Prüfung suchen…"
+          placeholder="Eintrag, Projekt, Probe oder Mitarbeiter suchen…"
           className="h-10 pl-9"
         />
       </div>
 
       <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-        {labbookFilterOptions.map((option) => (
+        {laborbookFilterOptions.map((option) => (
           <button
             key={option}
             type="button"
