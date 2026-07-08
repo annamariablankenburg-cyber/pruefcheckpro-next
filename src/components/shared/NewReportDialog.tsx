@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Info } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -12,10 +13,29 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { SampleField } from "@/types/sample";
+import type { ReportFormat, ReportLanguage, ReportTemplate } from "@/types/report";
 
 const fachbereichOptions: SampleField[] = ["Beton", "Asphalt", "Geotechnik"];
+const formatOptions: ReportFormat[] = ["PDF", "Excel", "PDF & Excel"];
+const spracheOptions: ReportLanguage[] = ["Deutsch", "Englisch"];
+const berichtstypOptions: ReportTemplate[] = [
+  "Standard-Prüfbericht",
+  "Laborbericht",
+  "Prüfprotokoll",
+  "Baustellenbericht",
+  "Kundenbericht",
+  "Kompaktbericht",
+];
 
 interface NewReportDialogProps {
   open: boolean;
@@ -33,15 +53,19 @@ function FieldLabel({ children, required }: { children: string; required?: boole
 
 export function NewReportDialog({ open, onOpenChange }: NewReportDialogProps) {
   const [titel, setTitel] = useState("");
+  const [berichtstyp, setBerichtstyp] = useState<ReportTemplate>(berichtstypOptions[0]);
   const [projekt, setProjekt] = useState("");
   const [kunde, setKunde] = useState("");
+  const [probeId, setProbeId] = useState("");
   const [fachbereich, setFachbereich] = useState<SampleField>(fachbereichOptions[0]);
-  const [standort, setStandort] = useState("");
-  const [pruefer, setPruefer] = useState("");
+  const [format, setFormat] = useState<ReportFormat>(formatOptions[0]);
+  const [ansprechpartner, setAnsprechpartner] = useState("");
+  const [vorlage, setVorlage] = useState("");
+  const [sprache, setSprache] = useState<ReportLanguage>(spracheOptions[0]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Neuer Bericht</DialogTitle>
           <DialogDescription>
@@ -62,6 +86,21 @@ export function NewReportDialog({ open, onOpenChange }: NewReportDialogProps) {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
+              <FieldLabel required>Berichtstyp</FieldLabel>
+              <Select value={berichtstyp} onValueChange={(value) => setBerichtstyp(value as ReportTemplate)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {berichtstypOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
               <FieldLabel required>Projekt/Baustelle</FieldLabel>
               <Input
                 value={projekt}
@@ -80,19 +119,28 @@ export function NewReportDialog({ open, onOpenChange }: NewReportDialogProps) {
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <FieldLabel>Standort</FieldLabel>
+              <FieldLabel required>Probe</FieldLabel>
               <Input
-                value={standort}
-                onChange={(event) => setStandort(event.target.value)}
-                placeholder="z. B. Labor Stuttgart"
+                value={probeId}
+                onChange={(event) => setProbeId(event.target.value)}
+                placeholder="z. B. BET-2026-014"
+                required
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <FieldLabel>Prüfer</FieldLabel>
+              <FieldLabel>Ansprechpartner</FieldLabel>
               <Input
-                value={pruefer}
-                onChange={(event) => setPruefer(event.target.value)}
-                placeholder="Name des zuständigen Prüfers"
+                value={ansprechpartner}
+                onChange={(event) => setAnsprechpartner(event.target.value)}
+                placeholder="Abweichend vom Kundenstamm, optional"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <FieldLabel>Vorlage</FieldLabel>
+              <Input
+                value={vorlage}
+                onChange={(event) => setVorlage(event.target.value)}
+                placeholder="z. B. Standardvorlage 2026"
               />
             </div>
           </div>
@@ -116,6 +164,58 @@ export function NewReportDialog({ open, onOpenChange }: NewReportDialogProps) {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <FieldLabel required>Format</FieldLabel>
+            <div className="flex flex-wrap gap-2">
+              {formatOptions.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setFormat(option)}
+                  className={cn(
+                    "rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
+                    format === option
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                  )}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <FieldLabel>Sprache</FieldLabel>
+            <div className="flex flex-wrap gap-2">
+              {spracheOptions.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setSprache(option)}
+                  className={cn(
+                    "rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
+                    sprache === option
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                  )}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <FieldLabel>Notizen</FieldLabel>
+            <Textarea placeholder="Besonderheiten, Hinweise für die Berichtserstellung …" />
+          </div>
+
+          <div className="flex items-start gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-2.5 text-sm text-primary">
+            <Info className="mt-0.5 size-4 shrink-0" />
+            Exportfunktionen werden später angebunden. Heute nur UI-Vorschau.
           </div>
         </div>
 

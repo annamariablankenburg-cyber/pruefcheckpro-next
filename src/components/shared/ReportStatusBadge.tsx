@@ -5,7 +5,8 @@ import type { ReportStatus } from "@/types/report";
 const statusStyles: Record<ReportStatus, string> = {
   Entwurf: "bg-muted text-muted-foreground",
   Fertig: "bg-primary/10 text-primary",
-  Exportiert: "bg-success/10 text-success",
+  "PDF exportiert": "bg-success/10 text-success",
+  "Excel exportiert": "bg-success/10 text-success",
   Archiviert: "border border-border bg-transparent text-muted-foreground",
 };
 

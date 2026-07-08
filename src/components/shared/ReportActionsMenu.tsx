@@ -2,10 +2,12 @@ import {
   Archive,
   ArchiveRestore,
   CheckCircle2,
+  Copy,
   Download,
   Eye,
   FileEdit,
   MoreHorizontal,
+  Trash2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -20,28 +22,34 @@ import type { Report } from "@/types/report";
 
 interface ReportActionsMenuProps {
   report: Report;
-  onOpenEditor: () => void;
+  onOpenDetails: () => void;
+  onEdit: () => void;
   onPreview: () => void;
   onMarkDone: () => void;
   onExportPdf: () => void;
   onExportExcel: () => void;
+  onDuplicate: () => void;
   onArchive: () => void;
   onReactivate: () => void;
+  onDelete: () => void;
 }
 
 export function ReportActionsMenu({
   report,
-  onOpenEditor,
+  onOpenDetails,
+  onEdit,
   onPreview,
   onMarkDone,
   onExportPdf,
   onExportExcel,
+  onDuplicate,
   onArchive,
   onReactivate,
+  onDelete,
 }: ReportActionsMenuProps) {
   const { status } = report;
   const canMarkDone = status === "Entwurf";
-  const canExport = status === "Entwurf" || status === "Fertig";
+  const canExport = status !== "Archiviert";
   const canArchive = status !== "Archiviert";
   const canReactivate = status === "Archiviert";
 
@@ -53,13 +61,17 @@ export function ReportActionsMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onSelect={onOpenEditor}>
+        <DropdownMenuItem onSelect={onOpenDetails}>
+          <Eye />
+          Details öffnen
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={onEdit}>
           <FileEdit />
-          Editor öffnen
+          Bearbeiten
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={onPreview}>
           <Eye />
-          Vorschau
+          Vorschau öffnen
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
@@ -73,15 +85,22 @@ export function ReportActionsMenu({
         {canExport && (
           <DropdownMenuItem onSelect={onExportPdf}>
             <Download />
-            Als PDF exportieren
+            PDF exportieren
           </DropdownMenuItem>
         )}
         {canExport && (
           <DropdownMenuItem onSelect={onExportExcel}>
             <Download />
-            Als Excel exportieren
+            Excel exportieren
           </DropdownMenuItem>
         )}
+        <DropdownMenuItem onSelect={onDuplicate}>
+          <Copy />
+          Duplizieren
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
         {canArchive && (
           <DropdownMenuItem onSelect={onArchive}>
             <Archive />
@@ -94,6 +113,12 @@ export function ReportActionsMenu({
             Reaktivieren
           </DropdownMenuItem>
         )}
+
+        <DropdownMenuSeparator />
+        <DropdownMenuItem variant="destructive" onSelect={onDelete}>
+          <Trash2 />
+          Löschen
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

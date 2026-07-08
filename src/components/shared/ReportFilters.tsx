@@ -3,7 +3,17 @@ import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-export const reportFilterOptions = ["Alle", "Entwurf", "Fertig", "Exportiert", "Archiviert"] as const;
+export const reportFilterOptions = [
+  "Alle",
+  "Entwurf",
+  "Fertig",
+  "PDF exportiert",
+  "Excel exportiert",
+  "Archiviert",
+  "Beton",
+  "Asphalt",
+  "Geotechnik",
+] as const;
 
 export type ReportFilter = (typeof reportFilterOptions)[number];
 
@@ -22,7 +32,7 @@ export function ReportFilters({ search, onSearchChange, filter, onFilterChange }
         <Input
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Bericht, Projekt oder Kunde suchen…"
+          placeholder="Bericht, Projekt, Kunde oder Probe suchen…"
           className="h-10 pl-9"
         />
       </div>

@@ -6,7 +6,7 @@ import {
   ArchiveRestore,
   Building2,
   CheckCircle2,
-  Contact,
+  Copy,
   Download,
   Eye,
   FileText,
@@ -14,10 +14,10 @@ import {
   PenLine,
   Save,
   ShieldCheck,
+  Trash2,
   Truck,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -27,81 +27,56 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { AuditTrailPreview } from "@/components/shared/AuditTrailPreview";
 import { CalculationPreview } from "@/components/shared/CalculationPreview";
-import { FakeBarChart, type BarChartDatum } from "@/components/shared/FakeBarChart";
+import { CustomerContactPreview } from "@/components/shared/CustomerContactPreview";
+import { ExcelPreviewPanel } from "@/components/shared/ExcelPreviewPanel";
+import { ExportOptionsPanel } from "@/components/shared/ExportOptionsPanel";
 import { RecordList } from "@/components/shared/RecordList";
+import { ReportPreview, type ReportPreviewSettings } from "@/components/shared/ReportPreview";
 import { ReportStatusBadge } from "@/components/shared/ReportStatusBadge";
 import { cn } from "@/lib/utils";
-import type { Report, ReportPruefungRef, ReportUnterschrift } from "@/types/report";
+import type { Report, ReportFormat, ReportPruefungRef, ReportUnterschrift } from "@/types/report";
 
 interface ReportEditorDrawerProps {
   report: Report | null;
+  initialSection?: Section;
   onOpenChange: (open: boolean) => void;
   onSave: (report: Report) => void;
   onSaveDraft: (report: Report) => void;
   onMarkDone: (report: Report) => void;
   onExportPdf: (report: Report) => void;
   onExportExcel: (report: Report) => void;
+  onDuplicate: (report: Report) => void;
   onArchive: (report: Report) => void;
   onReactivate: (report: Report) => void;
+  onDelete: (report: Report) => void;
   onPreview: (report: Report) => void;
 }
 
 const sections = [
   "Deckblatt",
-  "Kunde",
-  "Projekt",
+  "Kundendaten",
+  "Projektdaten",
   "Prüfungen",
   "Messwerte",
-  "Diagramme",
   "Fotos",
   "Anhänge",
-  "Bemerkungen",
   "Unterschriften",
+  "Export",
 ] as const;
-type Section = (typeof sections)[number];
+export type Section = (typeof sections)[number];
 
-const diagrammVorschauData: { key: string; label: string; unit: string; data: BarChartDatum[] }[] = [
-  {
-    key: "druckfestigkeit",
-    label: "Druckfestigkeit",
-    unit: "N/mm²",
-    data: [
-      { label: "Würfel 1", value: 23.2, heightClass: "h-24" },
-      { label: "Würfel 2", value: 23.0, heightClass: "h-24" },
-      { label: "Würfel 3", value: 23.3, heightClass: "h-24" },
-    ],
-  },
-  {
-    key: "biegezug",
-    label: "Biegezug",
-    unit: "N/mm²",
-    data: [
-      { label: "Prisma 1", value: 4.3, heightClass: "h-20" },
-      { label: "Prisma 2", value: 4.1, heightClass: "h-20" },
-    ],
-  },
-  {
-    key: "marshall",
-    label: "Marshall",
-    unit: "kN",
-    data: [
-      { label: "Probekörper 1", value: 12.4, heightClass: "h-28" },
-      { label: "Probekörper 2", value: 12.1, heightClass: "h-28" },
-    ],
-  },
-  {
-    key: "wassergehalt",
-    label: "Wassergehalt",
-    unit: "%",
-    data: [
-      { label: "Probe 1", value: 13.2, heightClass: "h-16" },
-      { label: "Probe 2", value: 12.3, heightClass: "h-14" },
-    ],
-  },
-];
+const formatOptions: ReportFormat[] = ["PDF", "Excel", "PDF & Excel"];
 
 function MetaField({ label, value }: { label: string; value: string }) {
   return (
@@ -129,38 +104,67 @@ function SectionTitle({ children }: { children: string }) {
 
 interface WorkspaceProps {
   report: Report;
+  initialSection?: Section;
   onSave: (report: Report) => void;
   onSaveDraft: (report: Report) => void;
   onMarkDone: (report: Report) => void;
   onExportPdf: (report: Report) => void;
   onExportExcel: (report: Report) => void;
+  onDuplicate: (report: Report) => void;
   onArchive: (report: Report) => void;
   onReactivate: (report: Report) => void;
+  onDelete: (report: Report) => void;
   onPreview: (report: Report) => void;
 }
 
 function ReportEditorWorkspace({
   report,
+  initialSection,
   onSave,
   onSaveDraft,
   onMarkDone,
   onExportPdf,
   onExportExcel,
+  onDuplicate,
   onArchive,
   onReactivate,
+  onDelete,
   onPreview,
 }: WorkspaceProps) {
-  const [activeSection, setActiveSection] = useState<Section>("Deckblatt");
+  const [activeSection, setActiveSection] = useState<Section>(initialSection ?? "Deckblatt");
   const [pruefungen, setPruefungen] = useState<ReportPruefungRef[]>(report.pruefungen);
   const [bemerkungen, setBemerkungen] = useState(report.bemerkungen);
   const [unterschriften, setUnterschriften] = useState<ReportUnterschrift[]>(report.unterschriften);
+  const [format, setFormat] = useState<ReportFormat>(report.format);
+  const [ansprechpartner, setAnsprechpartner] = useState(report.ansprechpartner ?? "");
+  const [berichtstyp, setBerichtstyp] = useState(report.berichtstyp);
+  const [settings, setSettings] = useState<ReportPreviewSettings>({
+    showCustomer: true,
+    showContact: true,
+    showProject: true,
+    showLogo: true,
+    showSignature: true,
+    showStamp: true,
+  });
   const [saveNote, setSaveNote] = useState<string | null>(null);
 
   const status = report.status;
   const canMarkDone = status === "Entwurf";
-  const canExport = status === "Entwurf" || status === "Fertig";
+  const canExport = status !== "Archiviert";
   const canArchive = status !== "Archiviert";
   const canReactivate = status === "Archiviert";
+
+  function buildSnapshot(): Report {
+    return {
+      ...report,
+      pruefungen,
+      bemerkungen,
+      unterschriften,
+      format,
+      berichtstyp,
+      ansprechpartner: ansprechpartner || undefined,
+    };
+  }
 
   function togglePruefung(id: string) {
     setPruefungen((current) =>
@@ -174,8 +178,12 @@ function ReportEditorWorkspace({
     );
   }
 
+  function toggleSetting(key: keyof ReportPreviewSettings) {
+    setSettings((current) => ({ ...current, [key]: !current[key] }));
+  }
+
   function handleSave() {
-    onSave(report);
+    onSave(buildSnapshot());
     setSaveNote("Änderungen lokal gespeichert – noch keine echte Speicherung.");
     window.setTimeout(() => setSaveNote(null), 2500);
   }
@@ -209,19 +217,19 @@ function ReportEditorWorkspace({
         <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3 lg:grid-cols-6">
           <MetaField label="Projekt" value={report.projekt} />
           <MetaField label="Kunde" value={report.kunde} />
+          <MetaField label="Probe" value={report.probeId ?? "—"} />
           <MetaField label="Fachbereich" value={report.fachbereich} />
           <MetaField label="Erstellt am" value={report.erstelltAm} />
-          <MetaField label="Prüfer" value={report.pruefer} />
           <MetaField label="Bearbeiter" value={report.bearbeiter} />
         </div>
       </DrawerHeader>
 
       <DrawerBody className="flex-1 overflow-y-auto p-0">
-        <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr_300px]">
-          {/* Links: Bereiche */}
+        <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr_320px]">
+          {/* Links: Berichtsnavigation */}
           <div className="border-b border-border p-4 lg:border-r lg:border-b-0">
             <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-              Bereiche
+              Berichtsnavigation
             </p>
             <div className="flex flex-col gap-1">
               {sections.map((section) => (
@@ -258,37 +266,68 @@ function ReportEditorWorkspace({
                 </div>
                 <div className="divide-y divide-border rounded-xl border border-border">
                   <MetaRow label="Berichtsnummer" value={report.berichtsnummer} />
+                  <MetaRow label="Berichtstyp" value={berichtstyp} />
                   <MetaRow label="Projekt" value={report.projekt} />
                   <MetaRow label="Kunde" value={report.kunde} />
                   <MetaRow label="Standort" value={report.standort ?? "—"} />
                   <MetaRow label="Prüfer" value={report.pruefer} />
                   <MetaRow label="Datum" value={report.erstelltAm} />
                 </div>
-              </div>
-            )}
-
-            {activeSection === "Kunde" && (
-              <div className="flex flex-col gap-4">
-                <h3 className="text-base font-semibold text-foreground">Kunde</h3>
-                <div className="flex items-center gap-3 rounded-xl border border-border p-4">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Contact className="size-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">{report.kunde}</p>
-                    <p className="text-xs text-muted-foreground">Auftraggeber dieses Prüfberichts</p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium text-foreground">Format</label>
+                    <div className="flex flex-wrap gap-2">
+                      {formatOptions.map((option) => (
+                        <button
+                          key={option}
+                          type="button"
+                          onClick={() => setFormat(option)}
+                          className={cn(
+                            "rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+                            format === option
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                          )}
+                        >
+                          {option}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Weitere Kundendaten (Adresse, Ansprechpartner) werden aus dem Kundenstamm übernommen –
-                  UI-Vorschau, keine echte Verknüpfung.
-                </p>
               </div>
             )}
 
-            {activeSection === "Projekt" && (
+            {activeSection === "Kundendaten" && (
               <div className="flex flex-col gap-4">
-                <h3 className="text-base font-semibold text-foreground">Projekt</h3>
+                <div>
+                  <h3 className="text-base font-semibold text-foreground">Kundendaten</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Kunden- und Ansprechpartnerdaten, die im Bericht erscheinen.
+                  </p>
+                </div>
+                <CustomerContactPreview
+                  kunde={report.kunde}
+                  ansprechpartner={ansprechpartner || undefined}
+                  showCustomer
+                  showContact
+                />
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-foreground">
+                    Ansprechpartner (abweichend, optional)
+                  </label>
+                  <Input
+                    value={ansprechpartner}
+                    onChange={(event) => setAnsprechpartner(event.target.value)}
+                    placeholder={`Standard: Ansprechpartner aus Kundenstamm`}
+                  />
+                </div>
+              </div>
+            )}
+
+            {activeSection === "Projektdaten" && (
+              <div className="flex flex-col gap-4">
+                <h3 className="text-base font-semibold text-foreground">Projektdaten</h3>
                 <div className="flex items-center gap-3 rounded-xl border border-border p-4">
                   <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <Building2 className="size-5" />
@@ -301,6 +340,7 @@ function ReportEditorWorkspace({
                 <div className="divide-y divide-border rounded-xl border border-border">
                   <MetaRow label="Fachbereich" value={report.fachbereich} />
                   <MetaRow label="Standort" value={report.standort ?? "—"} />
+                  <MetaRow label="Probe" value={report.probeId ?? "—"} />
                 </div>
               </div>
             )}
@@ -354,23 +394,15 @@ function ReportEditorWorkspace({
                     hint="Wird automatisch aus der Anforderung der Prüfart übernommen."
                   />
                 </div>
-              </div>
-            )}
-
-            {activeSection === "Diagramme" && (
-              <div className="flex flex-col gap-6">
-                <div>
-                  <h3 className="text-base font-semibold text-foreground">Diagramme</h3>
-                  <p className="text-xs text-muted-foreground">Vorschau der Diagramme für den Berichtsexport.</p>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-foreground">Bemerkungen</label>
+                  <Textarea
+                    value={bemerkungen}
+                    onChange={(event) => setBemerkungen(event.target.value)}
+                    placeholder="Zusammenfassung, Auffälligkeiten, Hinweise für den Kunden …"
+                    className="min-h-32"
+                  />
                 </div>
-                {diagrammVorschauData.map((chart) => (
-                  <div key={chart.key} className="flex flex-col gap-2">
-                    <h4 className="text-sm font-semibold text-foreground">
-                      {chart.label} ({chart.unit})
-                    </h4>
-                    <FakeBarChart data={chart.data} />
-                  </div>
-                ))}
               </div>
             )}
 
@@ -380,7 +412,7 @@ function ReportEditorWorkspace({
                 icon={ImageIcon}
                 items={report.fotos}
                 addLabel="Foto hinzufügen"
-                onAdd={() => onSave(report)}
+                onAdd={() => onSave(buildSnapshot())}
                 emptyLabel="Noch keine Fotos hinterlegt."
               />
             )}
@@ -392,7 +424,7 @@ function ReportEditorWorkspace({
                   icon={FileText}
                   items={report.dokumente}
                   addLabel="Dokument hochladen"
-                  onAdd={() => onSave(report)}
+                  onAdd={() => onSave(buildSnapshot())}
                   emptyLabel="Noch keine Dokumente hinterlegt."
                 />
                 <RecordList
@@ -400,20 +432,8 @@ function ReportEditorWorkspace({
                   icon={Truck}
                   items={report.lieferscheine}
                   addLabel="Lieferschein hinzufügen"
-                  onAdd={() => onSave(report)}
+                  onAdd={() => onSave(buildSnapshot())}
                   emptyLabel="Noch keine Lieferscheine hinterlegt."
-                />
-              </div>
-            )}
-
-            {activeSection === "Bemerkungen" && (
-              <div className="flex flex-col gap-2">
-                <h3 className="text-base font-semibold text-foreground">Bemerkungen</h3>
-                <Textarea
-                  value={bemerkungen}
-                  onChange={(event) => setBemerkungen(event.target.value)}
-                  placeholder="Zusammenfassung, Auffälligkeiten, Hinweise für den Kunden …"
-                  className="min-h-32"
                 />
               </div>
             )}
@@ -447,52 +467,130 @@ function ReportEditorWorkspace({
                 </div>
               </div>
             )}
+
+            {activeSection === "Export" && (
+              <div className="flex flex-col gap-6">
+                <div>
+                  <h3 className="text-base font-semibold text-foreground">Export</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Live-Berichtsvorschau sowie PDF- und Excel-Export – heute nur UI-Vorschau.
+                  </p>
+                </div>
+                <ReportPreview report={buildSnapshot()} settings={settings} />
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <ExportOptionsPanel
+                    berichtstyp={berichtstyp}
+                    onBerichtstypChange={setBerichtstyp}
+                    onExport={() => onExportPdf(buildSnapshot())}
+                  />
+                  <ExcelPreviewPanel report={buildSnapshot()} onExport={() => onExportExcel(buildSnapshot())} />
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Rechts: Status, Aktionen, Verlauf */}
-          <div className="flex flex-col gap-4 p-4 lg:p-6">
-            <div className="flex flex-col gap-2">
+          {/* Rechts: Berichtseinstellungen, Aktionen, Verlauf */}
+          <div className="flex flex-col gap-5 p-4 lg:p-6">
+            <div className="flex flex-col gap-3">
+              <SectionTitle>Berichtseinstellungen</SectionTitle>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-foreground">Exportformat</label>
+                <Select value={format} onValueChange={(value) => setFormat(value as ReportFormat)}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {formatOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <p className="mt-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                Sichtbare Abschnitte
+              </p>
+              <div className="flex flex-col gap-2">
+                <label className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                  <Checkbox checked={settings.showCustomer} onCheckedChange={() => toggleSetting("showCustomer")} />
+                  Kundendaten anzeigen
+                </label>
+                <label className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                  <Checkbox checked={settings.showContact} onCheckedChange={() => toggleSetting("showContact")} />
+                  Ansprechpartner anzeigen
+                </label>
+                <label className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                  <Checkbox checked={settings.showProject} onCheckedChange={() => toggleSetting("showProject")} />
+                  Projektinformationen anzeigen
+                </label>
+                <label className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                  <Checkbox checked={settings.showLogo} onCheckedChange={() => toggleSetting("showLogo")} />
+                  Firmenlogo anzeigen
+                </label>
+                <label className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                  <Checkbox checked={settings.showSignature} onCheckedChange={() => toggleSetting("showSignature")} />
+                  Digitale Unterschrift anzeigen
+                </label>
+                <label className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                  <Checkbox checked={settings.showStamp} onCheckedChange={() => toggleSetting("showStamp")} />
+                  Firmenstempel anzeigen
+                </label>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 border-t border-border pt-4">
               <SectionTitle>Aktionen</SectionTitle>
               <div className="flex flex-col gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={() => onSaveDraft(report)}>
+                <Button type="button" variant="outline" size="sm" onClick={() => onSaveDraft(buildSnapshot())}>
                   Als Entwurf speichern
                 </Button>
                 {canMarkDone && (
-                  <Button type="button" variant="outline" size="sm" onClick={() => onMarkDone(report)}>
+                  <Button type="button" variant="outline" size="sm" onClick={() => onMarkDone(buildSnapshot())}>
                     <CheckCircle2 className="size-4" />
                     Als fertig markieren
                   </Button>
                 )}
                 {canExport && (
-                  <Button type="button" size="sm" onClick={() => onExportPdf(report)}>
+                  <Button type="button" size="sm" onClick={() => onExportPdf(buildSnapshot())}>
                     <Download className="size-4" />
-                    Exportieren PDF
+                    PDF exportieren
                   </Button>
                 )}
                 {canExport && (
-                  <Button type="button" variant="outline" size="sm" onClick={() => onExportExcel(report)}>
+                  <Button type="button" variant="outline" size="sm" onClick={() => onExportExcel(buildSnapshot())}>
                     <Download className="size-4" />
-                    Exportieren Excel
+                    Excel exportieren
                   </Button>
                 )}
+                <Button type="button" variant="outline" size="sm" onClick={() => onDuplicate(buildSnapshot())}>
+                  <Copy className="size-4" />
+                  Duplizieren
+                </Button>
                 {canArchive && (
-                  <Button type="button" variant="outline" size="sm" onClick={() => onArchive(report)}>
+                  <Button type="button" variant="outline" size="sm" onClick={() => onArchive(buildSnapshot())}>
                     <Archive className="size-4" />
                     Archivieren
                   </Button>
                 )}
                 {canReactivate && (
-                  <Button type="button" variant="outline" size="sm" onClick={() => onReactivate(report)}>
+                  <Button type="button" variant="outline" size="sm" onClick={() => onReactivate(buildSnapshot())}>
                     <ArchiveRestore className="size-4" />
                     Reaktivieren
                   </Button>
                 )}
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => onDelete(buildSnapshot())}
+                >
+                  <Trash2 className="size-4" />
+                  Löschen
+                </Button>
               </div>
             </div>
-
-            <Badge variant="secondary" className="w-fit bg-primary/5 text-primary">
-              PDF/Excel-Export heute nur als UI-Vorschau
-            </Badge>
 
             <div className="border-t border-border pt-4">
               <AuditTrailPreview
@@ -510,11 +608,18 @@ function ReportEditorWorkspace({
   );
 }
 
-export function ReportEditorDrawer({ report, onOpenChange, ...handlers }: ReportEditorDrawerProps) {
+export function ReportEditorDrawer({ report, initialSection, onOpenChange, ...handlers }: ReportEditorDrawerProps) {
   return (
     <Drawer open={report !== null} onOpenChange={onOpenChange}>
-      <DrawerContent className="w-full sm:max-w-none lg:w-[95vw] xl:max-w-[1280px]">
-        {report && <ReportEditorWorkspace key={report.id} report={report} {...handlers} />}
+      <DrawerContent className="w-full sm:max-w-none lg:w-[95vw] xl:max-w-[1360px]">
+        {report && (
+          <ReportEditorWorkspace
+            key={report.id}
+            report={report}
+            initialSection={initialSection}
+            {...handlers}
+          />
+        )}
       </DrawerContent>
     </Drawer>
   );

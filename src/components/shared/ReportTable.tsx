@@ -1,23 +1,39 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { ReportActionsMenu } from "@/components/shared/ReportActionsMenu";
+import { ReportFormatBadge } from "@/components/shared/ReportFormatBadge";
 import { ReportStatusBadge } from "@/components/shared/ReportStatusBadge";
 import type { Report } from "@/types/report";
 
 interface ReportTableActionHandlers {
-  onOpenEditor: (report: Report) => void;
+  onOpenDetails: (report: Report) => void;
+  onEdit: (report: Report) => void;
   onPreview: (report: Report) => void;
   onMarkDone: (report: Report) => void;
   onExportPdf: (report: Report) => void;
   onExportExcel: (report: Report) => void;
+  onDuplicate: (report: Report) => void;
   onArchive: (report: Report) => void;
   onReactivate: (report: Report) => void;
+  onDelete: (report: Report) => void;
 }
 
 interface ReportTableProps extends ReportTableActionHandlers {
   reports: Report[];
 }
 
-const columns = ["Bericht", "Projekt", "Kunde", "Fachbereich", "Erstellt", "Bearbeiter", "Status", ""];
+const columns = [
+  "Bericht",
+  "Berichtsnummer",
+  "Projekt",
+  "Kunde",
+  "Probe",
+  "Fachbereich",
+  "Format",
+  "Status",
+  "Erstellt am",
+  "Bearbeiter",
+  "",
+];
 
 export function ReportTable({ reports, ...handlers }: ReportTableProps) {
   if (reports.length === 0) {
@@ -35,7 +51,7 @@ export function ReportTable({ reports, ...handlers }: ReportTableProps) {
       {/* Desktop/Tablet: Tabelle */}
       <Card className="hidden overflow-hidden py-0 md:block">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] text-sm">
+          <table className="w-full min-w-[1320px] text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/40 text-left text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 {columns.map((column) => (
@@ -51,31 +67,43 @@ export function ReportTable({ reports, ...handlers }: ReportTableProps) {
                   <td className="px-4 py-3 whitespace-nowrap">
                     <button
                       type="button"
-                      onClick={() => handlers.onOpenEditor(report)}
+                      onClick={() => handlers.onOpenDetails(report)}
                       className="text-left font-medium text-foreground hover:underline"
                     >
                       {report.titel}
                       <span className="block text-xs font-normal text-muted-foreground">{report.id}</span>
                     </button>
                   </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
+                    {report.berichtsnummer}
+                  </td>
                   <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{report.projekt}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{report.kunde}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
+                    {report.probeId ?? "—"}
+                  </td>
                   <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{report.fachbereich}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{report.erstelltAm}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{report.bearbeiter}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <ReportFormatBadge format={report.format} />
+                  </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <ReportStatusBadge status={report.status} />
                   </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{report.erstelltAm}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{report.bearbeiter}</td>
                   <td className="px-4 py-3 text-right whitespace-nowrap">
                     <ReportActionsMenu
                       report={report}
-                      onOpenEditor={() => handlers.onOpenEditor(report)}
+                      onOpenDetails={() => handlers.onOpenDetails(report)}
+                      onEdit={() => handlers.onEdit(report)}
                       onPreview={() => handlers.onPreview(report)}
                       onMarkDone={() => handlers.onMarkDone(report)}
                       onExportPdf={() => handlers.onExportPdf(report)}
                       onExportExcel={() => handlers.onExportExcel(report)}
+                      onDuplicate={() => handlers.onDuplicate(report)}
                       onArchive={() => handlers.onArchive(report)}
                       onReactivate={() => handlers.onReactivate(report)}
+                      onDelete={() => handlers.onDelete(report)}
                     />
                   </td>
                 </tr>
@@ -93,26 +121,33 @@ export function ReportTable({ reports, ...handlers }: ReportTableProps) {
               <div className="flex items-start justify-between gap-3">
                 <button
                   type="button"
-                  onClick={() => handlers.onOpenEditor(report)}
+                  onClick={() => handlers.onOpenDetails(report)}
                   className="min-w-0 text-left"
                 >
                   <span className="block truncate font-semibold text-foreground">{report.titel}</span>
-                  <span className="block truncate text-sm text-muted-foreground">{report.id}</span>
+                  <span className="block truncate text-sm text-muted-foreground">
+                    {report.id} · {report.berichtsnummer}
+                  </span>
                 </button>
                 <div className="flex shrink-0 items-center gap-1">
                   <ReportStatusBadge status={report.status} />
                   <ReportActionsMenu
                     report={report}
-                    onOpenEditor={() => handlers.onOpenEditor(report)}
+                    onOpenDetails={() => handlers.onOpenDetails(report)}
+                    onEdit={() => handlers.onEdit(report)}
                     onPreview={() => handlers.onPreview(report)}
                     onMarkDone={() => handlers.onMarkDone(report)}
                     onExportPdf={() => handlers.onExportPdf(report)}
                     onExportExcel={() => handlers.onExportExcel(report)}
+                    onDuplicate={() => handlers.onDuplicate(report)}
                     onArchive={() => handlers.onArchive(report)}
                     onReactivate={() => handlers.onReactivate(report)}
+                    onDelete={() => handlers.onDelete(report)}
                   />
                 </div>
               </div>
+
+              <ReportFormatBadge format={report.format} className="w-fit" />
 
               <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
                 <div>
@@ -124,6 +159,10 @@ export function ReportTable({ reports, ...handlers }: ReportTableProps) {
                   <p className="font-medium text-foreground">{report.kunde}</p>
                 </div>
                 <div>
+                  <p className="text-muted-foreground">Probe</p>
+                  <p className="font-medium text-foreground">{report.probeId ?? "—"}</p>
+                </div>
+                <div>
                   <p className="text-muted-foreground">Fachbereich</p>
                   <p className="font-medium text-foreground">{report.fachbereich}</p>
                 </div>
@@ -131,7 +170,7 @@ export function ReportTable({ reports, ...handlers }: ReportTableProps) {
                   <p className="text-muted-foreground">Erstellt</p>
                   <p className="font-medium text-foreground">{report.erstelltAm}</p>
                 </div>
-                <div className="col-span-2">
+                <div>
                   <p className="text-muted-foreground">Bearbeiter</p>
                   <p className="font-medium text-foreground">{report.bearbeiter}</p>
                 </div>
