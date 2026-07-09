@@ -25,17 +25,16 @@ import { ProgressRanking } from "@/components/shared/ProgressRanking";
 import { StatCard } from "@/components/shared/StatCard";
 import { TrendCard } from "@/components/shared/TrendCard";
 import { cn } from "@/lib/utils";
-import {
-  MONTHLY_TIMELINE_DEFAULT_START,
-  labStatus,
-  monthlyTimeline,
-  performanceRows,
-  statisticsByRange,
-  trendCards,
-  zeitraumOptions,
-  zeitraumToRangeKey,
-  type ZeitraumOption,
-} from "@/config/statistics";
+import type { ZeitraumOption } from "@/config/statistics";
+import { statisticsRepository } from "@/lib/repositories/statisticsRepository";
+
+const MONTHLY_TIMELINE_DEFAULT_START = statisticsRepository.getMonthlyTimelineDefaultStart();
+const labStatus = statisticsRepository.getLabStatus();
+const monthlyTimeline = statisticsRepository.getMonthlyTimeline();
+const performanceRows = statisticsRepository.getPerformanceRows();
+const trendCards = statisticsRepository.getTrendCards();
+const zeitraumOptions = statisticsRepository.getZeitraumOptions();
+const zeitraumToRangeKey = statisticsRepository.getZeitraumToRangeKey();
 
 const kpiIcons = [FlaskConical, Package, AlertTriangle, CheckCircle2, Clock, Gauge];
 
@@ -47,7 +46,7 @@ export default function StatistikenPage() {
   const [zeitraum, setZeitraum] = useState<ZeitraumOption>("30 Tage");
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
   const [monthOffset, setMonthOffset] = useState(0);
-  const range = statisticsByRange[zeitraumToRangeKey[zeitraum]];
+  const range = statisticsRepository.getByRange(zeitraumToRangeKey[zeitraum]);
   const isYearView = zeitraum === "365 Tage";
 
   const monthWindowStart = MONTHLY_TIMELINE_DEFAULT_START + monthOffset;

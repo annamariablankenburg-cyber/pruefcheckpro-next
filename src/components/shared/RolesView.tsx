@@ -11,13 +11,13 @@ import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToa
 import { RoleCard } from "@/components/shared/RoleCard";
 import { RoleDrawer } from "@/components/shared/RoleDrawer";
 import { StatCard } from "@/components/shared/StatCard";
-import { buildPermissions, roles as initialRoles } from "@/config/roles";
+import { roleRepository } from "@/lib/repositories/roleRepository";
 import type { Role } from "@/types/role";
 
 type ConfirmActionType = "archive" | "delete";
 
 export function RolesView() {
-  const [roles, setRoles] = useState<Role[]>(initialRoles);
+  const [roles, setRoles] = useState<Role[]>(roleRepository.getAll());
   const [detailRole, setDetailRole] = useState<Role | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [createPrefill, setCreatePrefill] = useState<NewRoleData | null>(null);
@@ -203,7 +203,7 @@ export function RolesView() {
         initialName={createPrefill?.name}
         initialDescription={createPrefill?.description}
         initialColor={createPrefill?.color}
-        initialPermissions={createPrefill?.permissions ?? buildPermissions([])}
+        initialPermissions={createPrefill?.permissions ?? roleRepository.buildPermissions([])}
       />
 
       <DuplicateRoleDialog

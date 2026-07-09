@@ -12,7 +12,7 @@ import { ProjectDetailDrawer } from "@/components/shared/ProjectDetailDrawer";
 import { ProjectFilters, type ProjectFilter } from "@/components/shared/ProjectFilters";
 import { ProjectTable } from "@/components/shared/ProjectTable";
 import { StatCard } from "@/components/shared/StatCard";
-import { projects as initialProjects } from "@/config/projects";
+import { projectRepository } from "@/lib/repositories/projectRepository";
 import type { Project, ProjectStatus } from "@/types/project";
 
 type ConfirmActionType = "pause" | "resume" | "complete" | "reopen" | "archive" | "reactivate";
@@ -66,7 +66,7 @@ const confirmCopy: Record<
 
 export function ProjectsView() {
   const router = useRouter();
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
+  const [projects, setProjects] = useState<Project[]>(projectRepository.getAll());
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<ProjectFilter>("Alle");
   const [detailProject, setDetailProject] = useState<Project | null>(null);

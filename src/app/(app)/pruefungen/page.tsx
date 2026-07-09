@@ -11,8 +11,9 @@ import { StatCard } from "@/components/shared/StatCard";
 import { TestEntryFilters, type TestEntryFilter } from "@/components/shared/TestEntryFilters";
 import { TestEntryTable } from "@/components/shared/TestEntryTable";
 import { TestValueDrawer } from "@/components/shared/TestValueDrawer";
-import { reports } from "@/config/reports";
-import { HEUTE, testEntries as initialTestEntries } from "@/config/testValues";
+import { reportRepository } from "@/lib/repositories/reportRepository";
+import { HEUTE } from "@/config/testValues";
+import { testValueRepository } from "@/lib/repositories/testValueRepository";
 import type { TestEntry, TestEntryStatus } from "@/types/testValue";
 
 type ConfirmActionType = "start" | "complete" | "reopen";
@@ -48,7 +49,7 @@ const confirmCopy: Record<
 
 export default function PruefungenPage() {
   const router = useRouter();
-  const [entries, setEntries] = useState<TestEntry[]>(initialTestEntries);
+  const [entries, setEntries] = useState<TestEntry[]>(testValueRepository.getAll());
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<TestEntryFilter>("Alle");
   const [activeEntry, setActiveEntry] = useState<TestEntry | null>(null);
@@ -102,7 +103,7 @@ export default function PruefungenPage() {
   }
 
   function handleCreateReport(entry: TestEntry) {
-    const hasLinkedReport = reports.some((report) => report.probeId === entry.sampleId);
+    const hasLinkedReport = reportRepository.getAll().some((report) => report.probeId === entry.sampleId);
     if (hasLinkedReport) {
       showFeedback("Verknüpfter Bericht wird geöffnet.");
       router.push("/pdf-export");

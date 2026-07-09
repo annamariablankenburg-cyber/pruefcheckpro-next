@@ -11,7 +11,7 @@ import { EmployeeSelectFieldDialog } from "@/components/shared/EmployeeSelectFie
 import { EmployeeTable } from "@/components/shared/EmployeeTable";
 import { InviteEmployeeDialog } from "@/components/shared/InviteEmployeeDialog";
 import { StatCard } from "@/components/shared/StatCard";
-import { employeeRoles, employees as initialEmployees, locationNames } from "@/config/employees";
+import { employeeRepository } from "@/lib/repositories/employeeRepository";
 import type { Employee } from "@/types/employee";
 
 type ConfirmActionType =
@@ -67,7 +67,7 @@ interface EmployeesViewProps {
 }
 
 export function EmployeesView({ onInvite }: EmployeesViewProps) {
-  const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
+  const [employees, setEmployees] = useState<Employee[]>(employeeRepository.getAll());
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<EmployeeFilter>("Alle");
   const [detailEmployee, setDetailEmployee] = useState<Employee | null>(null);
@@ -215,7 +215,7 @@ export function EmployeesView({ onInvite }: EmployeesViewProps) {
         title="Rolle ändern"
         description="Passe die Rolle dieses Mitarbeiters an. Die Berechtigungen ändern sich entsprechend der gewählten Rolle."
         fieldLabel="Rolle auswählen"
-        options={employeeRoles}
+        options={employeeRepository.getEmployeeRoles()}
         getInitialValue={(employee) => employee.role}
         confirmLabel="Rolle ändern"
         onOpenChange={(open) => !open && setRoleAction(null)}
@@ -231,7 +231,7 @@ export function EmployeesView({ onInvite }: EmployeesViewProps) {
         title="Standort ändern"
         description="Weise diesem Mitarbeiter einen anderen Standort zu."
         fieldLabel="Standort auswählen"
-        options={locationNames}
+        options={employeeRepository.getLocationNames()}
         getInitialValue={(employee) => employee.location}
         confirmLabel="Standort ändern"
         onOpenChange={(open) => !open && setLocationAction(null)}

@@ -18,16 +18,16 @@ import { InvitationsView } from "@/components/shared/InvitationsView";
 import { InviteEmployeeDialog } from "@/components/shared/InviteEmployeeDialog";
 import { NewLocationDialog } from "@/components/shared/NewLocationDialog";
 import { RolesView } from "@/components/shared/RolesView";
-import {
-  companyActivities,
-  companyEmployees,
-  companyInfo,
-  companyLocations,
-  companyProfile,
-  licenseOverview,
-  primaryLocation,
-} from "@/config/company";
+import { companyRepository } from "@/lib/repositories/companyRepository";
 import type { CompanyQuickAction } from "@/types/company";
+
+const companyProfile = companyRepository.getProfile();
+const companyLocations = companyRepository.getOverviewLocations();
+const companyEmployees = companyRepository.getOverviewEmployees();
+const companyActivities = companyRepository.getActivities();
+const licenseOverview = companyRepository.getLicenseOverview();
+const companyInfo = companyRepository.getInfo();
+const primaryLocation = companyRepository.getPrimaryLocation();
 
 const tabs: CompanyTab[] = [
   { value: "uebersicht", label: "Übersicht" },

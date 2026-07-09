@@ -12,7 +12,7 @@ import { CustomerTable } from "@/components/shared/CustomerTable";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { NewCustomerDialog } from "@/components/shared/NewCustomerDialog";
 import { StatCard } from "@/components/shared/StatCard";
-import { customers as initialCustomers } from "@/config/customers";
+import { customerRepository } from "@/lib/repositories/customerRepository";
 import type { Customer, CustomerStatus } from "@/types/customer";
 
 type ConfirmActionType = "deactivate" | "reactivate" | "archive";
@@ -45,7 +45,7 @@ const confirmCopy: Record<
 
 export function CustomersView() {
   const router = useRouter();
-  const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
+  const [customers, setCustomers] = useState<Customer[]>(customerRepository.getAll());
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<CustomerFilter>("Alle");
   const [detailCustomer, setDetailCustomer] = useState<Customer | null>(null);

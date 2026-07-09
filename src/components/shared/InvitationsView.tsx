@@ -11,7 +11,7 @@ import { InvitationFilters, type InvitationFilter } from "@/components/shared/In
 import { InvitationTable } from "@/components/shared/InvitationTable";
 import { InviteEmployeeDialog } from "@/components/shared/InviteEmployeeDialog";
 import { StatCard } from "@/components/shared/StatCard";
-import { invitations as initialInvitations } from "@/config/invitations";
+import { invitationRepository } from "@/lib/repositories/invitationRepository";
 import type { Invitation } from "@/types/invitation";
 
 type ConfirmActionType = "remind" | "resend" | "revoke" | "delete";
@@ -50,7 +50,7 @@ const confirmConfigs: Record<ConfirmActionType, ConfirmConfig> = {
 };
 
 export function InvitationsView() {
-  const [invitations, setInvitations] = useState<Invitation[]>(initialInvitations);
+  const [invitations, setInvitations] = useState<Invitation[]>(invitationRepository.getAll());
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<InvitationFilter>("Alle");
   const [detailInvitation, setDetailInvitation] = useState<Invitation | null>(null);

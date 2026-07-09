@@ -11,7 +11,7 @@ import { LocationDetailDrawer } from "@/components/shared/LocationDetailDrawer";
 import { LocationFilters, type LocationFilter } from "@/components/shared/LocationFilters";
 import { LocationTable } from "@/components/shared/LocationTable";
 import { StatCard } from "@/components/shared/StatCard";
-import { companyLocationDetails } from "@/config/locations";
+import { locationRepository } from "@/lib/repositories/locationRepository";
 import type { CompanyLocationDetail } from "@/types/location";
 
 interface CompanyLocationsViewProps {
@@ -20,7 +20,7 @@ interface CompanyLocationsViewProps {
 
 export function CompanyLocationsView({ onNewLocation }: CompanyLocationsViewProps) {
   const router = useRouter();
-  const [locations, setLocations] = useState<CompanyLocationDetail[]>(companyLocationDetails);
+  const [locations, setLocations] = useState<CompanyLocationDetail[]>(locationRepository.getAll());
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<LocationFilter>("Alle");
   const [detailLocation, setDetailLocation] = useState<CompanyLocationDetail | null>(null);

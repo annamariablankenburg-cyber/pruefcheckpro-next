@@ -11,7 +11,7 @@ import { DeviceTable } from "@/components/shared/DeviceTable";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { NewDeviceDialog } from "@/components/shared/NewDeviceDialog";
 import { StatCard } from "@/components/shared/StatCard";
-import { devices as initialDevices } from "@/config/devices";
+import { deviceRepository } from "@/lib/repositories/deviceRepository";
 import type { Device, DeviceStatus } from "@/types/device";
 
 type ConfirmActionType = "deactivate" | "reactivate" | "archive";
@@ -43,7 +43,7 @@ const confirmCopy: Record<
 };
 
 export function DevicesView() {
-  const [devices, setDevices] = useState<Device[]>(initialDevices);
+  const [devices, setDevices] = useState<Device[]>(deviceRepository.getAll());
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<DeviceFilter>("Alle");
   const [detailDevice, setDetailDevice] = useState<Device | null>(null);

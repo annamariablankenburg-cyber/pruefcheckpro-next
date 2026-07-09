@@ -22,14 +22,14 @@ import { AiQuickActions } from "@/components/shared/AiQuickActions";
 import { AiSafetyNotice } from "@/components/shared/AiSafetyNotice";
 import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
-import {
-  aiChats as initialChats,
-  aiContextCards,
-  aiQuickActions,
-  aiRecentResults,
-  aiTools,
-} from "@/config/ai";
+import { aiRepository } from "@/lib/repositories/aiRepository";
 import type { AiChat, AiContextCard, AiMessage, AiMode, AiQuickAction, AiTool } from "@/types/ai";
+
+const initialChats = aiRepository.getAll();
+const aiContextCards = aiRepository.getContextCards();
+const aiQuickActions = aiRepository.getQuickActions();
+const aiRecentResults = aiRepository.getRecentResults();
+const aiTools = aiRepository.getTools();
 
 function getCannedReply(prompt: string, mode: AiMode): string {
   const lower = prompt.toLowerCase();

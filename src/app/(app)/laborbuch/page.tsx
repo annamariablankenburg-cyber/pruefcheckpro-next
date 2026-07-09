@@ -13,7 +13,8 @@ import { LaborbookTimeline } from "@/components/shared/LaborbookTimeline";
 import { LaborbookViewSwitcher, type LaborbookView } from "@/components/shared/LaborbookViewSwitcher";
 import { NewLaborbookEntryDialog } from "@/components/shared/NewLaborbookEntryDialog";
 import { StatCard } from "@/components/shared/StatCard";
-import { DIESE_WOCHE, HEUTE, laborbookEntries as initialEntries } from "@/config/laborbook";
+import { DIESE_WOCHE, HEUTE } from "@/config/laborbook";
+import { laborbookRepository } from "@/lib/repositories/laborbookRepository";
 import type { LaborbookEntry, LaborbookStatus } from "@/types/laborbook";
 
 type ConfirmActionType = "archive" | "reactivate";
@@ -37,7 +38,7 @@ const confirmCopy: Record<
 };
 
 export default function LaborbuchPage() {
-  const [entries, setEntries] = useState<LaborbookEntry[]>(initialEntries);
+  const [entries, setEntries] = useState<LaborbookEntry[]>(laborbookRepository.getAll());
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<LaborbookFilter>("Alle");
   const [view, setView] = useState<LaborbookView>("Tabelle");

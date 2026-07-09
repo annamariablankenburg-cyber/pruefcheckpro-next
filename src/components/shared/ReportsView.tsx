@@ -19,7 +19,8 @@ import { ReportEditorDrawer, type Section } from "@/components/shared/ReportEdit
 import { ReportFilters, type ReportFilter } from "@/components/shared/ReportFilters";
 import { ReportTable } from "@/components/shared/ReportTable";
 import { StatCard } from "@/components/shared/StatCard";
-import { HEUTE, reports as initialReports } from "@/config/reports";
+import { HEUTE } from "@/config/reports";
+import { reportRepository } from "@/lib/repositories/reportRepository";
 import type { Report, ReportStatus } from "@/types/report";
 
 type ConfirmActionType = "saveDraft" | "markDone" | "exportPdf" | "exportExcel" | "archive" | "reactivate";
@@ -70,7 +71,7 @@ const confirmCopy: Record<
 
 export function ReportsView() {
   const router = useRouter();
-  const [reports, setReports] = useState<Report[]>(initialReports);
+  const [reports, setReports] = useState<Report[]>(reportRepository.getAll());
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<ReportFilter>("Alle");
   const [isNewReportOpen, setIsNewReportOpen] = useState(false);

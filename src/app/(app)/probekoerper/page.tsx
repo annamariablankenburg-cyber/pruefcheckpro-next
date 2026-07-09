@@ -20,7 +20,7 @@ import { SampleDetailDrawer } from "@/components/shared/SampleDetailDrawer";
 import { SampleFilters, type SampleFilter } from "@/components/shared/SampleFilters";
 import { SampleTable } from "@/components/shared/SampleTable";
 import { StatCard } from "@/components/shared/StatCard";
-import { samples as initialSamples } from "@/config/samples";
+import { sampleRepository } from "@/lib/repositories/sampleRepository";
 import type { Sample, SampleStatus } from "@/types/sample";
 
 type ConfirmActionType = "start" | "complete" | "reopen" | "archive" | "reactivate";
@@ -67,7 +67,7 @@ const confirmCopy: Record<
 };
 
 export default function ProbekoerperPage() {
-  const [samples, setSamples] = useState<Sample[]>(initialSamples);
+  const [samples, setSamples] = useState<Sample[]>(sampleRepository.getAll());
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<SampleFilter>("Alle");
 

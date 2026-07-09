@@ -20,13 +20,7 @@ import { IntegrationCard } from "@/components/shared/IntegrationCard";
 import { SecurityInfoCard } from "@/components/shared/SecurityInfoCard";
 import { WebhookTable } from "@/components/shared/WebhookTable";
 import { cn } from "@/lib/utils";
-import {
-  apiSettings as initialApiSettings,
-  cloudStorage,
-  exportFormats as initialExportFormats,
-  integrations as initialIntegrations,
-  webhooks as initialWebhooks,
-} from "@/config/integrations";
+import { integrationRepository } from "@/lib/repositories/integrationRepository";
 import {
   integrationCategories,
   type ApiSettings,
@@ -64,10 +58,10 @@ const categoryIcons: Record<IntegrationCategory, typeof Cloud> = {
 };
 
 export default function IntegrationenPage() {
-  const [integrations, setIntegrations] = useState<Integration[]>(initialIntegrations);
-  const [webhooks, setWebhooks] = useState<Webhook[]>(initialWebhooks);
-  const [exportFormats, setExportFormats] = useState<ExportFormatToggle[]>(initialExportFormats);
-  const [apiSettings, setApiSettings] = useState<ApiSettings>(initialApiSettings);
+  const [integrations, setIntegrations] = useState<Integration[]>(integrationRepository.getAllIntegrations());
+  const [webhooks, setWebhooks] = useState<Webhook[]>(integrationRepository.getAllWebhooks());
+  const [exportFormats, setExportFormats] = useState<ExportFormatToggle[]>(integrationRepository.getExportFormats());
+  const [apiSettings, setApiSettings] = useState<ApiSettings>(integrationRepository.getApiSettings());
   const [selectedCategory, setSelectedCategory] = useState<IntegrationCategory | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ integration: Integration; type: ConfirmType } | null>(
     null
@@ -226,7 +220,7 @@ export default function IntegrationenPage() {
           onRegenerateKey={() => setRegenerateConfirm(true)}
           onCopyKey={handleCopyKey}
         />
-        <CloudStorageCard storage={cloudStorage} />
+        <CloudStorageCard storage={integrationRepository.getCloudStorage()} />
       </div>
 
       <WebhookTable

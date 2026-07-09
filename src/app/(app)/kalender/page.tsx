@@ -13,8 +13,11 @@ import { CalendarToolbar, type CalendarViewMode } from "@/components/shared/Cale
 import { CalendarView } from "@/components/shared/CalendarView";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { NewCalendarTaskDialog } from "@/components/shared/NewCalendarTaskDialog";
-import { HEUTE, calendarEvents, weekDates, weekDayLabels } from "@/config/calendarEvents";
+import { HEUTE, weekDates, weekDayLabels } from "@/config/calendarEvents";
+import { calendarRepository } from "@/lib/repositories/calendarRepository";
 import type { CalendarEvent } from "@/types/calendarEvent";
+
+const calendarEvents = calendarRepository.getAll();
 
 const days = weekDates.map((date, index) => ({
   date,
