@@ -7,14 +7,14 @@ import { Button } from "@/components/ui/button";
 import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { LaborbookDetailDrawer } from "@/components/shared/LaborbookDetailDrawer";
-import { LaborbookFilters, type LaborbookFilter } from "@/components/shared/LaborbookFilters";
+import { LaborbookFilters } from "@/components/shared/LaborbookFilters";
 import { LaborbookTable } from "@/components/shared/LaborbookTable";
 import { LaborbookTimeline } from "@/components/shared/LaborbookTimeline";
 import { LaborbookViewSwitcher, type LaborbookView } from "@/components/shared/LaborbookViewSwitcher";
 import { NewLaborbookEntryDialog } from "@/components/shared/NewLaborbookEntryDialog";
 import { StatCard } from "@/components/shared/StatCard";
 import { DIESE_WOCHE, HEUTE } from "@/config/laborbook";
-import { laborbookRepository } from "@/lib/repositories/laborbookRepository";
+import { useLaborbook } from "@/hooks/useLaborbook";
 import type { LaborbookEntry, LaborbookStatus } from "@/types/laborbook";
 
 type ConfirmActionType = "archive" | "reactivate";
@@ -38,9 +38,17 @@ const confirmCopy: Record<
 };
 
 export default function LaborbuchPage() {
-  const [entries, setEntries] = useState<LaborbookEntry[]>(laborbookRepository.getAll());
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<LaborbookFilter>("Alle");
+  const {
+    entries,
+    filteredEntries,
+    search,
+    setSearch,
+    filter,
+    setFilter,
+    resetFilters,
+    updateEntry: updateEntryData,
+    removeEntry,
+  } = useLaborbook();
   const [view, setView] = useState<LaborbookView>("Tabelle");
 
   const [isNewEntryOpen, setIsNewEntryOpen] = useState(false);
@@ -54,9 +62,7 @@ export default function LaborbuchPage() {
   const { message: feedback, showFeedback } = useFeedbackToast();
 
   function updateEntry(id: string, changes: Partial<LaborbookEntry>) {
-    setEntries((current) =>
-      current.map((item) => (item.id === id ? { ...item, ...changes } : item))
-    );
+    updateEntryData(id, changes);
     setDetailEntry((current) => (current && current.id === id ? { ...current, ...changes } : current));
   }
 
@@ -71,44 +77,6 @@ export default function LaborbuchPage() {
     [entries]
   );
 
-  const filteredEntries = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    const pool =
-      filter === "Archiviert"
-        ? entries.filter((entry) => entry.status === "Archiviert")
-        : entries.filter((entry) => entry.status !== "Archiviert");
-
-    return pool.filter((entry) => {
-      const matchesSearch =
-        query.length === 0 ||
-        [entry.titel, entry.beschreibung, entry.projekt, entry.probeId, entry.mitarbeiter, entry.kunde]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase()
-          .includes(query);
-
-      const matchesFilter =
-        filter === "Alle" ||
-        filter === "Archiviert" ||
-        (filter === "Prüfungen" && entry.typ === "Prüfung") ||
-        (filter === "Geräte" && entry.typ === "Gerät") ||
-        (filter === "Kalibrierungen" && entry.typ === "Kalibrierung") ||
-        (filter === "Wartungen" && entry.typ === "Wartung") ||
-        (filter === "Notizen" && entry.typ === "Notiz") ||
-        (filter === "Ereignisse" && entry.typ === "Ereignis") ||
-        (filter === "Beton" && entry.fachbereich === "Beton") ||
-        (filter === "Asphalt" && entry.fachbereich === "Asphalt") ||
-        (filter === "Geotechnik" && entry.fachbereich === "Geotechnik");
-
-      return matchesSearch && matchesFilter;
-    });
-  }, [entries, search, filter]);
-
-  function handleResetFilters() {
-    setSearch("");
-    setFilter("Alle");
-  }
-
   function requestAction(type: ConfirmActionType) {
     return (entry: LaborbookEntry) => setConfirmAction({ entry, type });
   }
@@ -120,7 +88,7 @@ export default function LaborbuchPage() {
   }
 
   function handleConfirmDelete(subject: LaborbookEntry) {
-    setEntries((current) => current.filter((entry) => entry.id !== subject.id));
+    removeEntry(subject.id);
     setDetailEntry((current) => (current && current.id === subject.id ? null : current));
     setDeleteEntry(null);
   }
@@ -168,7 +136,7 @@ export default function LaborbuchPage() {
       {view === "Tabelle" ? (
         <LaborbookTable
           entries={filteredEntries}
-          onResetFilters={handleResetFilters}
+          onResetFilters={resetFilters}
           onViewDetails={setDetailEntry}
           onEdit={setEditEntry}
           onArchive={requestAction("archive")}
@@ -179,7 +147,7 @@ export default function LaborbuchPage() {
         <LaborbookTimeline
           entries={filteredEntries}
           onViewDetails={setDetailEntry}
-          onResetFilters={handleResetFilters}
+          onResetFilters={resetFilters}
         />
       )}
 

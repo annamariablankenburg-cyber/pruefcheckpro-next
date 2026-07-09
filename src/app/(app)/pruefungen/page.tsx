@@ -8,12 +8,12 @@ import { Button } from "@/components/ui/button";
 import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { StatCard } from "@/components/shared/StatCard";
-import { TestEntryFilters, type TestEntryFilter } from "@/components/shared/TestEntryFilters";
+import { TestEntryFilters } from "@/components/shared/TestEntryFilters";
 import { TestEntryTable } from "@/components/shared/TestEntryTable";
 import { TestValueDrawer } from "@/components/shared/TestValueDrawer";
 import { reportRepository } from "@/lib/repositories/reportRepository";
 import { HEUTE } from "@/config/testValues";
-import { testValueRepository } from "@/lib/repositories/testValueRepository";
+import { useTestEntries } from "@/hooks/useTestEntries";
 import type { TestEntry, TestEntryStatus } from "@/types/testValue";
 
 type ConfirmActionType = "start" | "complete" | "reopen";
@@ -49,17 +49,22 @@ const confirmCopy: Record<
 
 export default function PruefungenPage() {
   const router = useRouter();
-  const [entries, setEntries] = useState<TestEntry[]>(testValueRepository.getAll());
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<TestEntryFilter>("Alle");
+  const {
+    entries,
+    filteredEntries,
+    search,
+    setSearch,
+    filter,
+    setFilter,
+    resetFilters,
+    updateEntry: updateEntryData,
+  } = useTestEntries();
   const [activeEntry, setActiveEntry] = useState<TestEntry | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmActionState | null>(null);
   const { message: feedback, showFeedback } = useFeedbackToast();
 
   function updateEntry(sampleId: string, changes: Partial<TestEntry>) {
-    setEntries((current) =>
-      current.map((item) => (item.sampleId === sampleId ? { ...item, ...changes } : item))
-    );
+    updateEntryData(sampleId, changes);
     setActiveEntry((current) =>
       current && current.sampleId === sampleId ? { ...current, ...changes } : current
     );
@@ -76,28 +81,6 @@ export default function PruefungenPage() {
     [entries]
   );
 
-  const filteredEntries = useMemo(() => {
-    const query = search.trim().toLowerCase();
-
-    return entries.filter((entry) => {
-      const matchesSearch =
-        query.length === 0 ||
-        [entry.sampleId, entry.titel, entry.projekt, entry.pruefer]
-          .join(" ")
-          .toLowerCase()
-          .includes(query);
-
-      const matchesFilter =
-        filter === "Alle" ||
-        (filter === "Beton" && entry.fachbereich === "Beton") ||
-        (filter === "Asphalt" && entry.fachbereich === "Asphalt") ||
-        (filter === "Geotechnik" && entry.fachbereich === "Geotechnik") ||
-        filter === entry.status;
-
-      return matchesSearch && matchesFilter;
-    });
-  }, [entries, search, filter]);
-
   function requestAction(type: ConfirmActionType) {
     return (entry: TestEntry) => setConfirmAction({ entry, type });
   }
@@ -110,11 +93,6 @@ export default function PruefungenPage() {
       return;
     }
     showFeedback("Diese Funktion wird später angebunden.");
-  }
-
-  function handleResetFilters() {
-    setSearch("");
-    setFilter("Alle");
   }
 
   function handleConfirmAction(subject: TestEntry) {
@@ -155,7 +133,7 @@ export default function PruefungenPage() {
 
       <TestEntryTable
         entries={filteredEntries}
-        onResetFilters={handleResetFilters}
+        onResetFilters={resetFilters}
         onOpen={setActiveEntry}
         onStart={requestAction("start")}
         onComplete={requestAction("complete")}

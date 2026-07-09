@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, Cpu, FolderKanban, Plus, ShieldCheck, Users } from "lucide-react";
 
@@ -8,10 +8,10 @@ import { Button } from "@/components/ui/button";
 import { DeactivateLocationDialog } from "@/components/shared/DeactivateLocationDialog";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { LocationDetailDrawer } from "@/components/shared/LocationDetailDrawer";
-import { LocationFilters, type LocationFilter } from "@/components/shared/LocationFilters";
+import { LocationFilters } from "@/components/shared/LocationFilters";
 import { LocationTable } from "@/components/shared/LocationTable";
 import { StatCard } from "@/components/shared/StatCard";
-import { locationRepository } from "@/lib/repositories/locationRepository";
+import { useLocations } from "@/hooks/useLocations";
 import type { CompanyLocationDetail } from "@/types/location";
 
 interface CompanyLocationsViewProps {
@@ -20,30 +20,20 @@ interface CompanyLocationsViewProps {
 
 export function CompanyLocationsView({ onNewLocation }: CompanyLocationsViewProps) {
   const router = useRouter();
-  const [locations, setLocations] = useState<CompanyLocationDetail[]>(locationRepository.getAll());
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<LocationFilter>("Alle");
+  const {
+    locations,
+    filteredLocations,
+    search,
+    setSearch,
+    filter,
+    setFilter,
+    resetFilters,
+    deactivateLocation: deactivateLocationData,
+    reactivateLocation: reactivateLocationData,
+  } = useLocations();
   const [detailLocation, setDetailLocation] = useState<CompanyLocationDetail | null>(null);
   const [deactivateLocation, setDeactivateLocation] = useState<CompanyLocationDetail | null>(null);
   const { message: feedback, showFeedback } = useFeedbackToast();
-
-  const filteredLocations = useMemo(() => {
-    const query = search.trim().toLowerCase();
-
-    return locations.filter((location) => {
-      const matchesFilter =
-        filter === "Alle" || filter === location.status || filter === location.type;
-
-      const matchesSearch =
-        query.length === 0 ||
-        location.name.toLowerCase().includes(query) ||
-        location.street.toLowerCase().includes(query) ||
-        location.city.toLowerCase().includes(query) ||
-        location.contactPerson.toLowerCase().includes(query);
-
-      return matchesFilter && matchesSearch;
-    });
-  }, [locations, search, filter]);
 
   const totalCount = locations.length;
   const activeCount = locations.filter((location) => location.status === "Aktiv").length;
@@ -51,20 +41,13 @@ export function CompanyLocationsView({ onNewLocation }: CompanyLocationsViewProp
   const deviceTotal = locations.reduce((sum, location) => sum + location.deviceCount, 0);
   const projectTotal = locations.reduce((sum, location) => sum + location.projectCount, 0);
 
-  function handleResetFilters() {
-    setSearch("");
-    setFilter("Alle");
-  }
-
   function handleToggleStatus(location: CompanyLocationDetail) {
     if (location.status === "Aktiv") {
       setDeactivateLocation(location);
       return;
     }
 
-    setLocations((current) =>
-      current.map((item) => (item.id === location.id ? { ...item, status: "Aktiv" } : item))
-    );
+    reactivateLocationData(location.id);
     setDetailLocation((current) =>
       current && current.id === location.id ? { ...current, status: "Aktiv" } : current
     );
@@ -73,11 +56,7 @@ export function CompanyLocationsView({ onNewLocation }: CompanyLocationsViewProp
   function confirmDeactivate() {
     if (!deactivateLocation) return;
 
-    setLocations((current) =>
-      current.map((item) =>
-        item.id === deactivateLocation.id ? { ...item, status: "Inaktiv" } : item
-      )
-    );
+    deactivateLocationData(deactivateLocation.id);
     setDeactivateLocation(null);
     setDetailLocation(null);
   }
@@ -114,7 +93,7 @@ export function CompanyLocationsView({ onNewLocation }: CompanyLocationsViewProp
 
       <LocationTable
         locations={filteredLocations}
-        onResetFilters={handleResetFilters}
+        onResetFilters={resetFilters}
         onViewDetails={setDetailLocation}
         onEdit={() => showFeedback("Diese Funktion wird später angebunden.")}
         onViewEmployees={() => showFeedback("Diese Funktion wird später angebunden.")}

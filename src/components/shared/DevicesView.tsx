@@ -44,7 +44,6 @@ const confirmCopy: Record<
 
 export function DevicesView() {
   const {
-    devices,
     activeDevices,
     filteredDevices,
     search,

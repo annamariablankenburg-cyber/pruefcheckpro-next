@@ -67,7 +67,6 @@ const confirmCopy: Record<
 export function ProjectsView() {
   const router = useRouter();
   const {
-    projects,
     activeProjects,
     filteredProjects,
     search,

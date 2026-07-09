@@ -26,30 +26,32 @@ import { StatCard } from "@/components/shared/StatCard";
 import { TrendCard } from "@/components/shared/TrendCard";
 import { cn } from "@/lib/utils";
 import type { ZeitraumOption } from "@/config/statistics";
-import { statisticsRepository } from "@/lib/repositories/statisticsRepository";
-
-const MONTHLY_TIMELINE_DEFAULT_START = statisticsRepository.getMonthlyTimelineDefaultStart();
-const labStatus = statisticsRepository.getLabStatus();
-const monthlyTimeline = statisticsRepository.getMonthlyTimeline();
-const performanceRows = statisticsRepository.getPerformanceRows();
-const trendCards = statisticsRepository.getTrendCards();
-const zeitraumOptions = statisticsRepository.getZeitraumOptions();
-const zeitraumToRangeKey = statisticsRepository.getZeitraumToRangeKey();
+import { useStatistics } from "@/hooks/useStatistics";
 
 const kpiIcons = [FlaskConical, Package, AlertTriangle, CheckCircle2, Clock, Gauge];
 
 const MONTH_WINDOW_SIZE = 12;
-const MONTH_OFFSET_MIN = -MONTHLY_TIMELINE_DEFAULT_START;
-const MONTH_OFFSET_MAX = monthlyTimeline.length - MONTH_WINDOW_SIZE - MONTHLY_TIMELINE_DEFAULT_START;
 
 export default function StatistikenPage() {
-  const [zeitraum, setZeitraum] = useState<ZeitraumOption>("30 Tage");
+  const {
+    zeitraum,
+    setZeitraum,
+    range,
+    zeitraumOptions,
+    monthlyTimeline,
+    monthlyTimelineDefaultStart,
+    performanceRows,
+    trendCards,
+    labStatus,
+  } = useStatistics();
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
   const [monthOffset, setMonthOffset] = useState(0);
-  const range = statisticsRepository.getByRange(zeitraumToRangeKey[zeitraum]);
   const isYearView = zeitraum === "365 Tage";
 
-  const monthWindowStart = MONTHLY_TIMELINE_DEFAULT_START + monthOffset;
+  const monthOffsetMin = -monthlyTimelineDefaultStart;
+  const monthOffsetMax = monthlyTimeline.length - MONTH_WINDOW_SIZE - monthlyTimelineDefaultStart;
+
+  const monthWindowStart = monthlyTimelineDefaultStart + monthOffset;
   const visibleMonths = monthlyTimeline.slice(monthWindowStart, monthWindowStart + MONTH_WINDOW_SIZE);
   const chartData = isYearView ? visibleMonths : range.weeklyExams;
   const selectedDatum = chartData.find((datum) => datum.label === selectedLabel) ?? null;
@@ -66,7 +68,7 @@ export default function StatistikenPage() {
 
   function handleMonthWindowShift(direction: 1 | -1) {
     setMonthOffset((current) =>
-      Math.min(Math.max(current + direction, MONTH_OFFSET_MIN), MONTH_OFFSET_MAX)
+      Math.min(Math.max(current + direction, monthOffsetMin), monthOffsetMax)
     );
     setSelectedLabel(null);
   }
@@ -135,7 +137,7 @@ export default function StatistikenPage() {
                         variant="outline"
                         size="icon-sm"
                         onClick={() => handleMonthWindowShift(-1)}
-                        disabled={monthOffset <= MONTH_OFFSET_MIN}
+                        disabled={monthOffset <= monthOffsetMin}
                         aria-label="Vorherigen Monat anzeigen"
                       >
                         <ChevronLeft className="size-4" />
@@ -145,7 +147,7 @@ export default function StatistikenPage() {
                         variant="outline"
                         size="icon-sm"
                         onClick={() => handleMonthWindowShift(1)}
-                        disabled={monthOffset >= MONTH_OFFSET_MAX}
+                        disabled={monthOffset >= monthOffsetMax}
                         aria-label="Nächsten Monat anzeigen"
                       >
                         <ChevronRight className="size-4" />

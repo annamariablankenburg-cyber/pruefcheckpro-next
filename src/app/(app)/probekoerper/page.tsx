@@ -17,10 +17,10 @@ import { DeleteSampleDialog } from "@/components/shared/DeleteSampleDialog";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { NewSampleDialog } from "@/components/shared/NewSampleDialog";
 import { SampleDetailDrawer } from "@/components/shared/SampleDetailDrawer";
-import { SampleFilters, type SampleFilter } from "@/components/shared/SampleFilters";
+import { SampleFilters } from "@/components/shared/SampleFilters";
 import { SampleTable } from "@/components/shared/SampleTable";
 import { StatCard } from "@/components/shared/StatCard";
-import { sampleRepository } from "@/lib/repositories/sampleRepository";
+import { useSamples } from "@/hooks/useSamples";
 import type { Sample, SampleStatus } from "@/types/sample";
 
 type ConfirmActionType = "start" | "complete" | "reopen" | "archive" | "reactivate";
@@ -67,9 +67,17 @@ const confirmCopy: Record<
 };
 
 export default function ProbekoerperPage() {
-  const [samples, setSamples] = useState<Sample[]>(sampleRepository.getAll());
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<SampleFilter>("Alle");
+  const {
+    samples,
+    filteredSamples,
+    search,
+    setSearch,
+    filter,
+    setFilter,
+    resetFilters,
+    updateSample: updateSampleData,
+    removeSample,
+  } = useSamples();
 
   const [isNewSampleOpen, setIsNewSampleOpen] = useState(false);
   const [detailSample, setDetailSample] = useState<Sample | null>(null);
@@ -79,9 +87,7 @@ export default function ProbekoerperPage() {
   const { message: feedback, showFeedback } = useFeedbackToast();
 
   function updateSample(id: string, changes: Partial<Sample>) {
-    setSamples((current) =>
-      current.map((item) => (item.id === id ? { ...item, ...changes } : item))
-    );
+    updateSampleData(id, changes);
     setDetailSample((current) => (current && current.id === id ? { ...current, ...changes } : current));
   }
 
@@ -97,40 +103,8 @@ export default function ProbekoerperPage() {
     [samples]
   );
 
-  const filteredSamples = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    const pool =
-      filter === "Archiviert"
-        ? samples.filter((sample) => sample.status === "Archiviert")
-        : samples.filter((sample) => sample.status !== "Archiviert");
-
-    return pool.filter((sample) => {
-      const matchesSearch =
-        query.length === 0 ||
-        [sample.id, sample.bezeichnung, sample.kunde, sample.projekt, sample.probenart]
-          .join(" ")
-          .toLowerCase()
-          .includes(query);
-
-      const matchesFilter =
-        filter === "Alle" ||
-        filter === "Archiviert" ||
-        (filter === "Beton" && sample.fachbereich === "Beton") ||
-        (filter === "Asphalt" && sample.fachbereich === "Asphalt") ||
-        (filter === "Geotechnik" && sample.fachbereich === "Geotechnik") ||
-        filter === sample.status;
-
-      return matchesSearch && matchesFilter;
-    });
-  }, [samples, search, filter]);
-
   function requestAction(type: ConfirmActionType) {
     return (sample: Sample) => setConfirmAction({ sample, type });
-  }
-
-  function handleResetFilters() {
-    setSearch("");
-    setFilter("Alle");
   }
 
   function handleConfirmAction(subject: Sample) {
@@ -147,7 +121,7 @@ export default function ProbekoerperPage() {
 
   function handleConfirmDelete() {
     if (!deleteSample) return;
-    setSamples((current) => current.filter((sample) => sample.id !== deleteSample.id));
+    removeSample(deleteSample.id);
     setDetailSample((current) => (current && current.id === deleteSample.id ? null : current));
     setDeleteSample(null);
   }
@@ -187,7 +161,7 @@ export default function ProbekoerperPage() {
 
       <SampleTable
         samples={filteredSamples}
-        onResetFilters={handleResetFilters}
+        onResetFilters={resetFilters}
         onViewDetails={setDetailSample}
         onEdit={setEditSample}
         onEnterValues={() => showFeedback("Diese Funktion wird später angebunden.")}

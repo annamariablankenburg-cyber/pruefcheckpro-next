@@ -11,13 +11,20 @@ import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToa
 import { RoleCard } from "@/components/shared/RoleCard";
 import { RoleDrawer } from "@/components/shared/RoleDrawer";
 import { StatCard } from "@/components/shared/StatCard";
-import { roleRepository } from "@/lib/repositories/roleRepository";
+import { useRoles } from "@/hooks/useRoles";
 import type { Role } from "@/types/role";
 
 type ConfirmActionType = "archive" | "delete";
 
 export function RolesView() {
-  const [roles, setRoles] = useState<Role[]>(roleRepository.getAll());
+  const {
+    roles,
+    updateRole: updateRoleData,
+    createRole,
+    duplicateRole: duplicateRoleData,
+    removeRole,
+    buildPermissions,
+  } = useRoles();
   const [detailRole, setDetailRole] = useState<Role | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [createPrefill, setCreatePrefill] = useState<NewRoleData | null>(null);
@@ -47,7 +54,7 @@ export function RolesView() {
   }, [roles]);
 
   function updateRole(id: string, changes: Partial<Role>) {
-    setRoles((current) => current.map((role) => (role.id === id ? { ...role, ...changes } : role)));
+    updateRoleData(id, changes);
     setDetailRole((current) => (current && current.id === id ? { ...current, ...changes } : current));
   }
 
@@ -86,7 +93,7 @@ export function RolesView() {
       updatedBy: "Max Mustermann",
       permissions: data.permissions,
     };
-    setRoles((current) => [...current, newRole]);
+    createRole(newRole);
     showFeedback(`Rolle „${newRole.name}" wurde erstellt`);
   }
 
@@ -103,7 +110,7 @@ export function RolesView() {
       updatedBy: "Max Mustermann",
       permissions: { ...role.permissions },
     };
-    setRoles((current) => [...current, newRole]);
+    duplicateRoleData(newRole);
     setDuplicateRole(null);
     showFeedback(`Rolle „${newRole.name}" wurde dupliziert`);
   }
@@ -118,7 +125,7 @@ export function RolesView() {
     if (confirmAction.type === "archive") {
       updateRole(role.id, { status: role.status === "Archiviert" ? "Aktiv" : "Archiviert" });
     } else if (confirmAction.type === "delete" && role.type !== "System") {
-      setRoles((current) => current.filter((item) => item.id !== role.id));
+      removeRole(role);
       setDetailRole(null);
     }
 
@@ -203,7 +210,7 @@ export function RolesView() {
         initialName={createPrefill?.name}
         initialDescription={createPrefill?.description}
         initialColor={createPrefill?.color}
-        initialPermissions={createPrefill?.permissions ?? roleRepository.buildPermissions([])}
+        initialPermissions={createPrefill?.permissions ?? buildPermissions([])}
       />
 
       <DuplicateRoleDialog

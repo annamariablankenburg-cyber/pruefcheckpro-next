@@ -5,7 +5,7 @@ import { useEntityList } from "@/hooks/shared/useEntityList";
 import type { Role } from "@/types/role";
 
 export function useRoles() {
-  const { items: roles, update, remove, add } = useEntityList<Role>(
+  const { items: roles, update, remove, setItems } = useEntityList<Role>(
     roleRepository.getAll(),
     (role) => role.id
   );
@@ -20,12 +20,14 @@ export function useRoles() {
     updateRole(roleId, { permissions: { ...role.permissions, [key]: checked } });
   }
 
+  // Neue/duplizierte Rollen werden ans Ende gehängt (nicht vorangestellt),
+  // damit sich die Reihenfolge der Rollen-Karten nicht ändert.
   function createRole(role: Role) {
-    add(role);
+    setItems((current) => [...current, role]);
   }
 
   function duplicateRole(role: Role) {
-    add(role);
+    setItems((current) => [...current, role]);
   }
 
   function toggleArchive(role: Role) {

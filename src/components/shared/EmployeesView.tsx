@@ -1,17 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Clock, Plus, ShieldCheck, UserRoundX, UserRoundCheck, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { EmployeeConfirmDialog } from "@/components/shared/EmployeeConfirmDialog";
 import { EmployeeDetailDrawer } from "@/components/shared/EmployeeDetailDrawer";
-import { EmployeeFilters, type EmployeeFilter } from "@/components/shared/EmployeeFilters";
+import { EmployeeFilters } from "@/components/shared/EmployeeFilters";
 import { EmployeeSelectFieldDialog } from "@/components/shared/EmployeeSelectFieldDialog";
 import { EmployeeTable } from "@/components/shared/EmployeeTable";
 import { InviteEmployeeDialog } from "@/components/shared/InviteEmployeeDialog";
 import { StatCard } from "@/components/shared/StatCard";
-import { employeeRepository } from "@/lib/repositories/employeeRepository";
+import { useEmployees } from "@/hooks/useEmployees";
 import type { Employee } from "@/types/employee";
 
 type ConfirmActionType =
@@ -67,9 +67,19 @@ interface EmployeesViewProps {
 }
 
 export function EmployeesView({ onInvite }: EmployeesViewProps) {
-  const [employees, setEmployees] = useState<Employee[]>(employeeRepository.getAll());
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<EmployeeFilter>("Alle");
+  const {
+    employees,
+    filteredEmployees,
+    search,
+    setSearch,
+    filter,
+    setFilter,
+    resetFilters,
+    updateEmployee: updateEmployeeData,
+    removeEmployee,
+    employeeRoles,
+    locationNames,
+  } = useEmployees();
   const [detailEmployee, setDetailEmployee] = useState<Employee | null>(null);
   const [confirmAction, setConfirmAction] = useState<{
     employee: Employee;
@@ -79,24 +89,6 @@ export function EmployeesView({ onInvite }: EmployeesViewProps) {
   const [locationAction, setLocationAction] = useState<Employee | null>(null);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
 
-  const filteredEmployees = useMemo(() => {
-    const query = search.trim().toLowerCase();
-
-    return employees.filter((employee) => {
-      const matchesFilter =
-        filter === "Alle" || filter === employee.status || filter === employee.role;
-
-      const matchesSearch =
-        query.length === 0 ||
-        employee.name.toLowerCase().includes(query) ||
-        employee.email.toLowerCase().includes(query) ||
-        employee.role.toLowerCase().includes(query) ||
-        employee.location.toLowerCase().includes(query);
-
-      return matchesFilter && matchesSearch;
-    });
-  }, [employees, search, filter]);
-
   const totalCount = employees.length;
   const activeCount = employees.filter((employee) => employee.status === "Aktiv").length;
   const lockedCount = employees.filter((employee) => employee.status === "Gesperrt").length;
@@ -104,15 +96,8 @@ export function EmployeesView({ onInvite }: EmployeesViewProps) {
   const onlineCount = employees.filter((employee) => employee.lastLogin === "Online").length;
 
   function updateEmployee(id: string, changes: Partial<Employee>) {
-    setEmployees((current) =>
-      current.map((item) => (item.id === id ? { ...item, ...changes } : item))
-    );
+    updateEmployeeData(id, changes);
     setDetailEmployee((current) => (current && current.id === id ? { ...current, ...changes } : current));
-  }
-
-  function handleResetFilters() {
-    setSearch("");
-    setFilter("Alle");
   }
 
   function handleConfirm(employee: Employee) {
@@ -129,7 +114,7 @@ export function EmployeesView({ onInvite }: EmployeesViewProps) {
         updateEmployee(employee.id, { status: "Gesperrt" });
         break;
       case "revokeInvitation":
-        setEmployees((current) => current.filter((item) => item.id !== employee.id));
+        removeEmployee(employee.id);
         setDetailEmployee(null);
         break;
       case "reset":
@@ -172,7 +157,7 @@ export function EmployeesView({ onInvite }: EmployeesViewProps) {
 
       <EmployeeTable
         employees={filteredEmployees}
-        onResetFilters={handleResetFilters}
+        onResetFilters={resetFilters}
         onViewDetails={setDetailEmployee}
         onChangeRole={setRoleAction}
         onChangeLocation={setLocationAction}
@@ -215,7 +200,7 @@ export function EmployeesView({ onInvite }: EmployeesViewProps) {
         title="Rolle ändern"
         description="Passe die Rolle dieses Mitarbeiters an. Die Berechtigungen ändern sich entsprechend der gewählten Rolle."
         fieldLabel="Rolle auswählen"
-        options={employeeRepository.getEmployeeRoles()}
+        options={employeeRoles}
         getInitialValue={(employee) => employee.role}
         confirmLabel="Rolle ändern"
         onOpenChange={(open) => !open && setRoleAction(null)}
@@ -231,7 +216,7 @@ export function EmployeesView({ onInvite }: EmployeesViewProps) {
         title="Standort ändern"
         description="Weise diesem Mitarbeiter einen anderen Standort zu."
         fieldLabel="Standort auswählen"
-        options={employeeRepository.getLocationNames()}
+        options={locationNames}
         getInitialValue={(employee) => employee.location}
         confirmLabel="Standort ändern"
         onOpenChange={(open) => !open && setLocationAction(null)}

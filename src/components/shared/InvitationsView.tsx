@@ -1,17 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Check, Clock, Mail, Plus, ShieldCheck, XCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { InvitationDetailDrawer } from "@/components/shared/InvitationDetailDrawer";
-import { InvitationFilters, type InvitationFilter } from "@/components/shared/InvitationFilters";
+import { InvitationFilters } from "@/components/shared/InvitationFilters";
 import { InvitationTable } from "@/components/shared/InvitationTable";
 import { InviteEmployeeDialog } from "@/components/shared/InviteEmployeeDialog";
 import { StatCard } from "@/components/shared/StatCard";
-import { invitationRepository } from "@/lib/repositories/invitationRepository";
+import { useInvitations } from "@/hooks/useInvitations";
 import type { Invitation } from "@/types/invitation";
 
 type ConfirmActionType = "remind" | "resend" | "revoke" | "delete";
@@ -50,9 +50,17 @@ const confirmConfigs: Record<ConfirmActionType, ConfirmConfig> = {
 };
 
 export function InvitationsView() {
-  const [invitations, setInvitations] = useState<Invitation[]>(invitationRepository.getAll());
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<InvitationFilter>("Alle");
+  const {
+    invitations,
+    filteredInvitations,
+    search,
+    setSearch,
+    filter,
+    setFilter,
+    resetFilters,
+    updateInvitation: updateInvitationData,
+    removeInvitation,
+  } = useInvitations();
   const [detailInvitation, setDetailInvitation] = useState<Invitation | null>(null);
   const [confirmAction, setConfirmAction] = useState<{
     invitation: Invitation;
@@ -60,24 +68,6 @@ export function InvitationsView() {
   } | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const { message: copyFeedback, showFeedback } = useFeedbackToast();
-
-  const filteredInvitations = useMemo(() => {
-    const query = search.trim().toLowerCase();
-
-    return invitations.filter((invitation) => {
-      const matchesFilter =
-        filter === "Alle" || filter === invitation.status || filter === invitation.role;
-
-      const matchesSearch =
-        query.length === 0 ||
-        invitation.name.toLowerCase().includes(query) ||
-        invitation.email.toLowerCase().includes(query) ||
-        invitation.role.toLowerCase().includes(query) ||
-        invitation.location.toLowerCase().includes(query);
-
-      return matchesFilter && matchesSearch;
-    });
-  }, [invitations, search, filter]);
 
   const totalCount = invitations.length;
   const openCount = invitations.filter((invitation) => invitation.status === "Offen").length;
@@ -92,9 +82,7 @@ export function InvitationsView() {
   ).length;
 
   function updateInvitation(id: string, changes: Partial<Invitation>) {
-    setInvitations((current) =>
-      current.map((item) => (item.id === id ? { ...item, ...changes } : item))
-    );
+    updateInvitationData(id, changes);
     setDetailInvitation((current) =>
       current && current.id === id ? { ...current, ...changes } : current
     );
@@ -105,11 +93,6 @@ export function InvitationsView() {
       navigator.clipboard.writeText(invitation.link).catch(() => {});
     }
     showFeedback(`Link für ${invitation.name} kopiert`);
-  }
-
-  function handleResetFilters() {
-    setSearch("");
-    setFilter("Alle");
   }
 
   function handleConfirm(invitation: Invitation) {
@@ -138,7 +121,7 @@ export function InvitationsView() {
         });
         break;
       case "delete":
-        setInvitations((current) => current.filter((item) => item.id !== invitation.id));
+        removeInvitation(invitation.id);
         setDetailInvitation(null);
         break;
     }
@@ -178,7 +161,7 @@ export function InvitationsView() {
 
       <InvitationTable
         invitations={filteredInvitations}
-        onResetFilters={handleResetFilters}
+        onResetFilters={resetFilters}
         onViewDetails={setDetailInvitation}
         onCopyLink={handleCopyLink}
         onSendReminder={(invitation) => setConfirmAction({ invitation, type: "remind" })}

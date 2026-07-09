@@ -46,7 +46,6 @@ const confirmCopy: Record<
 export function CustomersView() {
   const router = useRouter();
   const {
-    customers,
     activeCustomers,
     filteredCustomers,
     search,

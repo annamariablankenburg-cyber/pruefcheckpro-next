@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Info } from "lucide-react";
 
@@ -14,10 +14,8 @@ import { CalendarView } from "@/components/shared/CalendarView";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { NewCalendarTaskDialog } from "@/components/shared/NewCalendarTaskDialog";
 import { HEUTE, weekDates, weekDayLabels } from "@/config/calendarEvents";
-import { calendarRepository } from "@/lib/repositories/calendarRepository";
+import { useCalendar } from "@/hooks/useCalendar";
 import type { CalendarEvent } from "@/types/calendarEvent";
-
-const calendarEvents = calendarRepository.getAll();
 
 const days = weekDates.map((date, index) => ({
   date,
@@ -30,15 +28,11 @@ const rangeLabel = `${days[0].dayNumber}. – ${days[6].dayNumber}. März 2026`;
 
 export default function KalenderPage() {
   const router = useRouter();
+  const { events: calendarEvents, todaysEvents, eventsForDate } = useCalendar();
   const [view, setView] = useState<CalendarViewMode>("woche");
   const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const { message: feedback, showFeedback } = useFeedbackToast();
-
-  const todaysEvents = useMemo(
-    () => calendarEvents.filter((event) => event.date === HEUTE).sort((a, b) => a.time.localeCompare(b.time)),
-    []
-  );
 
   function handleToday() {
     setView("woche");
@@ -94,7 +88,7 @@ export default function KalenderPage() {
                       )}
                     </div>
                     <AgendaList
-                      events={calendarEvents.filter((event) => event.date === day.date)}
+                      events={eventsForDate(day.date)}
                       emptyMessage="Keine Termine."
                       onEventClick={setSelectedEvent}
                     />
