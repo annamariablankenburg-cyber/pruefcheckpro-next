@@ -9,11 +9,25 @@ import {
   QrCode,
 } from "lucide-react";
 
-import type { ActiveSite, SiteDevice, SiteQuickActionItem, SiteSample } from "@/types/siteMode";
+import { customers } from "@/config/customers";
+import { devices } from "@/config/devices";
+import { projects } from "@/config/projects";
+import { samples } from "@/config/samples";
+import type { DeviceStatus, DeviceType } from "@/types/device";
+import type { Sample, SampleField, SampleStatus } from "@/types/sample";
+import type {
+  ActiveSite,
+  SiteDevice,
+  SiteDeviceStatus,
+  SiteQuickActionItem,
+  SiteSample,
+  SiteSampleStatus,
+} from "@/types/siteMode";
 
-// Mock-Daten für den Baustellenmodus (/baustellenmodus). Eigenständiger
-// Datensatz, aber bewusst konsistent mit config/samples.ts, config/devices.ts
-// und config/customers.ts gehalten (gleiche Proben-/Geräte-/Kundennamen).
+// Mock-Daten für den Baustellenmodus (/baustellenmodus). Werden aus den
+// echten Datensätzen abgeleitet (config/projects.ts, config/samples.ts,
+// config/customers.ts, config/devices.ts) statt unabhängig gepflegt, damit
+// Baustellenmodus, Probenmanager, Kunden und Geräte konsistent bleiben.
 
 export const siteQuickActions: SiteQuickActionItem[] = [
   { id: "qa-neue-probe", label: "Neue Probe", icon: FlaskConical },
@@ -26,102 +40,88 @@ export const siteQuickActions: SiteQuickActionItem[] = [
   { id: "qa-kunde", label: "Kunden öffnen", icon: Contact },
 ];
 
+const ACTIVE_PROJECT_ID = "proj-parkblick";
+const activeProject = projects.find((project) => project.id === ACTIVE_PROJECT_ID);
+const activeCustomer = customers.find((customer) => customer.id === activeProject?.customerId);
+
 export const activeSite: ActiveSite = {
-  projekt: "Neubau Wohnanlage Parkblick",
-  kunde: "Musterbau GmbH",
-  standort: "Parkstraße 15, 70173 Stuttgart",
-  ansprechpartner: "Max Mustermann",
-  telefon: "+49 711 998877",
+  projekt: activeProject?.name ?? "—",
+  kunde: activeProject?.customer ?? "—",
+  standort: activeProject?.address ?? "—",
+  ansprechpartner: activeProject?.contactPerson ?? activeCustomer?.contactPerson ?? "—",
+  telefon: activeProject?.phone ?? activeCustomer?.phone ?? "—",
   wetter: "18 °C · Sonnig (Platzhalter)",
   gps: "48,7758° N, 9,1829° E (Platzhalter)",
 };
 
-export const siteSamples: SiteSample[] = [
-  {
-    id: "BET-2026-014",
-    bezeichnung: "Beton C25/30",
-    status: "In Prüfung",
-    pruefalter: "28 Tage",
-    projekt: "Neubau Wohnanlage Parkblick",
-    kunde: "Musterbau GmbH",
-    ansprechpartner: "Max Mustermann",
-    gps: "48,7758° N, 9,1829° E (Platzhalter)",
-    pruefungen: [
-      { id: "pw-1", name: "Druckfestigkeit", status: "In Prüfung" },
-      { id: "pw-2", name: "Rohdichte", status: "Abgeschlossen" },
-    ],
-    fotos: [{ id: "f-1", title: "Foto Probe.jpg", date: "03.03.2026" }],
-    anhaenge: [{ id: "a-1", title: "Prüfprotokoll.pdf", date: "03.03.2026" }],
-    geraete: ["Druckprüfpresse (DR-001)"],
-    notizen: "Würfel bei trockenem Wetter entnommen, keine Auffälligkeiten.",
-  },
-  {
-    id: "ASP-2026-011",
-    bezeichnung: "Asphaltbohrkern",
-    status: "In Prüfung",
-    pruefalter: "7 Tage",
-    projekt: "L 342 Fahrbahnerneuerung",
-    kunde: "Straßenbau Nord",
-    ansprechpartner: "Thomas Weber",
-    gps: "48,8987° N, 9,2109° E (Platzhalter)",
-    pruefungen: [{ id: "pw-3", name: "Marshall", status: "In Prüfung" }],
-    fotos: [{ id: "f-2", title: "Foto Bohrkern.jpg", date: "25.02.2026" }],
-    anhaenge: [],
-    geraete: ["Siebmaschine (SI-011)"],
-    notizen: "Bohrkern aus Bauabschnitt 2 entnommen.",
-  },
-  {
-    id: "GEO-2026-021",
-    bezeichnung: "Bodenprobe Sand",
-    status: "Überfällig",
-    pruefalter: "eigenes Prüfdatum",
-    projekt: "Baugebiet Nord",
-    kunde: "Musterbau GmbH",
-    ansprechpartner: "Max Mustermann",
-    gps: "48,7701° N, 9,1620° E (Platzhalter)",
-    pruefungen: [{ id: "pw-4", name: "Proctor", status: "Überfällig" }],
-    fotos: [],
-    anhaenge: [],
-    geraete: ["Trockenschrank (TR-005)"],
-    notizen: "Prüftermin überschritten – bitte kurzfristig einplanen.",
-  },
-  {
-    id: "BET-2026-022",
-    bezeichnung: "Betonwürfel C30/37",
-    status: "Offen",
-    pruefalter: "28 Tage",
-    projekt: "Neubau Wohnanlage Parkblick",
-    kunde: "Musterbau GmbH",
-    ansprechpartner: "Max Mustermann",
-    gps: "48,7758° N, 9,1829° E (Platzhalter)",
-    pruefungen: [{ id: "pw-5", name: "Druckfestigkeit", status: "Offen" }],
-    fotos: [],
-    anhaenge: [],
-    geraete: [],
-    notizen: "",
-  },
-];
+function toSiteSampleStatus(status: SampleStatus): SiteSampleStatus {
+  if (status === "Vorbereitung") return "Offen";
+  if (status === "Archiviert") return "Abgeschlossen";
+  return status;
+}
 
-export const siteDevices: SiteDevice[] = [
-  {
-    id: "dev-dr-001",
-    name: "Druckprüfpresse",
-    inventoryNumber: "DR-001",
-    status: "Einsatzbereit",
-    kalibrierung: "Nächste Kalibrierung: 15.09.2026",
-  },
-  {
-    id: "dev-wa-014",
-    name: "Präzisionswaage",
-    inventoryNumber: "WA-014",
-    status: "Kalibrierung fällig",
-    kalibrierung: "Kalibrierung fällig seit: 20.02.2026",
-  },
-  {
-    id: "dev-si-011",
-    name: "Siebmaschine",
-    inventoryNumber: "SI-011",
-    status: "Einsatzbereit",
-    kalibrierung: "Nächste Kalibrierung: 12.11.2026",
-  },
-];
+// Gerätetypen, die für eine Prüfung im jeweiligen Fachbereich typischerweise
+// benötigt werden – reine UI-Heuristik zur Vorauswahl, keine feste Regel.
+const deviceTypesByField: Record<SampleField, DeviceType[]> = {
+  Beton: ["Druckpresse", "Waage", "Klimaschrank"],
+  Asphalt: ["Siebanlage", "Waage"],
+  Geotechnik: ["Trockenschrank", "Waage"],
+};
+
+const availableDeviceStatuses: DeviceStatus[] = ["Einsatzbereit", "Kalibrierung fällig", "Wartung fällig"];
+
+function devicesForSample(sample: Sample): string[] {
+  const wantedTypes = deviceTypesByField[sample.fachbereich];
+  return devices
+    .filter((device) => wantedTypes.includes(device.type) && availableDeviceStatuses.includes(device.status))
+    .slice(0, 1)
+    .map((device) => `${device.name} (${device.inventoryNumber})`);
+}
+
+// Auswahl echter, nicht archivierter Proben aus config/samples.ts für die
+// Baustellenmodus-Übersicht.
+const siteSampleIds = ["BET-2026-014", "ASP-2026-011", "GEO-2026-021", "BET-2026-022"];
+
+export const siteSamples: SiteSample[] = siteSampleIds
+  .map((id) => samples.find((sample) => sample.id === id))
+  .filter((sample): sample is Sample => sample !== undefined)
+  .map((sample) => {
+    const customer = customers.find((entry) => entry.id === sample.customerId);
+    return {
+      id: sample.id,
+      bezeichnung: sample.bezeichnung,
+      status: toSiteSampleStatus(sample.status),
+      pruefalter: sample.pruefalter,
+      projekt: sample.projekt,
+      kunde: sample.kunde,
+      ansprechpartner: customer?.contactPerson ?? "—",
+      gps:
+        sample.projectId === ACTIVE_PROJECT_ID
+          ? activeSite.gps
+          : "GPS wird bei Standortwechsel aktualisiert (Platzhalter)",
+      pruefungen: sample.pruefungen.map((pruefung) => ({
+        id: pruefung.id,
+        name: pruefung.name,
+        status: pruefung.status,
+      })),
+      fotos: sample.anhaenge,
+      anhaenge: sample.dokumente,
+      geraete: devicesForSample(sample),
+      notizen: sample.historie[sample.historie.length - 1]?.message ?? "",
+    };
+  });
+
+const siteDeviceStatuses: DeviceStatus[] = ["Einsatzbereit", "Kalibrierung fällig", "Wartung fällig"];
+
+export const siteDevices: SiteDevice[] = devices
+  .filter((device) => siteDeviceStatuses.includes(device.status))
+  .map((device) => ({
+    id: device.id,
+    name: device.name,
+    inventoryNumber: device.inventoryNumber,
+    status: device.status as SiteDeviceStatus,
+    kalibrierung:
+      device.status === "Kalibrierung fällig"
+        ? `Kalibrierung fällig seit: ${device.nextCalibration ?? "—"}`
+        : `Nächste Kalibrierung: ${device.nextCalibration ?? "—"}`,
+  }));

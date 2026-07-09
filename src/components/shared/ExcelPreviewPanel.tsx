@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Download, FileSpreadsheet } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { mapPruefungNameToPruefart, pruefartDefinitions } from "@/config/pruefarten";
 import { cn } from "@/lib/utils";
 import type { Report } from "@/types/report";
 
@@ -39,6 +40,12 @@ export function ExcelPreviewPanel({ report, onExport }: ExcelPreviewPanelProps) 
     });
   }
 
+  // Mittelwert/Bewertung stammen aus dem echten Prüfarten-Katalog
+  // (config/pruefarten.ts), zugeordnet über die im Bericht enthaltene
+  // Prüfung – kein frei erfundener Platzhalterwert mehr.
+  const pruefungName = report.pruefungen[0]?.name ?? report.titel;
+  const pruefart = pruefartDefinitions[mapPruefungNameToPruefart(pruefungName, report.fachbereich)];
+
   const previewRows: { label: string; value: string }[] = [
     { label: "Berichtskopf", value: `${report.berichtsnummer} · ${report.berichtstyp}` },
     { label: "Kunde", value: report.kunde },
@@ -46,8 +53,8 @@ export function ExcelPreviewPanel({ report, onExport }: ExcelPreviewPanelProps) 
     { label: "Probe", value: report.probeId ?? "—" },
     { label: "Prüfdatum", value: report.erstelltAm },
     { label: "Messwerte", value: "siehe Tabellenblatt „Rohdaten“" },
-    { label: "Mittelwerte", value: "siehe Tabellenblatt „Zusammenfassung“" },
-    { label: "Bewertung", value: "Bestanden" },
+    { label: "Mittelwerte", value: `${pruefart.mittelwert} · σ = ${pruefart.standardabweichung}` },
+    { label: "Bewertung", value: pruefart.bewertung },
     { label: "Bemerkung", value: report.bemerkungen || "—" },
   ];
 

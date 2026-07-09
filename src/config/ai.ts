@@ -12,6 +12,10 @@ import {
 } from "lucide-react";
 
 import type { RecordListItem } from "@/components/shared/RecordList";
+import { customers } from "@/config/customers";
+import { projects } from "@/config/projects";
+import { reports } from "@/config/reports";
+import { samples } from "@/config/samples";
 import type { AiChat, AiContextCard, AiQuickAction, AiTool } from "@/types/ai";
 
 export const aiChats: AiChat[] = [
@@ -136,33 +140,41 @@ export const aiTools: AiTool[] = [
   { id: "tool-labor", label: "Laborhilfe", description: "Prozesse & Abläufe erklären", icon: LifeBuoy },
 ];
 
+// Kontextkarten spiegeln echte Datensätze (config/samples.ts, config/projects.ts,
+// config/customers.ts, config/reports.ts) statt eigenständig gepflegter Werte,
+// damit die KI-Seite denselben Stand wie die übrigen Module zeigt.
+const contextSample = samples.find((sample) => sample.id === "BET-2026-014");
+const contextProject = projects.find((project) => project.id === "proj-parkblick");
+const contextCustomer = customers.find((customer) => customer.id === "cust-musterbau");
+const contextReport = reports.find((report) => report.id === "RPT-2026-001");
+
 export const aiContextCards: AiContextCard[] = [
   {
     id: "ctx-probe",
     label: "Aktuelle Probe",
-    value: "BET-2026-014",
-    meta: "Beton C25/30 – In Prüfung",
+    value: contextSample?.id ?? "—",
+    meta: `${contextSample?.bezeichnung ?? "—"} – ${contextSample?.status ?? "—"}`,
     icon: FlaskConical,
   },
   {
     id: "ctx-projekt",
     label: "Aktuelles Projekt",
-    value: "Neubau Wohnanlage Parkblick",
-    meta: "Musterbau GmbH",
+    value: contextProject?.name ?? "—",
+    meta: contextProject?.customer ?? "—",
     icon: FolderKanban,
   },
   {
     id: "ctx-kunde",
     label: "Aktueller Kunde",
-    value: "Musterbau GmbH",
-    meta: "K-2026-001",
+    value: contextCustomer?.name ?? "—",
+    meta: contextCustomer?.number ?? "—",
     icon: Contact,
   },
   {
     id: "ctx-bericht",
     label: "Aktueller Bericht",
-    value: "RPT-2026-001",
-    meta: "Prüfbericht – Betonwürfel Druckfestigkeit",
+    value: contextReport?.id ?? "—",
+    meta: contextReport?.titel ?? "—",
     icon: TestTubeDiagonal,
   },
 ];

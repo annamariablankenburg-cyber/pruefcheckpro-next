@@ -2,6 +2,11 @@ import type { BarChartDatum } from "@/components/shared/FakeBarChart";
 import type { DonutSegment } from "@/components/shared/FakeDonutChart";
 import type { RankingItem } from "@/components/shared/ProgressRanking";
 
+// Projekt-/Fachbereichsnamen sind bewusst identisch zu config/projects.ts und
+// config/samples.ts gehalten. Die absoluten Fallzahlen selbst bleiben
+// illustrative Langzeit-Mockdaten (mehrjähriger Laborbetrieb), da der reale
+// verknüpfte Mock-Datensatz nur 10 Proben umfasst und sich ein mehrjähriger
+// Verlauf daraus nicht sinnvoll ableiten lässt.
 export const zeitraumOptions = ["Heute", "7 Tage", "30 Tage", "365 Tage", "Alle"] as const;
 export type ZeitraumOption = (typeof zeitraumOptions)[number];
 
@@ -219,7 +224,7 @@ export const statisticsByRange: Record<RangeKey, RangeData> = {
       { label: "Geotechnik", value: "1 Prüfung", percentage: 17 },
     ],
     topProjects: [
-      { label: "Neubau Wohnanlage", value: "3 Prüfungen", percentage: 60 },
+      { label: "Neubau Wohnanlage Parkblick", value: "3 Prüfungen", percentage: 60 },
       { label: "Brückensanierung B17", value: "2 Prüfungen", percentage: 40 },
       { label: "L 342 Fahrbahnerneuerung", value: "1 Prüfung", percentage: 20 },
     ],
@@ -268,7 +273,7 @@ export const statisticsByRange: Record<RangeKey, RangeData> = {
       { label: "Geotechnik", value: "4 Prüfungen", percentage: 17 },
     ],
     topProjects: [
-      { label: "Neubau Wohnanlage", value: "9 Prüfungen", percentage: 75 },
+      { label: "Neubau Wohnanlage Parkblick", value: "9 Prüfungen", percentage: 75 },
       { label: "Brückensanierung B17", value: "6 Prüfungen", percentage: 60 },
       { label: "L 342 Fahrbahnerneuerung", value: "5 Prüfungen", percentage: 50 },
       { label: "Baugebiet Nord", value: "3 Prüfungen", percentage: 30 },
@@ -317,7 +322,7 @@ export const statisticsByRange: Record<RangeKey, RangeData> = {
       { label: "Geotechnik", value: "20 Prüfungen", percentage: 16 },
     ],
     topProjects: [
-      { label: "Neubau Wohnanlage", value: "34 Prüfungen", percentage: 88 },
+      { label: "Neubau Wohnanlage Parkblick", value: "34 Prüfungen", percentage: 88 },
       { label: "Brückensanierung B17", value: "27 Prüfungen", percentage: 72 },
       { label: "L 342 Fahrbahnerneuerung", value: "22 Prüfungen", percentage: 65 },
       { label: "Baugebiet Nord", value: "18 Prüfungen", percentage: 54 },
@@ -373,7 +378,7 @@ export const statisticsByRange: Record<RangeKey, RangeData> = {
       { label: "Geotechnik", value: "209 Prüfungen", percentage: 15 },
     ],
     topProjects: [
-      { label: "Neubau Wohnanlage", value: "312 Prüfungen", percentage: 92 },
+      { label: "Neubau Wohnanlage Parkblick", value: "312 Prüfungen", percentage: 92 },
       { label: "Brückensanierung B17", value: "265 Prüfungen", percentage: 78 },
       { label: "L 342 Fahrbahnerneuerung", value: "198 Prüfungen", percentage: 62 },
       { label: "Baugebiet Nord", value: "156 Prüfungen", percentage: 48 },
@@ -421,7 +426,7 @@ export const statisticsByRange: Record<RangeKey, RangeData> = {
       { label: "Geotechnik", value: "540 Prüfungen", percentage: 14 },
     ],
     topProjects: [
-      { label: "Neubau Wohnanlage", value: "612 Prüfungen", percentage: 95 },
+      { label: "Neubau Wohnanlage Parkblick", value: "612 Prüfungen", percentage: 95 },
       { label: "Brückensanierung B17", value: "540 Prüfungen", percentage: 84 },
       { label: "L 342 Fahrbahnerneuerung", value: "398 Prüfungen", percentage: 68 },
       { label: "Baugebiet Nord", value: "310 Prüfungen", percentage: 52 },

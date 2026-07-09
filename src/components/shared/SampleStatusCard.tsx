@@ -5,12 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-export type SampleStatus = "In Prüfung" | "Vorbereitung" | "Abgeschlossen";
+export type SampleStatus = "Offen" | "In Prüfung" | "Vorbereitung" | "Abgeschlossen" | "Überfällig";
 
 const statusStyles: Record<SampleStatus, string> = {
+  Offen: "bg-muted text-muted-foreground",
   "In Prüfung": "bg-primary/10 text-primary",
   Vorbereitung: "bg-warning/10 text-warning",
   Abgeschlossen: "bg-success/10 text-success",
+  Überfällig: "bg-destructive/10 text-destructive",
 };
 
 export interface SampleListItem {
