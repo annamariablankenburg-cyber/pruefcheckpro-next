@@ -16,11 +16,11 @@ import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { NewReportDialog } from "@/components/shared/NewReportDialog";
 import { ReportEditorDrawer, type Section } from "@/components/shared/ReportEditorDrawer";
-import { ReportFilters, type ReportFilter } from "@/components/shared/ReportFilters";
+import { ReportFilters } from "@/components/shared/ReportFilters";
 import { ReportTable } from "@/components/shared/ReportTable";
 import { StatCard } from "@/components/shared/StatCard";
 import { HEUTE } from "@/config/reports";
-import { reportRepository } from "@/lib/repositories/reportRepository";
+import { useReports } from "@/hooks/useReports";
 import type { Report, ReportStatus } from "@/types/report";
 
 type ConfirmActionType = "saveDraft" | "markDone" | "exportPdf" | "exportExcel" | "archive" | "reactivate";
@@ -71,9 +71,18 @@ const confirmCopy: Record<
 
 export function ReportsView() {
   const router = useRouter();
-  const [reports, setReports] = useState<Report[]>(reportRepository.getAll());
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<ReportFilter>("Alle");
+  const {
+    reports,
+    filteredReports,
+    search,
+    setSearch,
+    filter,
+    setFilter,
+    resetFilters,
+    updateReport: updateReportData,
+    removeReport,
+    createReport,
+  } = useReports();
   const [isNewReportOpen, setIsNewReportOpen] = useState(false);
   const [editorReport, setEditorReport] = useState<Report | null>(null);
   const [editorSection, setEditorSection] = useState<Section | undefined>(undefined);
@@ -84,9 +93,7 @@ export function ReportsView() {
   const { message: feedback, showFeedback } = useFeedbackToast();
 
   function updateReport(id: string, changes: Partial<Report>) {
-    setReports((current) =>
-      current.map((item) => (item.id === id ? { ...item, ...changes } : item))
-    );
+    updateReportData(id, changes);
     setEditorReport((current) => (current && current.id === id ? { ...current, ...changes } : current));
   }
 
@@ -107,41 +114,8 @@ export function ReportsView() {
     [reports]
   );
 
-  const filteredReports = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    const pool =
-      filter === "Archiviert"
-        ? reports.filter((report) => report.status === "Archiviert")
-        : reports.filter((report) => report.status !== "Archiviert");
-
-    return pool.filter((report) => {
-      const matchesSearch =
-        query.length === 0 ||
-        [report.titel, report.id, report.projekt, report.kunde, report.probeId]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase()
-          .includes(query);
-
-      const matchesFilter =
-        filter === "Alle" ||
-        filter === "Archiviert" ||
-        filter === report.status ||
-        (filter === "Beton" && report.fachbereich === "Beton") ||
-        (filter === "Asphalt" && report.fachbereich === "Asphalt") ||
-        (filter === "Geotechnik" && report.fachbereich === "Geotechnik");
-
-      return matchesSearch && matchesFilter;
-    });
-  }, [reports, search, filter]);
-
   function requestAction(type: ConfirmActionType) {
     return (report: Report) => setConfirmAction({ report, type });
-  }
-
-  function handleResetFilters() {
-    setSearch("");
-    setFilter("Alle");
   }
 
   function handleConfirmAction(subject: Report) {
@@ -164,12 +138,12 @@ export function ReportsView() {
       erstelltAm: HEUTE,
       historie: [{ message: `Dupliziert von ${report.id}.`, timestamp: HEUTE }],
     };
-    setReports((current) => [newReport, ...current]);
+    createReport(newReport);
     showFeedback(`Bericht „${newReport.titel}" wurde dupliziert.`);
   }
 
   function handleConfirmDelete(subject: Report) {
-    setReports((current) => current.filter((report) => report.id !== subject.id));
+    removeReport(subject.id);
     setEditorReport((current) => (current && current.id === subject.id ? null : current));
     setDeleteReport(null);
   }
@@ -204,7 +178,7 @@ export function ReportsView() {
 
       <ReportTable
         reports={filteredReports}
-        onResetFilters={handleResetFilters}
+        onResetFilters={resetFilters}
         onOpenDetails={(report) => openEditor(report)}
         onEdit={(report) => openEditor(report)}
         onPreview={(report) => openEditor(report, "Export")}

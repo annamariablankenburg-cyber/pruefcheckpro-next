@@ -7,12 +7,12 @@ import { Plus, Receipt, Truck, UserCheck, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 import { CustomerDetailDrawer } from "@/components/shared/CustomerDetailDrawer";
-import { CustomerFilters, type CustomerFilter } from "@/components/shared/CustomerFilters";
+import { CustomerFilters } from "@/components/shared/CustomerFilters";
 import { CustomerTable } from "@/components/shared/CustomerTable";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { NewCustomerDialog } from "@/components/shared/NewCustomerDialog";
 import { StatCard } from "@/components/shared/StatCard";
-import { customerRepository } from "@/lib/repositories/customerRepository";
+import { useCustomers } from "@/hooks/useCustomers";
 import type { Customer, CustomerStatus } from "@/types/customer";
 
 type ConfirmActionType = "deactivate" | "reactivate" | "archive";
@@ -45,9 +45,17 @@ const confirmCopy: Record<
 
 export function CustomersView() {
   const router = useRouter();
-  const [customers, setCustomers] = useState<Customer[]>(customerRepository.getAll());
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<CustomerFilter>("Alle");
+  const {
+    customers,
+    activeCustomers,
+    filteredCustomers,
+    search,
+    setSearch,
+    filter,
+    setFilter,
+    resetFilters,
+    updateCustomer: updateCustomerData,
+  } = useCustomers();
   const [detailCustomer, setDetailCustomer] = useState<Customer | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{
@@ -55,40 +63,6 @@ export function CustomersView() {
     type: ConfirmActionType;
   } | null>(null);
   const { message: feedback, showFeedback } = useFeedbackToast();
-
-  const activeCustomers = useMemo(
-    () => customers.filter((customer) => customer.status !== "Archiviert"),
-    [customers]
-  );
-
-  const filteredCustomers = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    const pool =
-      filter === "Archiviert"
-        ? customers.filter((customer) => customer.status === "Archiviert")
-        : activeCustomers;
-
-    return pool.filter((customer) => {
-      const matchesFilter =
-        filter === "Alle" ||
-        filter === "Archiviert" ||
-        (filter === "Mit offenen Rechnungen"
-          ? customer.invoices.length > 0
-          : filter === "Mit aktiven Projekten"
-            ? customer.projects.length > 0
-            : filter === customer.status || filter === customer.type);
-
-      const matchesSearch =
-        query.length === 0 ||
-        customer.name.toLowerCase().includes(query) ||
-        customer.contactPerson.toLowerCase().includes(query) ||
-        customer.city.toLowerCase().includes(query) ||
-        customer.street.toLowerCase().includes(query) ||
-        customer.projects.some((project) => project.toLowerCase().includes(query));
-
-      return matchesFilter && matchesSearch;
-    });
-  }, [customers, activeCustomers, search, filter]);
 
   const kpis = useMemo(
     () => ({
@@ -105,17 +79,10 @@ export function CustomersView() {
   );
 
   function updateCustomer(id: string, changes: Partial<Customer>) {
-    setCustomers((current) =>
-      current.map((customer) => (customer.id === id ? { ...customer, ...changes } : customer))
-    );
+    updateCustomerData(id, changes);
     setDetailCustomer((current) =>
       current && current.id === id ? { ...current, ...changes } : current
     );
-  }
-
-  function handleResetFilters() {
-    setSearch("");
-    setFilter("Alle");
   }
 
   function handleConfirmAction(customer: Customer) {
@@ -162,7 +129,7 @@ export function CustomersView() {
 
       <CustomerTable
         customers={filteredCustomers}
-        onResetFilters={handleResetFilters}
+        onResetFilters={resetFilters}
         onViewDetails={setDetailCustomer}
         onEdit={() => showFeedback("Diese Funktion wird später angebunden.")}
         onCreateProject={() => showFeedback("Diese Funktion wird später angebunden.")}

@@ -6,12 +6,12 @@ import { AlertTriangle, CheckCircle2, Cpu, PowerOff, Wrench } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 import { DeviceDetailDrawer } from "@/components/shared/DeviceDetailDrawer";
-import { DeviceFilters, type DeviceFilter } from "@/components/shared/DeviceFilters";
+import { DeviceFilters } from "@/components/shared/DeviceFilters";
 import { DeviceTable } from "@/components/shared/DeviceTable";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { NewDeviceDialog } from "@/components/shared/NewDeviceDialog";
 import { StatCard } from "@/components/shared/StatCard";
-import { deviceRepository } from "@/lib/repositories/deviceRepository";
+import { useDevices } from "@/hooks/useDevices";
 import type { Device, DeviceStatus } from "@/types/device";
 
 type ConfirmActionType = "deactivate" | "reactivate" | "archive";
@@ -43,9 +43,17 @@ const confirmCopy: Record<
 };
 
 export function DevicesView() {
-  const [devices, setDevices] = useState<Device[]>(deviceRepository.getAll());
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<DeviceFilter>("Alle");
+  const {
+    devices,
+    activeDevices,
+    filteredDevices,
+    search,
+    setSearch,
+    filter,
+    setFilter,
+    resetFilters,
+    updateDevice: updateDeviceData,
+  } = useDevices();
   const [detailDevice, setDetailDevice] = useState<Device | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editDevice, setEditDevice] = useState<Device | null>(null);
@@ -54,35 +62,6 @@ export function DevicesView() {
     type: ConfirmActionType;
   } | null>(null);
   const { message: feedback, showFeedback } = useFeedbackToast();
-
-  const activeDevices = useMemo(
-    () => devices.filter((device) => device.status !== "Archiviert"),
-    [devices]
-  );
-
-  const filteredDevices = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    const pool =
-      filter === "Archiviert"
-        ? devices.filter((device) => device.status === "Archiviert")
-        : activeDevices;
-
-    return pool.filter((device) => {
-      const matchesFilter =
-        filter === "Alle" ||
-        filter === "Archiviert" ||
-        filter === device.status ||
-        filter === device.type;
-
-      const matchesSearch =
-        query.length === 0 ||
-        device.name.toLowerCase().includes(query) ||
-        device.inventoryNumber.toLowerCase().includes(query) ||
-        device.location.toLowerCase().includes(query);
-
-      return matchesFilter && matchesSearch;
-    });
-  }, [devices, activeDevices, search, filter]);
 
   const kpis = useMemo(
     () => ({
@@ -97,17 +76,10 @@ export function DevicesView() {
   );
 
   function updateDevice(id: string, changes: Partial<Device>) {
-    setDevices((current) =>
-      current.map((device) => (device.id === id ? { ...device, ...changes } : device))
-    );
+    updateDeviceData(id, changes);
     setDetailDevice((current) =>
       current && current.id === id ? { ...current, ...changes } : current
     );
-  }
-
-  function handleResetFilters() {
-    setSearch("");
-    setFilter("Alle");
   }
 
   function handleConfirmAction(device: Device) {
@@ -164,7 +136,7 @@ export function DevicesView() {
 
       <DeviceTable
         devices={filteredDevices}
-        onResetFilters={handleResetFilters}
+        onResetFilters={resetFilters}
         onViewDetails={setDetailDevice}
         onEdit={setEditDevice}
         onDocumentCalibration={() =>

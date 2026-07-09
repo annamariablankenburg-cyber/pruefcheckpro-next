@@ -9,10 +9,10 @@ import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { NewProjectDialog } from "@/components/shared/NewProjectDialog";
 import { ProjectDetailDrawer } from "@/components/shared/ProjectDetailDrawer";
-import { ProjectFilters, type ProjectFilter } from "@/components/shared/ProjectFilters";
+import { ProjectFilters } from "@/components/shared/ProjectFilters";
 import { ProjectTable } from "@/components/shared/ProjectTable";
 import { StatCard } from "@/components/shared/StatCard";
-import { projectRepository } from "@/lib/repositories/projectRepository";
+import { useProjects } from "@/hooks/useProjects";
 import type { Project, ProjectStatus } from "@/types/project";
 
 type ConfirmActionType = "pause" | "resume" | "complete" | "reopen" | "archive" | "reactivate";
@@ -66,9 +66,17 @@ const confirmCopy: Record<
 
 export function ProjectsView() {
   const router = useRouter();
-  const [projects, setProjects] = useState<Project[]>(projectRepository.getAll());
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<ProjectFilter>("Alle");
+  const {
+    projects,
+    activeProjects,
+    filteredProjects,
+    search,
+    setSearch,
+    filter,
+    setFilter,
+    resetFilters,
+    updateProject: updateProjectData,
+  } = useProjects();
   const [detailProject, setDetailProject] = useState<Project | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{
@@ -76,34 +84,6 @@ export function ProjectsView() {
     type: ConfirmActionType;
   } | null>(null);
   const { message: feedback, showFeedback } = useFeedbackToast();
-
-  // Archivierte Projekte erscheinen nie in "Alle" oder anderen Filtern – nur
-  // im eigenen "Archiviert"-Filter.
-  const activeProjects = useMemo(
-    () => projects.filter((project) => project.status !== "Archiviert"),
-    [projects]
-  );
-
-  const filteredProjects = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    const pool = filter === "Archiviert" ? projects.filter((p) => p.status === "Archiviert") : activeProjects;
-
-    return pool.filter((project) => {
-      const matchesFilter =
-        filter === "Alle" ||
-        filter === "Archiviert" ||
-        (filter === "Überfällig" ? project.overdue === true : filter === project.status || filter === project.field);
-
-      const matchesSearch =
-        query.length === 0 ||
-        project.name.toLowerCase().includes(query) ||
-        project.customer.toLowerCase().includes(query) ||
-        project.address.toLowerCase().includes(query) ||
-        project.number.toLowerCase().includes(query);
-
-      return matchesFilter && matchesSearch;
-    });
-  }, [projects, activeProjects, search, filter]);
 
   const kpis = useMemo(
     () => ({
@@ -118,17 +98,10 @@ export function ProjectsView() {
   );
 
   function updateProject(id: string, changes: Partial<Project>) {
-    setProjects((current) =>
-      current.map((project) => (project.id === id ? { ...project, ...changes } : project))
-    );
+    updateProjectData(id, changes);
     setDetailProject((current) =>
       current && current.id === id ? { ...current, ...changes } : current
     );
-  }
-
-  function handleResetFilters() {
-    setSearch("");
-    setFilter("Alle");
   }
 
   function handleConfirmAction(project: Project) {
@@ -175,7 +148,7 @@ export function ProjectsView() {
 
       <ProjectTable
         projects={filteredProjects}
-        onResetFilters={handleResetFilters}
+        onResetFilters={resetFilters}
         onViewDetails={setDetailProject}
         onEdit={() => showFeedback("Diese Funktion wird später angebunden.")}
         onViewSamples={() => router.push("/probekoerper")}
