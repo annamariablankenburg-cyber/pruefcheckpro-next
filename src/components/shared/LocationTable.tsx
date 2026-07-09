@@ -1,6 +1,7 @@
 import { Building2 } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { LocationActionsMenu } from "@/components/shared/LocationActionsMenu";
 import { LocationStatusBadge } from "@/components/shared/LocationStatusBadge";
 import { LocationTypeBadge } from "@/components/shared/LocationTypeBadge";
@@ -14,6 +15,7 @@ interface LocationTableProps {
   onViewDevices: (location: CompanyLocationDetail) => void;
   onViewProjects: (location: CompanyLocationDetail) => void;
   onToggleStatus: (location: CompanyLocationDetail) => void;
+  onResetFilters?: () => void;
 }
 
 const columns = [
@@ -38,14 +40,11 @@ export function LocationTable({
   onViewDevices,
   onViewProjects,
   onToggleStatus,
+  onResetFilters,
 }: LocationTableProps) {
   if (locations.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-12 text-center text-sm text-muted-foreground">
-          Keine Standorte gefunden. Passe Suche oder Filter an.
-        </CardContent>
-      </Card>
+      <EmptyState message="Keine Standorte gefunden. Passe Suche oder Filter an." onReset={onResetFilters} />
     );
   }
 

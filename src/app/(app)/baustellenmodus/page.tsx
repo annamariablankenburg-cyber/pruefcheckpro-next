@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, CloudUpload, FlaskConical } from "lucide-react";
 
+import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { SiteCameraPanel } from "@/components/shared/SiteCameraPanel";
 import { SiteDetailDrawer } from "@/components/shared/SiteDetailDrawer";
 import { SiteDeviceCard } from "@/components/shared/SiteDeviceCard";
@@ -19,12 +20,7 @@ import type { SiteDevice, SiteQuickActionItem, SiteSample } from "@/types/siteMo
 export default function BaustellenmodusPage() {
   const router = useRouter();
   const [activeSample, setActiveSample] = useState<SiteSample | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
-
-  function showFeedback(message: string) {
-    setFeedback(message);
-    window.setTimeout(() => setFeedback(null), 2500);
-  }
+  const { message: feedback, showFeedback } = useFeedbackToast();
 
   const kpis = {
     heute: siteSamples.filter((sample) => sample.status !== "Abgeschlossen").length,
@@ -109,11 +105,7 @@ export default function BaustellenmodusPage() {
         onOpenSample={() => router.push("/probekoerper")}
       />
 
-      {feedback && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-lg">
-          {feedback}
-        </div>
-      )}
+      <FeedbackToast message={feedback} />
     </div>
   );
 }

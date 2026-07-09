@@ -11,6 +11,7 @@ import { CalendarEventDrawer } from "@/components/shared/CalendarEventDrawer";
 import { CalendarLegend } from "@/components/shared/CalendarLegend";
 import { CalendarToolbar, type CalendarViewMode } from "@/components/shared/CalendarToolbar";
 import { CalendarView } from "@/components/shared/CalendarView";
+import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { NewCalendarTaskDialog } from "@/components/shared/NewCalendarTaskDialog";
 import { HEUTE, calendarEvents, weekDates, weekDayLabels } from "@/config/calendarEvents";
 import type { CalendarEvent } from "@/types/calendarEvent";
@@ -29,7 +30,7 @@ export default function KalenderPage() {
   const [view, setView] = useState<CalendarViewMode>("woche");
   const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const { message: feedback, showFeedback } = useFeedbackToast();
 
   const todaysEvents = useMemo(
     () => calendarEvents.filter((event) => event.date === HEUTE).sort((a, b) => a.time.localeCompare(b.time)),
@@ -38,11 +39,6 @@ export default function KalenderPage() {
 
   function handleToday() {
     setView("woche");
-  }
-
-  function showFeedback(message: string) {
-    setFeedback(message);
-    window.setTimeout(() => setFeedback(null), 2500);
   }
 
   return (
@@ -148,11 +144,7 @@ export default function KalenderPage() {
         onDuplicate={() => showFeedback("Diese Funktion wird später angebunden.")}
       />
 
-      {feedback && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-lg">
-          {feedback}
-        </div>
-      )}
+      <FeedbackToast message={feedback} />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { Check, Clock, Mail, Plus, ShieldCheck, XCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
+import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { InvitationDetailDrawer } from "@/components/shared/InvitationDetailDrawer";
 import { InvitationFilters, type InvitationFilter } from "@/components/shared/InvitationFilters";
 import { InvitationTable } from "@/components/shared/InvitationTable";
@@ -58,7 +59,7 @@ export function InvitationsView() {
     type: ConfirmActionType;
   } | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  const { message: copyFeedback, showFeedback } = useFeedbackToast();
 
   const filteredInvitations = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -103,8 +104,12 @@ export function InvitationsView() {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(invitation.link).catch(() => {});
     }
-    setCopyFeedback(`Link für ${invitation.name} kopiert`);
-    window.setTimeout(() => setCopyFeedback(null), 2000);
+    showFeedback(`Link für ${invitation.name} kopiert`);
+  }
+
+  function handleResetFilters() {
+    setSearch("");
+    setFilter("Alle");
   }
 
   function handleConfirm(invitation: Invitation) {
@@ -173,6 +178,7 @@ export function InvitationsView() {
 
       <InvitationTable
         invitations={filteredInvitations}
+        onResetFilters={handleResetFilters}
         onViewDetails={setDetailInvitation}
         onCopyLink={handleCopyLink}
         onSendReminder={(invitation) => setConfirmAction({ invitation, type: "remind" })}
@@ -208,11 +214,7 @@ export function InvitationsView() {
         onConfirm={handleConfirm}
       />
 
-      {copyFeedback && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background shadow-lg">
-          {copyFeedback}
-        </div>
-      )}
+      <FeedbackToast message={copyFeedback} />
     </div>
   );
 }

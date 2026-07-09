@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Bell, LogOut, Sparkles } from "lucide-react";
 
 import { AiChatDrawer } from "@/components/layout/AiChatDrawer";
+import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import Logo from "@/components/shared/Logo";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -17,12 +18,7 @@ export function Topbar() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
 
-  const [feedback, setFeedback] = useState<string | null>(null);
-
-  function showFeedback(message: string) {
-    setFeedback(message);
-    window.setTimeout(() => setFeedback(null), 2500);
-  }
+  const { message: feedback, showFeedback } = useFeedbackToast();
 
   async function handleLogout() {
     setIsLoggingOut(true);
@@ -73,11 +69,7 @@ export function Topbar() {
 
       <AiChatDrawer open={aiOpen} onOpenChange={setAiOpen} />
 
-      {feedback && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-lg">
-          {feedback}
-        </div>
-      )}
+      <FeedbackToast message={feedback} />
     </header>
   );
 }

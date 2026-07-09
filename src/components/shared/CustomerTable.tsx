@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { CustomerActionsMenu } from "@/components/shared/CustomerActionsMenu";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { CustomerStatusBadge } from "@/components/shared/CustomerStatusBadge";
 import { CustomerTypeBadge } from "@/components/shared/CustomerTypeBadge";
 import { EmployeeAvatar } from "@/components/shared/EmployeeAvatar";
@@ -19,20 +20,17 @@ interface CustomerTableActionHandlers {
 
 interface CustomerTableProps extends CustomerTableActionHandlers {
   customers: Customer[];
+  onResetFilters?: () => void;
 }
 
 function addressOf(customer: Customer): string {
   return `${customer.street}, ${customer.postalCode} ${customer.city}`;
 }
 
-export function CustomerTable({ customers, ...handlers }: CustomerTableProps) {
+export function CustomerTable({ customers, onResetFilters, ...handlers }: CustomerTableProps) {
   if (customers.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-12 text-center text-sm text-muted-foreground">
-          Keine Kunden gefunden. Passe Suche oder Filter an.
-        </CardContent>
-      </Card>
+      <EmptyState message="Keine Kunden gefunden. Passe Suche oder Filter an." onReset={onResetFilters} />
     );
   }
 

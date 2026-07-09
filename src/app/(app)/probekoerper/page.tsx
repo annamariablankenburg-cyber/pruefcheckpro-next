@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 import { DeleteSampleDialog } from "@/components/shared/DeleteSampleDialog";
+import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { NewSampleDialog } from "@/components/shared/NewSampleDialog";
 import { SampleDetailDrawer } from "@/components/shared/SampleDetailDrawer";
 import { SampleFilters, type SampleFilter } from "@/components/shared/SampleFilters";
@@ -75,12 +76,7 @@ export default function ProbekoerperPage() {
   const [editSample, setEditSample] = useState<Sample | null>(null);
   const [deleteSample, setDeleteSample] = useState<Sample | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmActionState | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
-
-  function showFeedback(message: string) {
-    setFeedback(message);
-    window.setTimeout(() => setFeedback(null), 2500);
-  }
+  const { message: feedback, showFeedback } = useFeedbackToast();
 
   function updateSample(id: string, changes: Partial<Sample>) {
     setSamples((current) =>
@@ -130,6 +126,11 @@ export default function ProbekoerperPage() {
 
   function requestAction(type: ConfirmActionType) {
     return (sample: Sample) => setConfirmAction({ sample, type });
+  }
+
+  function handleResetFilters() {
+    setSearch("");
+    setFilter("Alle");
   }
 
   function handleConfirmAction(subject: Sample) {
@@ -186,6 +187,7 @@ export default function ProbekoerperPage() {
 
       <SampleTable
         samples={filteredSamples}
+        onResetFilters={handleResetFilters}
         onViewDetails={setDetailSample}
         onEdit={setEditSample}
         onEnterValues={() => showFeedback("Diese Funktion wird später angebunden.")}
@@ -237,11 +239,7 @@ export default function ProbekoerperPage() {
         onConfirm={handleConfirmAction}
       />
 
-      {feedback && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-lg">
-          {feedback}
-        </div>
-      )}
+      <FeedbackToast message={feedback} />
     </div>
   );
 }

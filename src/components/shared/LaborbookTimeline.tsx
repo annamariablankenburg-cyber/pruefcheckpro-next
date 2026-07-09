@@ -1,4 +1,4 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { LaborbookStatusBadge } from "@/components/shared/LaborbookStatusBadge";
 import { laborbookTypeIcons } from "@/components/shared/LaborbookTypeBadge";
 import { cn } from "@/lib/utils";
@@ -7,6 +7,7 @@ import type { LaborbookEntry } from "@/types/laborbook";
 interface LaborbookTimelineProps {
   entries: LaborbookEntry[];
   onViewDetails: (entry: LaborbookEntry) => void;
+  onResetFilters?: () => void;
 }
 
 interface DateGroup {
@@ -27,14 +28,10 @@ function groupByDatum(entries: LaborbookEntry[]): DateGroup[] {
   return groups;
 }
 
-export function LaborbookTimeline({ entries, onViewDetails }: LaborbookTimelineProps) {
+export function LaborbookTimeline({ entries, onViewDetails, onResetFilters }: LaborbookTimelineProps) {
   if (entries.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-12 text-center text-sm text-muted-foreground">
-          Keine Einträge gefunden. Passe Suche oder Filter an.
-        </CardContent>
-      </Card>
+      <EmptyState message="Keine Einträge gefunden. Passe Suche oder Filter an." onReset={onResetFilters} />
     );
   }
 

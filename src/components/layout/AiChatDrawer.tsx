@@ -21,6 +21,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 
 interface AiChatDrawerProps {
   open: boolean;
@@ -45,12 +46,7 @@ const chatHistory = [
 
 export function AiChatDrawer({ open, onOpenChange }: AiChatDrawerProps) {
   const [message, setMessage] = useState("");
-  const [feedback, setFeedback] = useState<string | null>(null);
-
-  function showFeedback(text: string) {
-    setFeedback(text);
-    window.setTimeout(() => setFeedback(null), 2500);
-  }
+  const { message: feedback, showFeedback } = useFeedbackToast();
 
   function handleSend() {
     if (message.trim().length === 0) return;
@@ -157,11 +153,7 @@ export function AiChatDrawer({ open, onOpenChange }: AiChatDrawerProps) {
             </form>
           </div>
 
-          {feedback && (
-            <div className="pointer-events-none absolute bottom-20 left-1/2 z-10 -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-lg">
-              {feedback}
-            </div>
-          )}
+          <FeedbackToast message={feedback} className="pointer-events-none absolute bottom-20 z-10" />
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>

@@ -8,6 +8,7 @@ import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 import { DeviceDetailDrawer } from "@/components/shared/DeviceDetailDrawer";
 import { DeviceFilters, type DeviceFilter } from "@/components/shared/DeviceFilters";
 import { DeviceTable } from "@/components/shared/DeviceTable";
+import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { NewDeviceDialog } from "@/components/shared/NewDeviceDialog";
 import { StatCard } from "@/components/shared/StatCard";
 import { devices as initialDevices } from "@/config/devices";
@@ -52,7 +53,7 @@ export function DevicesView() {
     device: Device;
     type: ConfirmActionType;
   } | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const { message: feedback, showFeedback } = useFeedbackToast();
 
   const activeDevices = useMemo(
     () => devices.filter((device) => device.status !== "Archiviert"),
@@ -95,11 +96,6 @@ export function DevicesView() {
     [activeDevices]
   );
 
-  function showFeedback(message: string) {
-    setFeedback(message);
-    window.setTimeout(() => setFeedback(null), 2000);
-  }
-
   function updateDevice(id: string, changes: Partial<Device>) {
     setDevices((current) =>
       current.map((device) => (device.id === id ? { ...device, ...changes } : device))
@@ -107,6 +103,11 @@ export function DevicesView() {
     setDetailDevice((current) =>
       current && current.id === id ? { ...current, ...changes } : current
     );
+  }
+
+  function handleResetFilters() {
+    setSearch("");
+    setFilter("Alle");
   }
 
   function handleConfirmAction(device: Device) {
@@ -163,6 +164,7 @@ export function DevicesView() {
 
       <DeviceTable
         devices={filteredDevices}
+        onResetFilters={handleResetFilters}
         onViewDetails={setDetailDevice}
         onEdit={setEditDevice}
         onDocumentCalibration={() =>
@@ -215,11 +217,7 @@ export function DevicesView() {
         onConfirm={handleConfirmAction}
       />
 
-      {feedback && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background shadow-lg">
-          {feedback}
-        </div>
-      )}
+      <FeedbackToast message={feedback} />
     </div>
   );
 }

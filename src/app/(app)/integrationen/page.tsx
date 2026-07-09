@@ -15,6 +15,7 @@ import { ApiSettingsCard } from "@/components/shared/ApiSettingsCard";
 import { CloudStorageCard } from "@/components/shared/CloudStorageCard";
 import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 import { ExportSettingsCard } from "@/components/shared/ExportSettingsCard";
+import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { IntegrationCard } from "@/components/shared/IntegrationCard";
 import { SecurityInfoCard } from "@/components/shared/SecurityInfoCard";
 import { WebhookTable } from "@/components/shared/WebhookTable";
@@ -72,12 +73,7 @@ export default function IntegrationenPage() {
     null
   );
   const [regenerateConfirm, setRegenerateConfirm] = useState(false);
-  const [feedback, setFeedback] = useState<string | null>(null);
-
-  function showFeedback(message: string) {
-    setFeedback(message);
-    window.setTimeout(() => setFeedback(null), 2500);
-  }
+  const { message: feedback, showFeedback } = useFeedbackToast();
 
   const categoryCounts = useMemo(() => {
     const counts: Record<IntegrationCategory, number> = {
@@ -262,11 +258,7 @@ export default function IntegrationenPage() {
         onConfirm={handleRegenerateKey}
       />
 
-      {feedback && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-lg">
-          {feedback}
-        </div>
-      )}
+      <FeedbackToast message={feedback} />
     </div>
   );
 }

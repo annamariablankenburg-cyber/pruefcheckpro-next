@@ -6,6 +6,7 @@ import { CheckCircle2, FlaskConical, FolderKanban, Plus, TriangleAlert } from "l
 
 import { Button } from "@/components/ui/button";
 import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
+import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { NewProjectDialog } from "@/components/shared/NewProjectDialog";
 import { ProjectDetailDrawer } from "@/components/shared/ProjectDetailDrawer";
 import { ProjectFilters, type ProjectFilter } from "@/components/shared/ProjectFilters";
@@ -74,7 +75,7 @@ export function ProjectsView() {
     project: Project;
     type: ConfirmActionType;
   } | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const { message: feedback, showFeedback } = useFeedbackToast();
 
   // Archivierte Projekte erscheinen nie in "Alle" oder anderen Filtern – nur
   // im eigenen "Archiviert"-Filter.
@@ -116,11 +117,6 @@ export function ProjectsView() {
     [activeProjects]
   );
 
-  function showFeedback(message: string) {
-    setFeedback(message);
-    window.setTimeout(() => setFeedback(null), 2000);
-  }
-
   function updateProject(id: string, changes: Partial<Project>) {
     setProjects((current) =>
       current.map((project) => (project.id === id ? { ...project, ...changes } : project))
@@ -128,6 +124,11 @@ export function ProjectsView() {
     setDetailProject((current) =>
       current && current.id === id ? { ...current, ...changes } : current
     );
+  }
+
+  function handleResetFilters() {
+    setSearch("");
+    setFilter("Alle");
   }
 
   function handleConfirmAction(project: Project) {
@@ -174,6 +175,7 @@ export function ProjectsView() {
 
       <ProjectTable
         projects={filteredProjects}
+        onResetFilters={handleResetFilters}
         onViewDetails={setDetailProject}
         onEdit={() => showFeedback("Diese Funktion wird später angebunden.")}
         onViewSamples={() => router.push("/probekoerper")}
@@ -215,11 +217,7 @@ export function ProjectsView() {
         onConfirm={handleConfirmAction}
       />
 
-      {feedback && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background shadow-lg">
-          {feedback}
-        </div>
-      )}
+      <FeedbackToast message={feedback} />
     </div>
   );
 }

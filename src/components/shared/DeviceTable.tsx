@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { DeviceActionsMenu } from "@/components/shared/DeviceActionsMenu";
 import { DeviceStatusBadge } from "@/components/shared/DeviceStatusBadge";
 import { DeviceTypeBadge } from "@/components/shared/DeviceTypeBadge";
+import { EmptyState } from "@/components/shared/EmptyState";
 import type { Device } from "@/types/device";
 
 interface DeviceTableActionHandlers {
@@ -17,16 +18,13 @@ interface DeviceTableActionHandlers {
 
 interface DeviceTableProps extends DeviceTableActionHandlers {
   devices: Device[];
+  onResetFilters?: () => void;
 }
 
-export function DeviceTable({ devices, ...handlers }: DeviceTableProps) {
+export function DeviceTable({ devices, onResetFilters, ...handlers }: DeviceTableProps) {
   if (devices.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-12 text-center text-sm text-muted-foreground">
-          Keine Geräte gefunden. Passe Suche oder Filter an.
-        </CardContent>
-      </Card>
+      <EmptyState message="Keine Geräte gefunden. Passe Suche oder Filter an." onReset={onResetFilters} />
     );
   }
 

@@ -3,6 +3,7 @@ import { EmployeeActionsMenu } from "@/components/shared/EmployeeActionsMenu";
 import { EmployeeAvatar } from "@/components/shared/EmployeeAvatar";
 import { EmployeeRoleBadge } from "@/components/shared/EmployeeRoleBadge";
 import { EmployeeStatusBadge } from "@/components/shared/EmployeeStatusBadge";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { cn } from "@/lib/utils";
 import type { Employee } from "@/types/employee";
 
@@ -16,6 +17,7 @@ interface EmployeeTableProps {
   onReactivate: (employee: Employee) => void;
   onRevokeAccess: (employee: Employee) => void;
   onRevokeInvitation: (employee: Employee) => void;
+  onResetFilters?: () => void;
 }
 
 const columns = [
@@ -45,14 +47,14 @@ export function EmployeeTable({
   onReactivate,
   onRevokeAccess,
   onRevokeInvitation,
+  onResetFilters,
 }: EmployeeTableProps) {
   if (employees.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-12 text-center text-sm text-muted-foreground">
-          Keine Mitarbeiter gefunden. Passe Suche oder Filter an.
-        </CardContent>
-      </Card>
+      <EmptyState
+        message="Keine Mitarbeiter gefunden. Passe Suche oder Filter an."
+        onReset={onResetFilters}
+      />
     );
   }
 

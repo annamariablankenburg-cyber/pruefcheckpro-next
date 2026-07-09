@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { EmployeeAvatar } from "@/components/shared/EmployeeAvatar";
 import { EmployeeRoleBadge } from "@/components/shared/EmployeeRoleBadge";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { InvitationActionsMenu } from "@/components/shared/InvitationActionsMenu";
 import { InvitationStatusBadge } from "@/components/shared/InvitationStatusBadge";
 import type { Invitation } from "@/types/invitation";
@@ -13,6 +14,7 @@ interface InvitationTableProps {
   onResend: (invitation: Invitation) => void;
   onRevoke: (invitation: Invitation) => void;
   onDelete: (invitation: Invitation) => void;
+  onResetFilters?: () => void;
 }
 
 const columns = [
@@ -34,14 +36,14 @@ export function InvitationTable({
   onResend,
   onRevoke,
   onDelete,
+  onResetFilters,
 }: InvitationTableProps) {
   if (invitations.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-12 text-center text-sm text-muted-foreground">
-          Keine Einladungen gefunden. Passe Suche oder Filter an.
-        </CardContent>
-      </Card>
+      <EmptyState
+        message="Keine Einladungen gefunden. Passe Suche oder Filter an."
+        onReset={onResetFilters}
+      />
     );
   }
 

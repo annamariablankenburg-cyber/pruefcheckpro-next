@@ -1,4 +1,5 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { TestEntryActionsMenu } from "@/components/shared/TestEntryActionsMenu";
 import { TestEntryStatusBadge } from "@/components/shared/TestEntryStatusBadge";
 import { TestValueCard } from "@/components/shared/TestValueCard";
@@ -15,6 +16,7 @@ interface TestEntryTableActionHandlers {
 
 interface TestEntryTableProps extends TestEntryTableActionHandlers {
   entries: TestEntry[];
+  onResetFilters?: () => void;
 }
 
 const columns = [
@@ -30,14 +32,10 @@ const columns = [
   "",
 ];
 
-export function TestEntryTable({ entries, ...handlers }: TestEntryTableProps) {
+export function TestEntryTable({ entries, onResetFilters, ...handlers }: TestEntryTableProps) {
   if (entries.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-12 text-center text-sm text-muted-foreground">
-          Keine Prüfungen gefunden. Passe Suche oder Filter an.
-        </CardContent>
-      </Card>
+      <EmptyState message="Keine Prüfungen gefunden. Passe Suche oder Filter an." onReset={onResetFilters} />
     );
   }
 

@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { EmployeeAvatar } from "@/components/shared/EmployeeAvatar";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { LaborbookActionsMenu } from "@/components/shared/LaborbookActionsMenu";
 import { LaborbookStatusBadge } from "@/components/shared/LaborbookStatusBadge";
 import { LaborbookTypeBadge } from "@/components/shared/LaborbookTypeBadge";
@@ -15,6 +16,7 @@ interface LaborbookTableActionHandlers {
 
 interface LaborbookTableProps extends LaborbookTableActionHandlers {
   entries: LaborbookEntry[];
+  onResetFilters?: () => void;
 }
 
 const columns = [
@@ -37,14 +39,10 @@ function initialsOf(name: string) {
     .toUpperCase();
 }
 
-export function LaborbookTable({ entries, ...handlers }: LaborbookTableProps) {
+export function LaborbookTable({ entries, onResetFilters, ...handlers }: LaborbookTableProps) {
   if (entries.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-12 text-center text-sm text-muted-foreground">
-          Keine Einträge gefunden. Passe Suche oder Filter an.
-        </CardContent>
-      </Card>
+      <EmptyState message="Keine Einträge gefunden. Passe Suche oder Filter an." onReset={onResetFilters} />
     );
   }
 

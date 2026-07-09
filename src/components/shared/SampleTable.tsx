@@ -1,4 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { SampleActionsMenu } from "@/components/shared/SampleActionsMenu";
 import { SampleStatusBadge } from "@/components/shared/SampleStatusBadge";
 import type { Sample } from "@/types/sample";
@@ -17,6 +18,7 @@ interface SampleTableActionHandlers {
 
 interface SampleTableProps extends SampleTableActionHandlers {
   samples: Sample[];
+  onResetFilters?: () => void;
 }
 
 const columns = [
@@ -34,14 +36,10 @@ const columns = [
   "",
 ];
 
-export function SampleTable({ samples, ...handlers }: SampleTableProps) {
+export function SampleTable({ samples, onResetFilters, ...handlers }: SampleTableProps) {
   if (samples.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-12 text-center text-sm text-muted-foreground">
-          Keine Proben gefunden. Passe Suche oder Filter an.
-        </CardContent>
-      </Card>
+      <EmptyState message="Keine Proben gefunden. Passe Suche oder Filter an." onReset={onResetFilters} />
     );
   }
 

@@ -13,6 +13,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
+import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { NewReportDialog } from "@/components/shared/NewReportDialog";
 import { ReportEditorDrawer, type Section } from "@/components/shared/ReportEditorDrawer";
 import { ReportFilters, type ReportFilter } from "@/components/shared/ReportFilters";
@@ -79,12 +80,7 @@ export function ReportsView() {
   const [confirmAction, setConfirmAction] = useState<{ report: Report; type: ConfirmActionType } | null>(
     null
   );
-  const [feedback, setFeedback] = useState<string | null>(null);
-
-  function showFeedback(message: string) {
-    setFeedback(message);
-    window.setTimeout(() => setFeedback(null), 2500);
-  }
+  const { message: feedback, showFeedback } = useFeedbackToast();
 
   function updateReport(id: string, changes: Partial<Report>) {
     setReports((current) =>
@@ -140,6 +136,11 @@ export function ReportsView() {
 
   function requestAction(type: ConfirmActionType) {
     return (report: Report) => setConfirmAction({ report, type });
+  }
+
+  function handleResetFilters() {
+    setSearch("");
+    setFilter("Alle");
   }
 
   function handleConfirmAction(subject: Report) {
@@ -202,6 +203,7 @@ export function ReportsView() {
 
       <ReportTable
         reports={filteredReports}
+        onResetFilters={handleResetFilters}
         onOpenDetails={(report) => openEditor(report)}
         onEdit={(report) => openEditor(report)}
         onPreview={(report) => openEditor(report, "Export")}
@@ -254,11 +256,7 @@ export function ReportsView() {
         onConfirm={handleConfirmDelete}
       />
 
-      {feedback && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-lg">
-          {feedback}
-        </div>
-      )}
+      <FeedbackToast message={feedback} />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { ReportActionsMenu } from "@/components/shared/ReportActionsMenu";
 import { ReportFormatBadge } from "@/components/shared/ReportFormatBadge";
 import { ReportStatusBadge } from "@/components/shared/ReportStatusBadge";
@@ -19,6 +20,7 @@ interface ReportTableActionHandlers {
 
 interface ReportTableProps extends ReportTableActionHandlers {
   reports: Report[];
+  onResetFilters?: () => void;
 }
 
 const columns = [
@@ -35,14 +37,10 @@ const columns = [
   "",
 ];
 
-export function ReportTable({ reports, ...handlers }: ReportTableProps) {
+export function ReportTable({ reports, onResetFilters, ...handlers }: ReportTableProps) {
   if (reports.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-12 text-center text-sm text-muted-foreground">
-          Keine Berichte gefunden. Passe Suche oder Filter an.
-        </CardContent>
-      </Card>
+      <EmptyState message="Keine Berichte gefunden. Passe Suche oder Filter an." onReset={onResetFilters} />
     );
   }
 

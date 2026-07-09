@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 import { CreateRoleDialog, type NewRoleData } from "@/components/shared/CreateRoleDialog";
 import { DuplicateRoleDialog } from "@/components/shared/DuplicateRoleDialog";
+import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { RoleCard } from "@/components/shared/RoleCard";
 import { RoleDrawer } from "@/components/shared/RoleDrawer";
 import { StatCard } from "@/components/shared/StatCard";
@@ -25,7 +26,7 @@ export function RolesView() {
     role: Role;
     type: ConfirmActionType;
   } | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const { message: feedback, showFeedback } = useFeedbackToast();
 
   const kpis = useMemo(() => {
     const systemCount = roles.filter((role) => role.type === "System").length;
@@ -44,11 +45,6 @@ export function RolesView() {
       activePermissions,
     };
   }, [roles]);
-
-  function showFeedback(message: string) {
-    setFeedback(message);
-    window.setTimeout(() => setFeedback(null), 2000);
-  }
 
   function updateRole(id: string, changes: Partial<Role>) {
     setRoles((current) => current.map((role) => (role.id === id ? { ...role, ...changes } : role)));
@@ -226,11 +222,7 @@ export function RolesView() {
         onConfirm={handleConfirmAction}
       />
 
-      {feedback && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background shadow-lg">
-          {feedback}
-        </div>
-      )}
+      <FeedbackToast message={feedback} />
     </div>
   );
 }

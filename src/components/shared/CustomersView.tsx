@@ -9,6 +9,7 @@ import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 import { CustomerDetailDrawer } from "@/components/shared/CustomerDetailDrawer";
 import { CustomerFilters, type CustomerFilter } from "@/components/shared/CustomerFilters";
 import { CustomerTable } from "@/components/shared/CustomerTable";
+import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { NewCustomerDialog } from "@/components/shared/NewCustomerDialog";
 import { StatCard } from "@/components/shared/StatCard";
 import { customers as initialCustomers } from "@/config/customers";
@@ -53,7 +54,7 @@ export function CustomersView() {
     customer: Customer;
     type: ConfirmActionType;
   } | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const { message: feedback, showFeedback } = useFeedbackToast();
 
   const activeCustomers = useMemo(
     () => customers.filter((customer) => customer.status !== "Archiviert"),
@@ -103,11 +104,6 @@ export function CustomersView() {
     [activeCustomers]
   );
 
-  function showFeedback(message: string) {
-    setFeedback(message);
-    window.setTimeout(() => setFeedback(null), 2000);
-  }
-
   function updateCustomer(id: string, changes: Partial<Customer>) {
     setCustomers((current) =>
       current.map((customer) => (customer.id === id ? { ...customer, ...changes } : customer))
@@ -115,6 +111,11 @@ export function CustomersView() {
     setDetailCustomer((current) =>
       current && current.id === id ? { ...current, ...changes } : current
     );
+  }
+
+  function handleResetFilters() {
+    setSearch("");
+    setFilter("Alle");
   }
 
   function handleConfirmAction(customer: Customer) {
@@ -161,6 +162,7 @@ export function CustomersView() {
 
       <CustomerTable
         customers={filteredCustomers}
+        onResetFilters={handleResetFilters}
         onViewDetails={setDetailCustomer}
         onEdit={() => showFeedback("Diese Funktion wird später angebunden.")}
         onCreateProject={() => showFeedback("Diese Funktion wird später angebunden.")}
@@ -197,11 +199,7 @@ export function CustomersView() {
         onConfirm={handleConfirmAction}
       />
 
-      {feedback && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background shadow-lg">
-          {feedback}
-        </div>
-      )}
+      <FeedbackToast message={feedback} />
     </div>
   );
 }

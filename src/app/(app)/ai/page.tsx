@@ -21,6 +21,7 @@ import { AiModeSelector } from "@/components/shared/AiModeSelector";
 import { AiQuickActions } from "@/components/shared/AiQuickActions";
 import { AiSafetyNotice } from "@/components/shared/AiSafetyNotice";
 import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
+import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import {
   aiChats as initialChats,
   aiContextCards,
@@ -87,14 +88,9 @@ export default function AiPage() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [archiveChat, setArchiveChat] = useState<AiChat | null>(null);
   const [deleteChat, setDeleteChat] = useState<AiChat | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const { message: feedback, showFeedback } = useFeedbackToast();
 
   const activeChat = chats.find((chat) => chat.id === activeChatId) ?? null;
-
-  function showFeedback(message: string) {
-    setFeedback(message);
-    window.setTimeout(() => setFeedback(null), 2500);
-  }
 
   function handleContextCardClick(card: AiContextCard) {
     const target = contextCardRoutes[card.id];
@@ -334,11 +330,7 @@ export default function AiPage() {
         onConfirm={handleConfirmDelete}
       />
 
-      {feedback && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-lg">
-          {feedback}
-        </div>
-      )}
+      <FeedbackToast message={feedback} />
     </div>
   );
 }

@@ -110,6 +110,11 @@ export function EmployeesView({ onInvite }: EmployeesViewProps) {
     setDetailEmployee((current) => (current && current.id === id ? { ...current, ...changes } : current));
   }
 
+  function handleResetFilters() {
+    setSearch("");
+    setFilter("Alle");
+  }
+
   function handleConfirm(employee: Employee) {
     if (!confirmAction) return;
 
@@ -167,6 +172,7 @@ export function EmployeesView({ onInvite }: EmployeesViewProps) {
 
       <EmployeeTable
         employees={filteredEmployees}
+        onResetFilters={handleResetFilters}
         onViewDetails={setDetailEmployee}
         onChangeRole={setRoleAction}
         onChangeLocation={setLocationAction}

@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { EmployeeAvatar } from "@/components/shared/EmployeeAvatar";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { ProjectActionsMenu } from "@/components/shared/ProjectActionsMenu";
 import { ProjectFieldBadge } from "@/components/shared/ProjectFieldBadge";
 import { ProjectStatusBadge } from "@/components/shared/ProjectStatusBadge";
@@ -23,6 +24,7 @@ interface ProjectTableActionHandlers {
 
 interface ProjectTableProps extends ProjectTableActionHandlers {
   projects: Project[];
+  onResetFilters?: () => void;
 }
 
 function ProjectProgress({ value }: { value: number }) {
@@ -34,14 +36,10 @@ function ProjectProgress({ value }: { value: number }) {
   );
 }
 
-export function ProjectTable({ projects, ...handlers }: ProjectTableProps) {
+export function ProjectTable({ projects, onResetFilters, ...handlers }: ProjectTableProps) {
   if (projects.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-12 text-center text-sm text-muted-foreground">
-          Keine Projekte gefunden. Passe Suche oder Filter an.
-        </CardContent>
-      </Card>
+      <EmptyState message="Keine Projekte gefunden. Passe Suche oder Filter an." onReset={onResetFilters} />
     );
   }
 

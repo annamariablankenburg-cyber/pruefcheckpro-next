@@ -6,6 +6,7 @@ import { Building2, Cpu, FolderKanban, Plus, ShieldCheck, Users } from "lucide-r
 
 import { Button } from "@/components/ui/button";
 import { DeactivateLocationDialog } from "@/components/shared/DeactivateLocationDialog";
+import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { LocationDetailDrawer } from "@/components/shared/LocationDetailDrawer";
 import { LocationFilters, type LocationFilter } from "@/components/shared/LocationFilters";
 import { LocationTable } from "@/components/shared/LocationTable";
@@ -24,12 +25,7 @@ export function CompanyLocationsView({ onNewLocation }: CompanyLocationsViewProp
   const [filter, setFilter] = useState<LocationFilter>("Alle");
   const [detailLocation, setDetailLocation] = useState<CompanyLocationDetail | null>(null);
   const [deactivateLocation, setDeactivateLocation] = useState<CompanyLocationDetail | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
-
-  function showFeedback(message: string) {
-    setFeedback(message);
-    window.setTimeout(() => setFeedback(null), 2500);
-  }
+  const { message: feedback, showFeedback } = useFeedbackToast();
 
   const filteredLocations = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -54,6 +50,11 @@ export function CompanyLocationsView({ onNewLocation }: CompanyLocationsViewProp
   const employeeTotal = locations.reduce((sum, location) => sum + location.employeeCount, 0);
   const deviceTotal = locations.reduce((sum, location) => sum + location.deviceCount, 0);
   const projectTotal = locations.reduce((sum, location) => sum + location.projectCount, 0);
+
+  function handleResetFilters() {
+    setSearch("");
+    setFilter("Alle");
+  }
 
   function handleToggleStatus(location: CompanyLocationDetail) {
     if (location.status === "Aktiv") {
@@ -113,6 +114,7 @@ export function CompanyLocationsView({ onNewLocation }: CompanyLocationsViewProp
 
       <LocationTable
         locations={filteredLocations}
+        onResetFilters={handleResetFilters}
         onViewDetails={setDetailLocation}
         onEdit={() => showFeedback("Diese Funktion wird später angebunden.")}
         onViewEmployees={() => showFeedback("Diese Funktion wird später angebunden.")}
@@ -137,11 +139,7 @@ export function CompanyLocationsView({ onNewLocation }: CompanyLocationsViewProp
         onConfirm={confirmDeactivate}
       />
 
-      {feedback && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-lg">
-          {feedback}
-        </div>
-      )}
+      <FeedbackToast message={feedback} />
     </div>
   );
 }
