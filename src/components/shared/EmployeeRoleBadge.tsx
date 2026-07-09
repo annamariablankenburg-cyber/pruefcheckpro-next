@@ -1,5 +1,4 @@
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { StatusBadge } from "@/components/shared/StatusBadge";
 import type { EmployeeRole } from "@/types/employee";
 
 const roleStyles: Record<EmployeeRole, string> = {
@@ -16,9 +15,5 @@ interface EmployeeRoleBadgeProps {
 }
 
 export function EmployeeRoleBadge({ role, className }: EmployeeRoleBadgeProps) {
-  return (
-    <Badge variant="secondary" className={cn("shrink-0", roleStyles[role], className)}>
-      {role}
-    </Badge>
-  );
+  return <StatusBadge value={role} styles={roleStyles} className={className} />;
 }

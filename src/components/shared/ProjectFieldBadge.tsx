@@ -1,5 +1,4 @@
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { StatusBadge } from "@/components/shared/StatusBadge";
 import type { ProjectField } from "@/types/project";
 
 // Farbzuordnung bewusst konsistent mit den Fachbereichs-Farben aus dem
@@ -17,9 +16,5 @@ interface ProjectFieldBadgeProps {
 }
 
 export function ProjectFieldBadge({ field, className }: ProjectFieldBadgeProps) {
-  return (
-    <Badge variant="secondary" className={cn("shrink-0", fieldStyles[field], className)}>
-      {field}
-    </Badge>
-  );
+  return <StatusBadge value={field} styles={fieldStyles} className={className} />;
 }

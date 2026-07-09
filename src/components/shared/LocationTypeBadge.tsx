@@ -1,5 +1,4 @@
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { StatusBadge } from "@/components/shared/StatusBadge";
 import type { LocationType } from "@/types/location";
 
 const typeStyles: Record<LocationType, string> = {
@@ -14,9 +13,5 @@ interface LocationTypeBadgeProps {
 }
 
 export function LocationTypeBadge({ type, className }: LocationTypeBadgeProps) {
-  return (
-    <Badge variant="secondary" className={cn("shrink-0", typeStyles[type], className)}>
-      {type}
-    </Badge>
-  );
+  return <StatusBadge value={type} styles={typeStyles} className={className} />;
 }

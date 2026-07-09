@@ -1,8 +1,7 @@
 import { Beaker, CalendarCheck, Cpu, FileText, Sparkles, Wrench } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { StatusBadge } from "@/components/shared/StatusBadge";
 import type { LaborbookType } from "@/types/laborbook";
 
 export const laborbookTypeIcons: Record<LaborbookType, LucideIcon> = {
@@ -29,11 +28,7 @@ interface LaborbookTypeBadgeProps {
 }
 
 export function LaborbookTypeBadge({ typ, className }: LaborbookTypeBadgeProps) {
-  const Icon = laborbookTypeIcons[typ];
   return (
-    <Badge variant="secondary" className={cn("shrink-0 gap-1", typeStyles[typ], className)}>
-      <Icon className="size-3.5" />
-      {typ}
-    </Badge>
+    <StatusBadge value={typ} styles={typeStyles} icons={laborbookTypeIcons} className={className} />
   );
 }

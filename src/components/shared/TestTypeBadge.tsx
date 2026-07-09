@@ -1,5 +1,4 @@
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { StatusBadge } from "@/components/shared/StatusBadge";
 import type { TestType } from "@/types/testValue";
 
 export const testTypeLabels: Record<TestType, string> = {
@@ -23,8 +22,11 @@ interface TestTypeBadgeProps {
 
 export function TestTypeBadge({ testType, className }: TestTypeBadgeProps) {
   return (
-    <Badge variant="secondary" className={cn("shrink-0", testTypeStyles[testType], className)}>
-      {testTypeLabels[testType]}
-    </Badge>
+    <StatusBadge
+      value={testType}
+      styles={testTypeStyles}
+      label={testTypeLabels[testType]}
+      className={className}
+    />
   );
 }

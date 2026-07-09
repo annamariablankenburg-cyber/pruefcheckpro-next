@@ -1,5 +1,4 @@
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { StatusBadge } from "@/components/shared/StatusBadge";
 import type { IntegrationStatus } from "@/types/integration";
 
 const statusStyles: Record<IntegrationStatus, string> = {
@@ -13,9 +12,5 @@ interface IntegrationStatusBadgeProps {
 }
 
 export function IntegrationStatusBadge({ status, className }: IntegrationStatusBadgeProps) {
-  return (
-    <Badge variant="secondary" className={cn("shrink-0", statusStyles[status], className)}>
-      {status}
-    </Badge>
-  );
+  return <StatusBadge value={status} styles={statusStyles} className={className} />;
 }

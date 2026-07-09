@@ -1,7 +1,6 @@
 import { TriangleAlert } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { StatusBadge } from "@/components/shared/StatusBadge";
 import type { ProjectStatus } from "@/types/project";
 
 const statusStyles: Record<ProjectStatus, string> = {
@@ -22,9 +21,7 @@ interface ProjectStatusBadgeProps {
 export function ProjectStatusBadge({ status, overdue, className }: ProjectStatusBadgeProps) {
   return (
     <span className="inline-flex items-center gap-1.5">
-      <Badge variant="secondary" className={cn("shrink-0", statusStyles[status], className)}>
-        {status}
-      </Badge>
+      <StatusBadge value={status} styles={statusStyles} className={className} />
       {overdue && status === "Aktiv" && (
         <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive">
           <TriangleAlert className="size-3.5" />

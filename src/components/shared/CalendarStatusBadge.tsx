@@ -1,5 +1,4 @@
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { StatusBadge } from "@/components/shared/StatusBadge";
 import type { CalendarEventStatus } from "@/types/calendarEvent";
 
 const statusStyles: Record<CalendarEventStatus, string> = {
@@ -15,9 +14,5 @@ interface CalendarStatusBadgeProps {
 }
 
 export function CalendarStatusBadge({ status, className }: CalendarStatusBadgeProps) {
-  return (
-    <Badge variant="secondary" className={cn("shrink-0", statusStyles[status], className)}>
-      {status}
-    </Badge>
-  );
+  return <StatusBadge value={status} styles={statusStyles} className={className} />;
 }

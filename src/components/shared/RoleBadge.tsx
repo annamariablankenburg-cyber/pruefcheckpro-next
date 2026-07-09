@@ -1,5 +1,4 @@
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { StatusBadge } from "@/components/shared/StatusBadge";
 import type { RoleColor, RoleType } from "@/types/role";
 
 export const roleColorStyles: Record<RoleColor, string> = {
@@ -10,6 +9,16 @@ export const roleColorStyles: Record<RoleColor, string> = {
   neutral: "bg-muted text-muted-foreground",
 };
 
+const typeStyles: Record<RoleType, string> = {
+  System: "bg-primary/10 text-primary",
+  Benutzerdefiniert: "bg-muted text-muted-foreground",
+};
+
+const typeLabels: Record<RoleType, string> = {
+  System: "Systemrolle",
+  Benutzerdefiniert: "Benutzerdefiniert",
+};
+
 interface RoleBadgeProps {
   type: RoleType;
   className?: string;
@@ -17,15 +26,6 @@ interface RoleBadgeProps {
 
 export function RoleBadge({ type, className }: RoleBadgeProps) {
   return (
-    <Badge
-      variant="secondary"
-      className={cn(
-        "shrink-0",
-        type === "System" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
-        className
-      )}
-    >
-      {type === "System" ? "Systemrolle" : "Benutzerdefiniert"}
-    </Badge>
+    <StatusBadge value={type} styles={typeStyles} label={typeLabels[type]} className={className} />
   );
 }
