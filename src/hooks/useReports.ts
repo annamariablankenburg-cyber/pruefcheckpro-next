@@ -1,6 +1,6 @@
 "use client";
 
-import { reportRepository } from "@/lib/repositories/reportRepository";
+import { reportService } from "@/lib/services/reportService";
 import { useEntityList } from "@/hooks/shared/useEntityList";
 import { useSearchAndFilter } from "@/hooks/shared/useSearchAndFilter";
 import type { ReportFilter } from "@/components/shared/ReportFilters";
@@ -8,7 +8,7 @@ import type { Report } from "@/types/report";
 
 export function useReports() {
   const { items: reports, update, remove, add } = useEntityList<Report>(
-    reportRepository.getAll(),
+    reportService.getReports(),
     (report) => report.id
   );
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { locationRepository } from "@/lib/repositories/locationRepository";
+import { locationService } from "@/lib/services/locationService";
 import { useEntityList } from "@/hooks/shared/useEntityList";
 import { useSearchAndFilter } from "@/hooks/shared/useSearchAndFilter";
 import type { LocationFilter } from "@/components/shared/LocationFilters";
@@ -8,7 +8,7 @@ import type { CompanyLocationDetail } from "@/types/location";
 
 export function useLocations() {
   const { items: locations, update } = useEntityList<CompanyLocationDetail>(
-    locationRepository.getAll(),
+    locationService.getLocations(),
     (location) => location.id
   );
 

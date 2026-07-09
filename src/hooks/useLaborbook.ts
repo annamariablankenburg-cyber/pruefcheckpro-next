@@ -1,6 +1,6 @@
 "use client";
 
-import { laborbookRepository } from "@/lib/repositories/laborbookRepository";
+import { laborbookService } from "@/lib/services/laborbookService";
 import { useEntityList } from "@/hooks/shared/useEntityList";
 import { useSearchAndFilter } from "@/hooks/shared/useSearchAndFilter";
 import type { LaborbookFilter } from "@/components/shared/LaborbookFilters";
@@ -8,7 +8,7 @@ import type { LaborbookEntry } from "@/types/laborbook";
 
 export function useLaborbook() {
   const { items: entries, update, remove, add } = useEntityList<LaborbookEntry>(
-    laborbookRepository.getAll(),
+    laborbookService.getLaborbookEntries(),
     (entry) => entry.id
   );
 

@@ -1,12 +1,12 @@
 "use client";
 
-import { roleRepository } from "@/lib/repositories/roleRepository";
+import { roleService } from "@/lib/services/roleService";
 import { useEntityList } from "@/hooks/shared/useEntityList";
 import type { Role } from "@/types/role";
 
 export function useRoles() {
   const { items: roles, update, remove, setItems } = useEntityList<Role>(
-    roleRepository.getAll(),
+    roleService.getRoles(),
     (role) => role.id
   );
 
@@ -47,6 +47,6 @@ export function useRoles() {
     duplicateRole,
     toggleArchive,
     removeRole,
-    buildPermissions: roleRepository.buildPermissions,
+    buildPermissions: roleService.buildPermissions,
   };
 }

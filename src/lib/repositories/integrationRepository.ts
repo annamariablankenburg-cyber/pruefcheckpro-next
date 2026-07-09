@@ -15,6 +15,7 @@ export const integrationRepository = {
   getAllWebhooks: webhooksBase.getAll,
   getWebhookById: webhooksBase.getById,
   updateWebhook: webhooksBase.update,
+  removeWebhook: webhooksBase.remove,
   getExportFormats() {
     return exportFormats;
   },

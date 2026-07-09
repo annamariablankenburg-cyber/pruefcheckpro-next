@@ -1,27 +1,24 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { statisticsRepository } from "@/lib/repositories/statisticsRepository";
+import { statisticsService } from "@/lib/services/statisticsService";
 import type { ZeitraumOption } from "@/config/statistics";
 
 export function useStatistics() {
   const [zeitraum, setZeitraum] = useState<ZeitraumOption>("30 Tage");
 
-  const zeitraumToRangeKey = statisticsRepository.getZeitraumToRangeKey();
-  const range = useMemo(
-    () => statisticsRepository.getByRange(zeitraumToRangeKey[zeitraum]),
-    [zeitraum, zeitraumToRangeKey]
-  );
+  const range = useMemo(() => statisticsService.getStatisticsRange(zeitraum), [zeitraum]);
+  const references = statisticsService.getStatisticsReferences();
 
   return {
     zeitraum,
     setZeitraum,
     range,
-    zeitraumOptions: statisticsRepository.getZeitraumOptions(),
-    monthlyTimeline: statisticsRepository.getMonthlyTimeline(),
-    monthlyTimelineDefaultStart: statisticsRepository.getMonthlyTimelineDefaultStart(),
-    performanceRows: statisticsRepository.getPerformanceRows(),
-    trendCards: statisticsRepository.getTrendCards(),
-    labStatus: statisticsRepository.getLabStatus(),
+    zeitraumOptions: references.zeitraumOptions,
+    monthlyTimeline: references.monthlyTimeline,
+    monthlyTimelineDefaultStart: references.monthlyTimelineDefaultStart,
+    performanceRows: references.performanceRows,
+    trendCards: references.trendCards,
+    labStatus: references.labStatus,
   };
 }

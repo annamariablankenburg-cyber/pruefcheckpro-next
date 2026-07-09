@@ -1,6 +1,6 @@
 "use client";
 
-import { testValueRepository } from "@/lib/repositories/testValueRepository";
+import { testValueService } from "@/lib/services/testValueService";
 import { useEntityList } from "@/hooks/shared/useEntityList";
 import { useSearchAndFilter } from "@/hooks/shared/useSearchAndFilter";
 import type { TestEntryFilter } from "@/components/shared/TestEntryFilters";
@@ -8,7 +8,7 @@ import type { TestEntry } from "@/types/testValue";
 
 export function useTestEntries() {
   const { items: entries, update } = useEntityList<TestEntry>(
-    testValueRepository.getAll(),
+    testValueService.getTestEntries(),
     (entry) => entry.sampleId
   );
 

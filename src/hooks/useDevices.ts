@@ -1,6 +1,6 @@
 "use client";
 
-import { deviceRepository } from "@/lib/repositories/deviceRepository";
+import { deviceService } from "@/lib/services/deviceService";
 import { useEntityList } from "@/hooks/shared/useEntityList";
 import { useSearchAndFilter } from "@/hooks/shared/useSearchAndFilter";
 import type { DeviceFilter } from "@/components/shared/DeviceFilters";
@@ -8,7 +8,7 @@ import type { Device } from "@/types/device";
 
 export function useDevices() {
   const { items: devices, update, remove, add } = useEntityList<Device>(
-    deviceRepository.getAll(),
+    deviceService.getDevices(),
     (device) => device.id
   );
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { sampleRepository } from "@/lib/repositories/sampleRepository";
+import { sampleService } from "@/lib/services/sampleService";
 import { useEntityList } from "@/hooks/shared/useEntityList";
 import { useSearchAndFilter } from "@/hooks/shared/useSearchAndFilter";
 import type { SampleFilter } from "@/components/shared/SampleFilters";
@@ -8,7 +8,7 @@ import type { Sample } from "@/types/sample";
 
 export function useSamples() {
   const { items: samples, update, remove, add } = useEntityList<Sample>(
-    sampleRepository.getAll(),
+    sampleService.getSamples(),
     (sample) => sample.id
   );
 

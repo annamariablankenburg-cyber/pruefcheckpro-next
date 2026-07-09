@@ -1,6 +1,6 @@
 "use client";
 
-import { customerRepository } from "@/lib/repositories/customerRepository";
+import { customerService } from "@/lib/services/customerService";
 import { useEntityList } from "@/hooks/shared/useEntityList";
 import { useSearchAndFilter } from "@/hooks/shared/useSearchAndFilter";
 import type { CustomerFilter } from "@/components/shared/CustomerFilters";
@@ -8,7 +8,7 @@ import type { Customer } from "@/types/customer";
 
 export function useCustomers() {
   const { items: customers, update, remove, add } = useEntityList<Customer>(
-    customerRepository.getAll(),
+    customerService.getCustomers(),
     (customer) => customer.id
   );
 

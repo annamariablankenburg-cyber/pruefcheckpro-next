@@ -2,10 +2,10 @@
 
 import { useMemo } from "react";
 import { HEUTE } from "@/config/calendarEvents";
-import { calendarRepository } from "@/lib/repositories/calendarRepository";
+import { calendarService } from "@/lib/services/calendarService";
 
 export function useCalendar() {
-  const events = calendarRepository.getAll();
+  const events = calendarService.getCalendarEvents();
 
   const todaysEvents = useMemo(
     () => events.filter((event) => event.date === HEUTE).sort((a, b) => a.time.localeCompare(b.time)),

@@ -1,6 +1,6 @@
 "use client";
 
-import { projectRepository } from "@/lib/repositories/projectRepository";
+import { projectService } from "@/lib/services/projectService";
 import { useEntityList } from "@/hooks/shared/useEntityList";
 import { useSearchAndFilter } from "@/hooks/shared/useSearchAndFilter";
 import type { ProjectFilter } from "@/components/shared/ProjectFilters";
@@ -8,7 +8,7 @@ import type { Project } from "@/types/project";
 
 export function useProjects() {
   const { items: projects, update, remove, add } = useEntityList<Project>(
-    projectRepository.getAll(),
+    projectService.getProjects(),
     (project) => project.id
   );
 

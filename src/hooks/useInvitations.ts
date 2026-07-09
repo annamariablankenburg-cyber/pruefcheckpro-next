@@ -1,6 +1,6 @@
 "use client";
 
-import { invitationRepository } from "@/lib/repositories/invitationRepository";
+import { invitationService } from "@/lib/services/invitationService";
 import { useEntityList } from "@/hooks/shared/useEntityList";
 import { useSearchAndFilter } from "@/hooks/shared/useSearchAndFilter";
 import type { InvitationFilter } from "@/components/shared/InvitationFilters";
@@ -8,7 +8,7 @@ import type { Invitation } from "@/types/invitation";
 
 export function useInvitations() {
   const { items: invitations, update, remove } = useEntityList<Invitation>(
-    invitationRepository.getAll(),
+    invitationService.getInvitations(),
     (invitation) => invitation.id
   );
 

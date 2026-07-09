@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { aiRepository } from "@/lib/repositories/aiRepository";
+import { aiService } from "@/lib/services/aiService";
 import type { AiChat, AiMessage, AiMode, AiQuickAction } from "@/types/ai";
 
 function getCannedReply(prompt: string, mode: AiMode): string {
@@ -46,7 +46,7 @@ function getCannedReply(prompt: string, mode: AiMode): string {
 }
 
 export function useAI() {
-  const initialChats = aiRepository.getAll();
+  const initialChats = aiService.getAiChats();
   const [chats, setChats] = useState<AiChat[]>(initialChats);
   const [activeChatId, setActiveChatId] = useState<string | null>(initialChats[0]?.id ?? null);
   const [mode, setMode] = useState<AiMode>("Allgemein");
@@ -138,9 +138,9 @@ export function useAI() {
     reactivateChat,
     archiveChat,
     deleteChat,
-    tools: aiRepository.getTools(),
-    contextCards: aiRepository.getContextCards(),
-    quickActions: aiRepository.getQuickActions(),
-    recentResults: aiRepository.getRecentResults(),
+    tools: aiService.getAiTools(),
+    contextCards: aiService.getAiContextCards(),
+    quickActions: aiService.getAiQuickActions(),
+    recentResults: aiService.getAiRecentResults(),
   };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { employeeRepository } from "@/lib/repositories/employeeRepository";
+import { employeeService } from "@/lib/services/employeeService";
 import { useEntityList } from "@/hooks/shared/useEntityList";
 import { useSearchAndFilter } from "@/hooks/shared/useSearchAndFilter";
 import type { EmployeeFilter } from "@/components/shared/EmployeeFilters";
@@ -8,7 +8,7 @@ import type { Employee } from "@/types/employee";
 
 export function useEmployees() {
   const { items: employees, update, remove } = useEntityList<Employee>(
-    employeeRepository.getAll(),
+    employeeService.getEmployees(),
     (employee) => employee.id
   );
 
@@ -57,7 +57,7 @@ export function useEmployees() {
     suspendEmployee,
     reactivateEmployee,
     removeEmployee,
-    employeeRoles: employeeRepository.getEmployeeRoles(),
-    locationNames: employeeRepository.getLocationNames(),
+    employeeRoles: employeeService.getEmployeeRoles(),
+    locationNames: employeeService.getLocationNames(),
   };
 }
