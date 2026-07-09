@@ -191,7 +191,7 @@ export function RolesView() {
         role={detailRole}
         onOpenChange={(open) => !open && setDetailRole(null)}
         onTogglePermission={handleTogglePermission}
-        onEdit={() => {}}
+        onEdit={() => showFeedback("Diese Funktion wird später angebunden.")}
         onCopy={handleCopy}
         onDuplicate={setDuplicateRole}
         onExport={handleExport}

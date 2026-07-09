@@ -45,6 +45,18 @@ const chatHistory = [
 
 export function AiChatDrawer({ open, onOpenChange }: AiChatDrawerProps) {
   const [message, setMessage] = useState("");
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  function showFeedback(text: string) {
+    setFeedback(text);
+    window.setTimeout(() => setFeedback(null), 2500);
+  }
+
+  function handleSend() {
+    if (message.trim().length === 0) return;
+    setMessage("");
+    showFeedback("Diese Funktion wird später angebunden.");
+  }
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -63,7 +75,12 @@ export function AiChatDrawer({ open, onOpenChange }: AiChatDrawerProps) {
               </DialogPrimitive.Title>
             </div>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" aria-label="Neuer Chat">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Neuer Chat"
+                onClick={() => showFeedback("Diese Funktion wird später angebunden.")}
+              >
                 <MessageSquarePlus className="size-4" />
               </Button>
               <Button variant="ghost" size="icon" aria-label="Vollbild öffnen" asChild>
@@ -89,13 +106,15 @@ export function AiChatDrawer({ open, onOpenChange }: AiChatDrawerProps) {
 
             <div className="flex flex-wrap gap-2">
               {quickActions.map((action) => (
-                <span
+                <button
                   key={action.label}
+                  type="button"
+                  onClick={() => showFeedback("Diese Funktion wird später angebunden.")}
                   className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
                 >
                   <action.icon className="size-3.5" />
                   {action.label}
-                </span>
+                </button>
               ))}
             </div>
 
@@ -107,6 +126,7 @@ export function AiChatDrawer({ open, onOpenChange }: AiChatDrawerProps) {
                 <button
                   key={entry.title}
                   type="button"
+                  onClick={() => showFeedback("Diese Funktion wird später angebunden.")}
                   className="-mx-2 flex items-center gap-2.5 rounded-lg px-2 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted/60"
                 >
                   <MessageSquare className="size-4 shrink-0 text-muted-foreground" />
@@ -118,18 +138,30 @@ export function AiChatDrawer({ open, onOpenChange }: AiChatDrawerProps) {
           </div>
 
           <div className="border-t border-border p-4">
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 focus-within:border-primary/40">
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                handleSend();
+              }}
+              className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 focus-within:border-primary/40"
+            >
               <Input
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}
                 placeholder="Frag die KI …"
                 className="h-8 border-none bg-transparent px-0 shadow-none focus-visible:ring-0"
               />
-              <Button size="icon-sm" aria-label="Senden">
+              <Button type="submit" size="icon-sm" aria-label="Senden" disabled={message.trim().length === 0}>
                 <Send className="size-4" />
               </Button>
-            </div>
+            </form>
           </div>
+
+          {feedback && (
+            <div className="pointer-events-none absolute bottom-20 left-1/2 z-10 -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-lg">
+              {feedback}
+            </div>
+          )}
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>

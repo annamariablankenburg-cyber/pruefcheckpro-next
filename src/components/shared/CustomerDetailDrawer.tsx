@@ -29,6 +29,7 @@ interface CustomerDetailDrawerProps {
   onOpenChange: (open: boolean) => void;
   onEdit: (customer: Customer) => void;
   onCreateProject: (customer: Customer) => void;
+  onOpenProject: (projectName: string) => void;
   onAddInvoice: (customer: Customer) => void;
   onAddDeliveryNote: (customer: Customer) => void;
   onUploadDocument: (customer: Customer) => void;
@@ -59,6 +60,7 @@ export function CustomerDetailDrawer({
   onOpenChange,
   onEdit,
   onCreateProject,
+  onOpenProject,
   onAddInvoice,
   onAddDeliveryNote,
   onUploadDocument,
@@ -122,9 +124,14 @@ export function CustomerDetailDrawer({
                 {customer.projects.length > 0 ? (
                   <div className="flex flex-col divide-y divide-border rounded-xl border border-border">
                     {customer.projects.map((project) => (
-                      <div key={project} className="px-3.5 py-2.5 text-sm text-foreground">
+                      <button
+                        key={project}
+                        type="button"
+                        onClick={() => onOpenProject(project)}
+                        className="px-3.5 py-2.5 text-left text-sm text-foreground hover:bg-muted/60"
+                      >
                         {project}
-                      </div>
+                      </button>
                     ))}
                   </div>
                 ) : (

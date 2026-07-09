@@ -17,6 +17,13 @@ export function Topbar() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
 
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  function showFeedback(message: string) {
+    setFeedback(message);
+    window.setTimeout(() => setFeedback(null), 2500);
+  }
+
   async function handleLogout() {
     setIsLoggingOut(true);
     try {
@@ -39,7 +46,13 @@ export function Topbar() {
           <Sparkles className="size-4" />
           <span className="hidden sm:inline">KI öffnen</span>
         </Button>
-        <Button type="button" variant="ghost" size="icon" aria-label="Benachrichtigungen">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label="Benachrichtigungen"
+          onClick={() => showFeedback("Diese Funktion wird später angebunden.")}
+        >
           <Bell className="size-4" />
         </Button>
         <ThemeToggle />
@@ -59,6 +72,12 @@ export function Topbar() {
       </div>
 
       <AiChatDrawer open={aiOpen} onOpenChange={setAiOpen} />
+
+      {feedback && (
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-lg">
+          {feedback}
+        </div>
+      )}
     </header>
   );
 }

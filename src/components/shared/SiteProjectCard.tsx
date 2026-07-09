@@ -1,11 +1,13 @@
-import { Cloud, MapPin, Phone } from "lucide-react";
+import { Cloud, ExternalLink, MapPin, Phone } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmployeeAvatar } from "@/components/shared/EmployeeAvatar";
 import type { ActiveSite } from "@/types/siteMode";
 
 interface SiteProjectCardProps {
   site: ActiveSite;
+  onOpenProject: () => void;
 }
 
 function initialsOf(name: string) {
@@ -27,15 +29,21 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function SiteProjectCard({ site }: SiteProjectCardProps) {
+export function SiteProjectCard({ site, onOpenProject }: SiteProjectCardProps) {
   return (
     <Card>
       <CardContent className="flex flex-col gap-4">
-        <div>
-          <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-            Aktive Baustelle
-          </p>
-          <h2 className="mt-1 text-lg font-semibold text-foreground">{site.projekt}</h2>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              Aktive Baustelle
+            </p>
+            <h2 className="mt-1 text-lg font-semibold text-foreground">{site.projekt}</h2>
+          </div>
+          <Button type="button" variant="outline" size="sm" onClick={onOpenProject}>
+            <ExternalLink className="size-4" />
+            Projekt öffnen
+          </Button>
         </div>
 
         <div className="divide-y divide-border">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { AlertTriangle, CloudUpload, FlaskConical } from "lucide-react";
 
 import { SiteCameraPanel } from "@/components/shared/SiteCameraPanel";
@@ -16,6 +17,7 @@ import { activeSite, siteDevices, siteQuickActions, siteSamples } from "@/config
 import type { SiteDevice, SiteQuickActionItem, SiteSample } from "@/types/siteMode";
 
 export default function BaustellenmodusPage() {
+  const router = useRouter();
   const [activeSample, setActiveSample] = useState<SiteSample | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
@@ -57,7 +59,7 @@ export default function BaustellenmodusPage() {
         <StatCard icon={CloudUpload} label="Zu synchronisieren" value={kpis.zuSynchronisieren} tone="warning" />
       </div>
 
-      <SiteProjectCard site={activeSite} />
+      <SiteProjectCard site={activeSite} onOpenProject={() => router.push("/projekte")} />
 
       <div className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold text-foreground">Schnellaktionen</h2>
@@ -104,6 +106,7 @@ export default function BaustellenmodusPage() {
         onUpdateLocation={() => showFeedback("Diese Funktion wird später angebunden.")}
         onAddPhoto={() => showFeedback("Diese Funktion wird später angebunden.")}
         onAddAttachment={() => showFeedback("Diese Funktion wird später angebunden.")}
+        onOpenSample={() => router.push("/probekoerper")}
       />
 
       {feedback && (

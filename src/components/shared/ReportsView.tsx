@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   CalendarClock,
   CheckCircle2,
@@ -67,6 +68,7 @@ const confirmCopy: Record<
 };
 
 export function ReportsView() {
+  const router = useRouter();
   const [reports, setReports] = useState<Report[]>(initialReports);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<ReportFilter>("Alle");
@@ -226,6 +228,9 @@ export function ReportsView() {
         onReactivate={requestAction("reactivate")}
         onDelete={setDeleteReport}
         onPreview={() => showFeedback("Diese Funktion wird später angebunden.")}
+        onOpenProject={() => router.push("/projekte")}
+        onOpenCustomer={() => router.push("/kunden")}
+        onOpenSample={() => router.push("/probekoerper")}
       />
 
       <NewReportDialog open={isNewReportOpen} onOpenChange={setIsNewReportOpen} />

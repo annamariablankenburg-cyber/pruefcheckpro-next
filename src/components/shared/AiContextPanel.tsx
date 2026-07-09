@@ -11,6 +11,7 @@ interface AiContextPanelProps {
   recentResults: RecordListItem[];
   onToolSelect: (tool: AiTool) => void;
   onViewAllResults: () => void;
+  onContextCardClick: (card: AiContextCard) => void;
 }
 
 export function AiContextPanel({
@@ -19,6 +20,7 @@ export function AiContextPanel({
   recentResults,
   onToolSelect,
   onViewAllResults,
+  onContextCardClick,
 }: AiContextPanelProps) {
   return (
     <div className="flex flex-col gap-6">
@@ -28,9 +30,11 @@ export function AiContextPanel({
           {contextCards.map((card) => {
             const Icon = card.icon;
             return (
-              <div
+              <button
                 key={card.id}
-                className="flex items-center gap-2.5 rounded-xl border border-border p-3"
+                type="button"
+                onClick={() => onContextCardClick(card)}
+                className="flex items-center gap-2.5 rounded-xl border border-border p-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/5"
               >
                 <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                   <Icon className="size-4" />
@@ -40,7 +44,7 @@ export function AiContextPanel({
                   <p className="truncate text-sm font-medium text-foreground">{card.value}</p>
                   <p className="truncate text-xs text-muted-foreground">{card.meta}</p>
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>

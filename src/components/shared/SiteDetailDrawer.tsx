@@ -1,4 +1,4 @@
-import { Camera, Cpu, FileText, Image as ImageIcon, MapPin, StickyNote } from "lucide-react";
+import { Camera, Cpu, ExternalLink, FileText, Image as ImageIcon, MapPin, StickyNote } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ interface SiteDetailDrawerProps {
   onUpdateLocation: (sample: SiteSample) => void;
   onAddPhoto: (sample: SiteSample) => void;
   onAddAttachment: (sample: SiteSample) => void;
+  onOpenSample: (sample: SiteSample) => void;
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {
@@ -51,6 +52,7 @@ export function SiteDetailDrawer({
   onUpdateLocation,
   onAddPhoto,
   onAddAttachment,
+  onOpenSample,
 }: SiteDetailDrawerProps) {
   return (
     <Drawer open={sample !== null} onOpenChange={onOpenChange}>
@@ -164,6 +166,10 @@ export function SiteDetailDrawer({
                   Standort aktualisieren
                 </Button>
               </div>
+              <Button type="button" variant="outline" size="lg" className="w-full" onClick={() => onOpenSample(sample)}>
+                <ExternalLink className="size-4" />
+                Im Probenmanager öffnen
+              </Button>
             </div>
           </>
         )}

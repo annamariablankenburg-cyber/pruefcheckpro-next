@@ -175,13 +175,11 @@ export function ProjectsView() {
       <ProjectTable
         projects={filteredProjects}
         onViewDetails={setDetailProject}
-        onEdit={() => {}}
+        onEdit={() => showFeedback("Diese Funktion wird später angebunden.")}
         onViewSamples={() => router.push("/probekoerper")}
         onNewSample={() => router.push("/probekoerper")}
-        onAddDeliveryNote={() =>
-          showFeedback("Lieferschein-Upload folgt in einem späteren Sprint (nur UI)")
-        }
-        onOpenCustomer={() => showFeedback("Kundenverwaltung folgt in einem späteren Sprint")}
+        onAddDeliveryNote={() => showFeedback("Diese Funktion wird später angebunden.")}
+        onOpenCustomer={() => router.push("/kunden")}
         onPause={(project) => openConfirm(project, "pause")}
         onResume={(project) => openConfirm(project, "resume")}
         onComplete={(project) => openConfirm(project, "complete")}
@@ -193,13 +191,11 @@ export function ProjectsView() {
       <ProjectDetailDrawer
         project={detailProject}
         onOpenChange={(open) => !open && setDetailProject(null)}
-        onEdit={() => {}}
+        onEdit={() => showFeedback("Diese Funktion wird später angebunden.")}
         onViewSamples={() => router.push("/probekoerper")}
         onNewSample={() => router.push("/probekoerper")}
-        onAddDeliveryNote={() =>
-          showFeedback("Lieferschein-Upload folgt in einem späteren Sprint (nur UI)")
-        }
-        onOpenCustomer={() => showFeedback("Kundenverwaltung folgt in einem späteren Sprint")}
+        onAddDeliveryNote={() => showFeedback("Diese Funktion wird später angebunden.")}
+        onOpenCustomer={() => router.push("/kunden")}
         onPause={(project) => openConfirm(project, "pause")}
         onResume={(project) => openConfirm(project, "resume")}
         onComplete={(project) => openConfirm(project, "complete")}

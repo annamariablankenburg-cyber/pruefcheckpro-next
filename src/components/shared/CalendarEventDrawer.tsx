@@ -22,9 +22,22 @@ import type { CalendarEvent } from "@/types/calendarEvent";
 interface CalendarEventDrawerProps {
   event: CalendarEvent | null;
   onOpenChange: (open: boolean) => void;
+  onOpenSample: (event: CalendarEvent) => void;
+  onEnterValues: (event: CalendarEvent) => void;
+  onEdit: (event: CalendarEvent) => void;
+  onMove: (event: CalendarEvent) => void;
+  onDuplicate: (event: CalendarEvent) => void;
 }
 
-export function CalendarEventDrawer({ event, onOpenChange }: CalendarEventDrawerProps) {
+export function CalendarEventDrawer({
+  event,
+  onOpenChange,
+  onOpenSample,
+  onEnterValues,
+  onEdit,
+  onMove,
+  onDuplicate,
+}: CalendarEventDrawerProps) {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
   return (
@@ -75,7 +88,13 @@ export function CalendarEventDrawer({ event, onOpenChange }: CalendarEventDrawer
                           </p>
                         )}
                       </div>
-                      <Button type="button" variant="outline" size="sm" className="shrink-0">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0"
+                        onClick={() => onOpenSample(event)}
+                      >
                         Probe öffnen
                         <ArrowRight className="size-3.5" />
                       </Button>
@@ -89,7 +108,7 @@ export function CalendarEventDrawer({ event, onOpenChange }: CalendarEventDrawer
                   <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                     Prüfung
                   </p>
-                  <Button type="button" variant="outline" className="w-fit">
+                  <Button type="button" variant="outline" className="w-fit" onClick={() => onEnterValues(event)}>
                     <FlaskConical className="size-4" />
                     Prüfwerte eintragen
                   </Button>
@@ -101,9 +120,9 @@ export function CalendarEventDrawer({ event, onOpenChange }: CalendarEventDrawer
                   Aktionen
                 </p>
                 <CalendarActionMenu
-                  onEdit={() => {}}
-                  onMove={() => {}}
-                  onDuplicate={() => {}}
+                  onEdit={() => onEdit(event)}
+                  onMove={() => onMove(event)}
+                  onDuplicate={() => onDuplicate(event)}
                   onDelete={() => setIsDeleteOpen(true)}
                 />
               </div>

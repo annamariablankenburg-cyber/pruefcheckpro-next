@@ -61,6 +61,9 @@ interface ReportEditorDrawerProps {
   onReactivate: (report: Report) => void;
   onDelete: (report: Report) => void;
   onPreview: (report: Report) => void;
+  onOpenProject: (report: Report) => void;
+  onOpenCustomer: (report: Report) => void;
+  onOpenSample: (report: Report) => void;
 }
 
 const sections = [
@@ -115,6 +118,9 @@ interface WorkspaceProps {
   onReactivate: (report: Report) => void;
   onDelete: (report: Report) => void;
   onPreview: (report: Report) => void;
+  onOpenProject: (report: Report) => void;
+  onOpenCustomer: (report: Report) => void;
+  onOpenSample: (report: Report) => void;
 }
 
 function ReportEditorWorkspace({
@@ -130,6 +136,9 @@ function ReportEditorWorkspace({
   onReactivate,
   onDelete,
   onPreview,
+  onOpenProject,
+  onOpenCustomer,
+  onOpenSample,
 }: WorkspaceProps) {
   const [activeSection, setActiveSection] = useState<Section>(initialSection ?? "Deckblatt");
   const [pruefungen, setPruefungen] = useState<ReportPruefungRef[]>(report.pruefungen);
@@ -300,11 +309,16 @@ function ReportEditorWorkspace({
 
             {activeSection === "Kundendaten" && (
               <div className="flex flex-col gap-4">
-                <div>
-                  <h3 className="text-base font-semibold text-foreground">Kundendaten</h3>
-                  <p className="text-xs text-muted-foreground">
-                    Kunden- und Ansprechpartnerdaten, die im Bericht erscheinen.
-                  </p>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-base font-semibold text-foreground">Kundendaten</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Kunden- und Ansprechpartnerdaten, die im Bericht erscheinen.
+                    </p>
+                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={() => onOpenCustomer(report)}>
+                    Kunde öffnen
+                  </Button>
                 </div>
                 <CustomerContactPreview
                   kunde={report.kunde}
@@ -327,7 +341,12 @@ function ReportEditorWorkspace({
 
             {activeSection === "Projektdaten" && (
               <div className="flex flex-col gap-4">
-                <h3 className="text-base font-semibold text-foreground">Projektdaten</h3>
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="text-base font-semibold text-foreground">Projektdaten</h3>
+                  <Button type="button" variant="outline" size="sm" onClick={() => onOpenProject(report)}>
+                    Projekt öffnen
+                  </Button>
+                </div>
                 <div className="flex items-center gap-3 rounded-xl border border-border p-4">
                   <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <Building2 className="size-5" />
@@ -342,6 +361,17 @@ function ReportEditorWorkspace({
                   <MetaRow label="Standort" value={report.standort ?? "—"} />
                   <MetaRow label="Probe" value={report.probeId ?? "—"} />
                 </div>
+                {report.probeId && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-fit"
+                    onClick={() => onOpenSample(report)}
+                  >
+                    Probe öffnen
+                  </Button>
+                )}
               </div>
             )}
 

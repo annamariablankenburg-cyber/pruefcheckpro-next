@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { History, Settings, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,7 @@ import {
   aiRecentResults,
   aiTools,
 } from "@/config/ai";
-import type { AiChat, AiMessage, AiMode, AiQuickAction, AiTool } from "@/types/ai";
+import type { AiChat, AiContextCard, AiMessage, AiMode, AiQuickAction, AiTool } from "@/types/ai";
 
 function getCannedReply(prompt: string, mode: AiMode): string {
   const lower = prompt.toLowerCase();
@@ -70,7 +71,15 @@ function getCannedReply(prompt: string, mode: AiMode): string {
   return modeHints[mode];
 }
 
+const contextCardRoutes: Record<string, string> = {
+  "ctx-probe": "/probekoerper",
+  "ctx-projekt": "/projekte",
+  "ctx-kunde": "/kunden",
+  "ctx-bericht": "/pdf-export",
+};
+
 export default function AiPage() {
+  const router = useRouter();
   const [chats, setChats] = useState<AiChat[]>(initialChats);
   const [activeChatId, setActiveChatId] = useState<string | null>(initialChats[0]?.id ?? null);
   const [mode, setMode] = useState<AiMode>("Allgemein");
@@ -85,6 +94,15 @@ export default function AiPage() {
   function showFeedback(message: string) {
     setFeedback(message);
     window.setTimeout(() => setFeedback(null), 2500);
+  }
+
+  function handleContextCardClick(card: AiContextCard) {
+    const target = contextCardRoutes[card.id];
+    if (target) {
+      router.push(target);
+      return;
+    }
+    showFeedback("Diese Funktion wird später angebunden.");
   }
 
   function handleNewChat() {
@@ -283,6 +301,7 @@ export default function AiPage() {
             recentResults={aiRecentResults}
             onToolSelect={handleToolSelect}
             onViewAllResults={() => showFeedback("Diese Funktion wird später angebunden.")}
+            onContextCardClick={handleContextCardClick}
           />
         </div>
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Info } from "lucide-react";
 
 import { AgendaList } from "@/components/shared/AgendaList";
@@ -24,9 +25,11 @@ const days = weekDates.map((date, index) => ({
 const rangeLabel = `${days[0].dayNumber}. – ${days[6].dayNumber}. März 2026`;
 
 export default function KalenderPage() {
+  const router = useRouter();
   const [view, setView] = useState<CalendarViewMode>("woche");
   const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
 
   const todaysEvents = useMemo(
     () => calendarEvents.filter((event) => event.date === HEUTE).sort((a, b) => a.time.localeCompare(b.time)),
@@ -35,6 +38,11 @@ export default function KalenderPage() {
 
   function handleToday() {
     setView("woche");
+  }
+
+  function showFeedback(message: string) {
+    setFeedback(message);
+    window.setTimeout(() => setFeedback(null), 2500);
   }
 
   return (
@@ -133,7 +141,18 @@ export default function KalenderPage() {
       <CalendarEventDrawer
         event={selectedEvent}
         onOpenChange={(open) => !open && setSelectedEvent(null)}
+        onOpenSample={() => router.push("/probekoerper")}
+        onEnterValues={() => router.push("/pruefungen")}
+        onEdit={() => showFeedback("Diese Funktion wird später angebunden.")}
+        onMove={() => showFeedback("Diese Funktion wird später angebunden.")}
+        onDuplicate={() => showFeedback("Diese Funktion wird später angebunden.")}
       />
+
+      {feedback && (
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-lg">
+          {feedback}
+        </div>
+      )}
     </div>
   );
 }

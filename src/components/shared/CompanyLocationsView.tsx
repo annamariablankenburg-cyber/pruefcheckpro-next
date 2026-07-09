@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Building2, Cpu, FolderKanban, Plus, ShieldCheck, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -17,11 +18,18 @@ interface CompanyLocationsViewProps {
 }
 
 export function CompanyLocationsView({ onNewLocation }: CompanyLocationsViewProps) {
+  const router = useRouter();
   const [locations, setLocations] = useState<CompanyLocationDetail[]>(companyLocationDetails);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<LocationFilter>("Alle");
   const [detailLocation, setDetailLocation] = useState<CompanyLocationDetail | null>(null);
   const [deactivateLocation, setDeactivateLocation] = useState<CompanyLocationDetail | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  function showFeedback(message: string) {
+    setFeedback(message);
+    window.setTimeout(() => setFeedback(null), 2500);
+  }
 
   const filteredLocations = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -106,20 +114,20 @@ export function CompanyLocationsView({ onNewLocation }: CompanyLocationsViewProp
       <LocationTable
         locations={filteredLocations}
         onViewDetails={setDetailLocation}
-        onEdit={() => {}}
-        onViewEmployees={() => {}}
-        onViewDevices={() => {}}
-        onViewProjects={() => {}}
+        onEdit={() => showFeedback("Diese Funktion wird später angebunden.")}
+        onViewEmployees={() => showFeedback("Diese Funktion wird später angebunden.")}
+        onViewDevices={() => router.push("/geraete")}
+        onViewProjects={() => router.push("/projekte")}
         onToggleStatus={handleToggleStatus}
       />
 
       <LocationDetailDrawer
         location={detailLocation}
         onOpenChange={(open) => !open && setDetailLocation(null)}
-        onEdit={() => {}}
-        onViewEmployees={() => {}}
-        onViewDevices={() => {}}
-        onViewProjects={() => {}}
+        onEdit={() => showFeedback("Diese Funktion wird später angebunden.")}
+        onViewEmployees={() => showFeedback("Diese Funktion wird später angebunden.")}
+        onViewDevices={() => router.push("/geraete")}
+        onViewProjects={() => router.push("/projekte")}
         onToggleStatus={handleToggleStatus}
       />
 
@@ -128,6 +136,12 @@ export function CompanyLocationsView({ onNewLocation }: CompanyLocationsViewProp
         onOpenChange={(open) => !open && setDeactivateLocation(null)}
         onConfirm={confirmDeactivate}
       />
+
+      {feedback && (
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-lg">
+          {feedback}
+        </div>
+      )}
     </div>
   );
 }

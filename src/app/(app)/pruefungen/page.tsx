@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { CalendarClock, CheckCircle2, ListTodo, Plus, TestTubeDiagonal, TriangleAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { StatCard } from "@/components/shared/StatCard";
 import { TestEntryFilters, type TestEntryFilter } from "@/components/shared/TestEntryFilters";
 import { TestEntryTable } from "@/components/shared/TestEntryTable";
 import { TestValueDrawer } from "@/components/shared/TestValueDrawer";
+import { reports } from "@/config/reports";
 import { HEUTE, testEntries as initialTestEntries } from "@/config/testValues";
 import type { TestEntry, TestEntryStatus } from "@/types/testValue";
 
@@ -44,6 +46,7 @@ const confirmCopy: Record<
 };
 
 export default function PruefungenPage() {
+  const router = useRouter();
   const [entries, setEntries] = useState<TestEntry[]>(initialTestEntries);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<TestEntryFilter>("Alle");
@@ -102,6 +105,16 @@ export default function PruefungenPage() {
     return (entry: TestEntry) => setConfirmAction({ entry, type });
   }
 
+  function handleCreateReport(entry: TestEntry) {
+    const hasLinkedReport = reports.some((report) => report.probeId === entry.sampleId);
+    if (hasLinkedReport) {
+      showFeedback("Verknüpfter Bericht wird geöffnet.");
+      router.push("/pdf-export");
+      return;
+    }
+    showFeedback("Diese Funktion wird später angebunden.");
+  }
+
   function handleConfirmAction(subject: TestEntry) {
     if (!confirmAction) return;
     updateEntry(subject.sampleId, { status: confirmCopy[confirmAction.type].nextStatus });
@@ -144,7 +157,7 @@ export default function PruefungenPage() {
         onStart={requestAction("start")}
         onComplete={requestAction("complete")}
         onReopen={requestAction("reopen")}
-        onCreateReport={() => showFeedback("Diese Funktion wird später angebunden.")}
+        onCreateReport={handleCreateReport}
         onExportExcel={() => showFeedback("Diese Funktion wird später angebunden.")}
       />
 
@@ -154,7 +167,7 @@ export default function PruefungenPage() {
         onStart={requestAction("start")}
         onComplete={requestAction("complete")}
         onReopen={requestAction("reopen")}
-        onCreateReport={() => showFeedback("Diese Funktion wird später angebunden.")}
+        onCreateReport={handleCreateReport}
         onExportExcel={() => showFeedback("Diese Funktion wird später angebunden.")}
       />
 

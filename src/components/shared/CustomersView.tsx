@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, Receipt, Truck, UserCheck, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ const confirmCopy: Record<
 };
 
 export function CustomersView() {
+  const router = useRouter();
   const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<CustomerFilter>("Alle");
@@ -160,17 +162,11 @@ export function CustomersView() {
       <CustomerTable
         customers={filteredCustomers}
         onViewDetails={setDetailCustomer}
-        onEdit={() => {}}
-        onCreateProject={() =>
-          showFeedback("Projekt erstellen folgt in einem späteren Sprint (nur UI)")
-        }
-        onAddInvoice={() => showFeedback("Rechnungs-Upload folgt in einem späteren Sprint (nur UI)")}
-        onAddDeliveryNote={() =>
-          showFeedback("Lieferschein-Upload folgt in einem späteren Sprint (nur UI)")
-        }
-        onUploadDocument={() =>
-          showFeedback("Dokumenten-Upload folgt in einem späteren Sprint (nur UI)")
-        }
+        onEdit={() => showFeedback("Diese Funktion wird später angebunden.")}
+        onCreateProject={() => showFeedback("Diese Funktion wird später angebunden.")}
+        onAddInvoice={() => showFeedback("Diese Funktion wird später angebunden.")}
+        onAddDeliveryNote={() => showFeedback("Diese Funktion wird später angebunden.")}
+        onUploadDocument={() => showFeedback("Diese Funktion wird später angebunden.")}
         onDeactivate={(customer) => openConfirm(customer, "deactivate")}
         onReactivate={(customer) => openConfirm(customer, "reactivate")}
         onArchive={(customer) => openConfirm(customer, "archive")}
@@ -179,17 +175,12 @@ export function CustomersView() {
       <CustomerDetailDrawer
         customer={detailCustomer}
         onOpenChange={(open) => !open && setDetailCustomer(null)}
-        onEdit={() => {}}
-        onCreateProject={() =>
-          showFeedback("Projekt erstellen folgt in einem späteren Sprint (nur UI)")
-        }
-        onAddInvoice={() => showFeedback("Rechnungs-Upload folgt in einem späteren Sprint (nur UI)")}
-        onAddDeliveryNote={() =>
-          showFeedback("Lieferschein-Upload folgt in einem späteren Sprint (nur UI)")
-        }
-        onUploadDocument={() =>
-          showFeedback("Dokumenten-Upload folgt in einem späteren Sprint (nur UI)")
-        }
+        onEdit={() => showFeedback("Diese Funktion wird später angebunden.")}
+        onCreateProject={() => showFeedback("Diese Funktion wird später angebunden.")}
+        onOpenProject={() => router.push("/projekte")}
+        onAddInvoice={() => showFeedback("Diese Funktion wird später angebunden.")}
+        onAddDeliveryNote={() => showFeedback("Diese Funktion wird später angebunden.")}
+        onUploadDocument={() => showFeedback("Diese Funktion wird später angebunden.")}
         onDeactivate={(customer) => openConfirm(customer, "deactivate")}
         onReactivate={(customer) => openConfirm(customer, "reactivate")}
         onArchive={(customer) => openConfirm(customer, "archive")}
