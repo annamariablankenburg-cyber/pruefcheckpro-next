@@ -11,6 +11,7 @@ import {
   Eye,
   FileText,
   Image as ImageIcon,
+  Mail,
   PenLine,
   Save,
   ShieldCheck,
@@ -39,13 +40,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { AuditTrailPreview } from "@/components/shared/AuditTrailPreview";
 import { CalculationPreview } from "@/components/shared/CalculationPreview";
 import { CustomerContactPreview } from "@/components/shared/CustomerContactPreview";
+import { EmailHistoryList } from "@/components/shared/EmailHistoryList";
+import { EmailSendStatusBadge } from "@/components/shared/EmailSendStatusBadge";
 import { ExcelPreviewPanel } from "@/components/shared/ExcelPreviewPanel";
 import { ExportOptionsPanel } from "@/components/shared/ExportOptionsPanel";
 import { RecordList } from "@/components/shared/RecordList";
 import { ReportPreview, type ReportPreviewSettings } from "@/components/shared/ReportPreview";
 import { ReportStatusBadge } from "@/components/shared/ReportStatusBadge";
 import { cn } from "@/lib/utils";
-import type { Report, ReportFormat, ReportPruefungRef, ReportUnterschrift } from "@/types/report";
+import type {
+  Report,
+  ReportEmailHistoryEntry,
+  ReportFormat,
+  ReportPruefungRef,
+  ReportUnterschrift,
+} from "@/types/report";
 
 interface ReportEditorDrawerProps {
   report: Report | null;
@@ -64,6 +73,9 @@ interface ReportEditorDrawerProps {
   onOpenProject: (report: Report) => void;
   onOpenCustomer: (report: Report) => void;
   onOpenSample: (report: Report) => void;
+  onSendEmail: (report: Report) => void;
+  onResendEmail: (report: Report, entry: ReportEmailHistoryEntry) => void;
+  onCopyEmailText: (entry: ReportEmailHistoryEntry) => void;
 }
 
 const sections = [
@@ -76,6 +88,7 @@ const sections = [
   "Anhänge",
   "Unterschriften",
   "Export",
+  "E-Mail",
 ] as const;
 export type Section = (typeof sections)[number];
 
@@ -121,6 +134,9 @@ interface WorkspaceProps {
   onOpenProject: (report: Report) => void;
   onOpenCustomer: (report: Report) => void;
   onOpenSample: (report: Report) => void;
+  onSendEmail: (report: Report) => void;
+  onResendEmail: (report: Report, entry: ReportEmailHistoryEntry) => void;
+  onCopyEmailText: (entry: ReportEmailHistoryEntry) => void;
 }
 
 function ReportEditorWorkspace({
@@ -139,6 +155,9 @@ function ReportEditorWorkspace({
   onOpenProject,
   onOpenCustomer,
   onOpenSample,
+  onSendEmail,
+  onResendEmail,
+  onCopyEmailText,
 }: WorkspaceProps) {
   const [activeSection, setActiveSection] = useState<Section>(initialSection ?? "Deckblatt");
   const [pruefungen, setPruefungen] = useState<ReportPruefungRef[]>(report.pruefungen);
@@ -215,6 +234,10 @@ function ReportEditorWorkspace({
             <Button type="button" variant="outline" size="sm" onClick={() => onPreview(report)}>
               <Eye className="size-4" />
               Vorschau
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => onSendEmail(buildSnapshot())}>
+              <Mail className="size-4" />
+              Per E-Mail senden
             </Button>
             <Button type="button" variant="outline" size="sm" onClick={handleSave}>
               <Save className="size-4" />
@@ -515,6 +538,34 @@ function ReportEditorWorkspace({
                   />
                   <ExcelPreviewPanel report={buildSnapshot()} onExport={() => onExportExcel(buildSnapshot())} />
                 </div>
+              </div>
+            )}
+
+            {activeSection === "E-Mail" && (
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-base font-semibold text-foreground">E-Mail-Verlauf</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Versand an Kunden und Ansprechpartner – heute nur lokale Vorschau.
+                    </p>
+                  </div>
+                  <EmailSendStatusBadge status={report.emailStatus} />
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="w-fit"
+                  onClick={() => onSendEmail(buildSnapshot())}
+                >
+                  <Mail className="size-4" />
+                  Per E-Mail senden
+                </Button>
+                <EmailHistoryList
+                  entries={report.emailHistory}
+                  onResend={(entry) => onResendEmail(buildSnapshot(), entry)}
+                  onCopyText={onCopyEmailText}
+                />
               </div>
             )}
           </div>

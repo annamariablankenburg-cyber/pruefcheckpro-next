@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -8,16 +9,27 @@ import {
   ChevronRight,
   Clock,
   Download,
+  FileSpreadsheet,
+  FileText,
   FlaskConical,
   Gauge,
   Package,
+  Table,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { BarChartDetailPanel } from "@/components/shared/BarChartDetailPanel";
 import { FakeBarChart, type BarChartDatum } from "@/components/shared/FakeBarChart";
 import { FakeDonutChart } from "@/components/shared/FakeDonutChart";
+import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { InsightsCard } from "@/components/shared/InsightsCard";
 import { LabStatusSummaryCard } from "@/components/shared/LabStatusSummaryCard";
 import { PerformanceTable } from "@/components/shared/PerformanceTable";
@@ -33,6 +45,8 @@ const kpiIcons = [FlaskConical, Package, AlertTriangle, CheckCircle2, Clock, Gau
 const MONTH_WINDOW_SIZE = 12;
 
 export default function StatistikenPage() {
+  const router = useRouter();
+  const { message: feedback, showFeedback } = useFeedbackToast();
   const {
     zeitraum,
     setZeitraum,
@@ -73,6 +87,10 @@ export default function StatistikenPage() {
     setSelectedLabel(null);
   }
 
+  function handleExport(format: "PDF" | "Excel" | "CSV") {
+    showFeedback(`${format}-Export wird später angebunden.`);
+  }
+
   return (
     <div className="flex flex-col gap-6 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -103,10 +121,33 @@ export default function StatistikenPage() {
               </button>
             ))}
           </div>
-          <Button type="button" variant="outline">
-            <Download className="size-4" />
-            Export
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" variant="outline">
+                <Download className="size-4" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => handleExport("PDF")}>
+                <FileText />
+                PDF exportieren
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => handleExport("Excel")}>
+                <FileSpreadsheet />
+                Excel exportieren
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => handleExport("CSV")}>
+                <Table />
+                CSV exportieren
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => router.push("/pdf-export")}>
+                <Download />
+                Zum Exportbereich
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -239,6 +280,8 @@ export default function StatistikenPage() {
           <InsightsCard insights={range.insights} />
         </div>
       </div>
+
+      <FeedbackToast message={feedback} />
     </div>
   );
 }

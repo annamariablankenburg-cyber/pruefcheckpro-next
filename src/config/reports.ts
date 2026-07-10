@@ -1,5 +1,5 @@
 import { samples } from "@/config/samples";
-import type { Report, ReportPruefungRef } from "@/types/report";
+import type { Report, ReportEmailHistoryEntry, ReportEmailStatus, ReportPruefungRef } from "@/types/report";
 
 // Mocked "heute" passend zu den übrigen Mockdaten dieses Prototyps.
 export const HEUTE = "03.03.2026";
@@ -19,7 +19,57 @@ function pruefungenFromSample(probeId: string): ReportPruefungRef[] {
   }));
 }
 
-type ReportSeed = Omit<Report, "pruefungen" | "fachbereich" | "standort">;
+type ReportSeed = Omit<
+  Report,
+  | "pruefungen"
+  | "fachbereich"
+  | "standort"
+  | "emailStatus"
+  | "emailSentTo"
+  | "emailSentAt"
+  | "emailSentBy"
+  | "emailSubject"
+  | "emailAttachmentCount"
+  | "emailHistory"
+>;
+
+// Beispielhafter E-Mail-Verlauf für einen bereits "versendeten" Bericht –
+// zeigt, wie Versandhistorie und -status im UI aussehen. Alle anderen
+// Berichte starten mit Status "Noch nicht versendet" und leerer Historie.
+const emailOverrides: Record<
+  string,
+  {
+    status: ReportEmailStatus;
+    sentTo: string[];
+    sentAt: string;
+    sentBy: string;
+    subject: string;
+    attachmentCount: number;
+    history: ReportEmailHistoryEntry[];
+  }
+> = {
+  "RPT-2026-002": {
+    status: "Versendet",
+    sentTo: ["nord@strassenbau-nord.de"],
+    sentAt: "26.02.2026 14:32",
+    sentBy: "S. Wolf",
+    subject: "Prüfbericht ASP-2026-011 – L 342 Fahrbahnerneuerung",
+    attachmentCount: 1,
+    history: [
+      {
+        id: "email-rpt-002-1",
+        timestamp: "26.02.2026 14:32",
+        recipients: ["nord@strassenbau-nord.de"],
+        subject: "Prüfbericht ASP-2026-011 – L 342 Fahrbahnerneuerung",
+        message:
+          "Guten Tag,\n\nanbei erhalten Sie den Prüfbericht zur Probe ASP-2026-011 für das Projekt L 342 Fahrbahnerneuerung.\n\nBei Rückfragen stehen wir Ihnen gerne zur Verfügung.\n\nMit freundlichen Grüßen\nMusterlabor GmbH",
+        status: "Versendet",
+        sentBy: "S. Wolf",
+        attachmentCount: 1,
+      },
+    ],
+  },
+};
 
 const reportSeeds: ReportSeed[] = [
   {
@@ -270,10 +320,18 @@ const reportSeeds: ReportSeed[] = [
 
 export const reports: Report[] = reportSeeds.map((seed) => {
   const sample = seed.probeId ? samples.find((s) => s.id === seed.probeId) : undefined;
+  const emailOverride = emailOverrides[seed.id];
   return {
     ...seed,
     fachbereich: sample?.fachbereich ?? "Beton",
     standort: sample?.standort,
     pruefungen: seed.probeId ? pruefungenFromSample(seed.probeId) : [],
+    emailStatus: emailOverride?.status ?? "Noch nicht versendet",
+    emailSentTo: emailOverride?.sentTo,
+    emailSentAt: emailOverride?.sentAt,
+    emailSentBy: emailOverride?.sentBy,
+    emailSubject: emailOverride?.subject,
+    emailAttachmentCount: emailOverride?.attachmentCount,
+    emailHistory: emailOverride?.history ?? [],
   };
 });

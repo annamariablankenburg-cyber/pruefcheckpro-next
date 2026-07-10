@@ -29,7 +29,7 @@ export function FeedbackToast({ message, className }: FeedbackToastProps) {
   return (
     <div
       className={cn(
-        "fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-lg",
+        "fixed bottom-6 left-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 rounded-2xl border border-border bg-card px-4 py-2.5 text-center text-sm font-medium whitespace-normal break-words text-foreground shadow-lg",
         className
       )}
     >

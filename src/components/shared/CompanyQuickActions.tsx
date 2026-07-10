@@ -16,6 +16,7 @@ export function CompanyQuickActions({ actions }: CompanyQuickActionsProps) {
           <button
             key={action.label}
             type="button"
+            onClick={action.onClick}
             className="flex items-center gap-3 rounded-xl bg-muted/50 px-3.5 py-2.5 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted"
           >
             <action.icon className="size-4 shrink-0 text-muted-foreground" />

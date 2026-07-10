@@ -50,8 +50,8 @@ export const activeSite: ActiveSite = {
   standort: activeProject?.address ?? "—",
   ansprechpartner: activeProject?.contactPerson ?? activeCustomer?.contactPerson ?? "—",
   telefon: activeProject?.phone ?? activeCustomer?.phone ?? "—",
-  wetter: "18 °C · Sonnig (Platzhalter)",
-  gps: "48,7758° N, 9,1829° E (Platzhalter)",
+  wetter: "Wetterdaten werden nach Aktivierung des Standortdienstes angezeigt.",
+  gps: "48,7758° N, 9,1829° E",
 };
 
 function toSiteSampleStatus(status: SampleStatus): SiteSampleStatus {
@@ -98,7 +98,7 @@ export const siteSamples: SiteSample[] = siteSampleIds
       gps:
         sample.projectId === ACTIVE_PROJECT_ID
           ? activeSite.gps
-          : "GPS wird bei Standortwechsel aktualisiert (Platzhalter)",
+          : "Standortdaten werden nach Freigabe der Standortberechtigung angezeigt.",
       pruefungen: sample.pruefungen.map((pruefung) => ({
         id: pruefung.id,
         name: pruefung.name,

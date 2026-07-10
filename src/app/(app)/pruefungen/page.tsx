@@ -150,6 +150,7 @@ export default function PruefungenPage() {
         onReopen={requestAction("reopen")}
         onCreateReport={handleCreateReport}
         onExportExcel={() => showFeedback("Diese Funktion wird später angebunden.")}
+        onFeedback={showFeedback}
       />
 
       <ConfirmActionDialog<TestEntry>

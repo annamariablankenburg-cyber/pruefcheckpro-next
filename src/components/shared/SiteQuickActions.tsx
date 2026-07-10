@@ -1,4 +1,3 @@
-import { Card, CardContent } from "@/components/ui/card";
 import type { SiteQuickActionItem } from "@/types/siteMode";
 
 interface SiteQuickActionsProps {
@@ -12,23 +11,17 @@ export function SiteQuickActions({ actions, onSelect }: SiteQuickActionsProps) {
       {actions.map((action) => {
         const Icon = action.icon;
         return (
-          <Card
+          <button
             key={action.id}
-            role="button"
-            tabIndex={0}
+            type="button"
             onClick={() => onSelect(action)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") onSelect(action);
-            }}
-            className="cursor-pointer py-0 transition-colors hover:border-primary/40 hover:bg-primary/5 active:bg-primary/10"
+            className="flex min-h-28 flex-col items-center justify-center gap-2.5 rounded-xl border border-border bg-card px-3 py-5 text-center shadow-sm shadow-foreground/5 transition-colors hover:border-primary/40 hover:bg-primary/5 active:bg-primary/10"
           >
-            <CardContent className="flex min-h-28 flex-col items-center justify-center gap-2.5 px-3 py-5 text-center">
-              <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                <Icon className="size-6" />
-              </div>
-              <p className="text-sm font-semibold text-foreground">{action.label}</p>
-            </CardContent>
-          </Card>
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <Icon className="size-6" />
+            </div>
+            <p className="text-sm font-semibold text-foreground">{action.label}</p>
+          </button>
         );
       })}
     </div>

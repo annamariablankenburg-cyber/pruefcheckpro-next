@@ -25,7 +25,9 @@ export function SiteSampleCard({ sample, onOpen }: SiteSampleCardProps) {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="font-semibold text-foreground">{sample.id}</p>
-            <p className="truncate text-sm text-muted-foreground">{sample.bezeichnung}</p>
+            <p className="truncate text-sm text-muted-foreground" title={sample.bezeichnung}>
+              {sample.bezeichnung}
+            </p>
           </div>
           <Badge variant="secondary" className={cn("shrink-0", statusStyles[sample.status])}>
             {sample.status}
@@ -37,7 +39,7 @@ export function SiteSampleCard({ sample, onOpen }: SiteSampleCardProps) {
             <span className="text-xs text-muted-foreground/80">Prüfalter: </span>
             {sample.pruefalter}
           </p>
-          <p className="truncate">
+          <p className="truncate" title={sample.projekt}>
             <span className="text-xs text-muted-foreground/80">Projekt: </span>
             {sample.projekt}
           </p>

@@ -22,7 +22,9 @@ export function SiteDeviceCard({ device, onSelect }: SiteDeviceCardProps) {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="font-semibold text-foreground">{device.name}</p>
-            <p className="truncate text-sm text-muted-foreground">{device.inventoryNumber}</p>
+            <p className="truncate text-sm text-muted-foreground" title={device.inventoryNumber}>
+              {device.inventoryNumber}
+            </p>
           </div>
           <Badge variant="secondary" className={cn("shrink-0", statusStyles[device.status])}>
             {device.status}

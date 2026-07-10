@@ -45,6 +45,8 @@ export const pruefartDefinitions: Record<PruefartKey, PruefartDefinition> = {
       { key: "hoehe", label: "Höhe", unit: "mm", kind: "input" },
       { key: "bruchlast", label: "Bruchlast", unit: "kN", kind: "input" },
       { key: "biegezugfestigkeit", label: "Biegezugfestigkeit", unit: "N/mm²", kind: "calculated" },
+      { key: "druckBruchhaelfte1", label: "Druckfestigkeit Bruchhälfte 1", unit: "N/mm²", kind: "input" },
+      { key: "druckBruchhaelfte2", label: "Druckfestigkeit Bruchhälfte 2", unit: "N/mm²", kind: "input" },
       { key: "status", label: "Status", kind: "status" },
     ],
     formeln: [
@@ -175,6 +177,7 @@ export const pruefartDefinitions: Record<PruefartKey, PruefartDefinition> = {
     name: "Sieblinie",
     fachbereich: "Asphalt",
     rowLabel: "Sieb",
+    autoNumberLabel: false,
     fields: [
       { key: "rueckstandG", label: "Rückstand", unit: "g", kind: "input" },
       { key: "rueckstandProzent", label: "Rückstand", unit: "%", kind: "calculated" },
@@ -205,9 +208,9 @@ export const pruefartRows: Record<PruefartKey, PruefartRow[]> = {
     { id: "w4", label: "Würfel 4", status: "Offen", values: { laenge: "150,0", breite: "150,0", hoehe: "150,0", masse: "–", bruchlast: "–", druckfestigkeit: "–" } },
   ],
   biegezug: [
-    { id: "p1", label: "Prisma 1", status: "OK", values: { laenge: "400,0", breite: "100,0", hoehe: "100,0", bruchlast: "28,4", biegezugfestigkeit: "4,3" } },
-    { id: "p2", label: "Prisma 2", status: "OK", values: { laenge: "400,0", breite: "100,0", hoehe: "100,0", bruchlast: "27,1", biegezugfestigkeit: "4,1" } },
-    { id: "p3", label: "Prisma 3", status: "Offen", values: { laenge: "400,0", breite: "100,0", hoehe: "100,0", bruchlast: "–", biegezugfestigkeit: "–" } },
+    { id: "p1", label: "Prisma 1", status: "OK", values: { laenge: "400,0", breite: "100,0", hoehe: "100,0", bruchlast: "28,4", biegezugfestigkeit: "4,3", druckBruchhaelfte1: "42,1", druckBruchhaelfte2: "41,8" } },
+    { id: "p2", label: "Prisma 2", status: "OK", values: { laenge: "400,0", breite: "100,0", hoehe: "100,0", bruchlast: "27,1", biegezugfestigkeit: "4,1", druckBruchhaelfte1: "40,3", druckBruchhaelfte2: "40,9" } },
+    { id: "p3", label: "Prisma 3", status: "Offen", values: { laenge: "400,0", breite: "100,0", hoehe: "100,0", bruchlast: "–", biegezugfestigkeit: "–", druckBruchhaelfte1: "–", druckBruchhaelfte2: "–" } },
   ],
   rohdichte: [
     { id: "r1", label: "Probe 1", status: "OK", values: { masse: "2,158", volumen: "0,900", rohdichte: "2398" } },

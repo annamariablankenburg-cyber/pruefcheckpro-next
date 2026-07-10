@@ -18,7 +18,7 @@ export function SiteOfflineBanner({ onSync }: SiteOfflineBannerProps) {
           <div>
             <p className="font-semibold text-foreground">Offline-Modus vorbereitet.</p>
             <p className="text-sm text-muted-foreground">
-              Synchronisierung folgt in einem späteren Update.
+              Lokale Speicherung und Synchronisierung werden später angebunden.
             </p>
           </div>
         </div>

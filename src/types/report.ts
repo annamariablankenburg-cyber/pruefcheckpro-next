@@ -32,6 +32,25 @@ export interface ReportHistoryEntry {
   timestamp: string;
 }
 
+export type ReportEmailStatus =
+  | "Noch nicht versendet"
+  | "Versand vorbereitet"
+  | "Versendet"
+  | "Versand fehlgeschlagen";
+
+export interface ReportEmailHistoryEntry {
+  id: string;
+  timestamp: string;
+  recipients: string[];
+  cc?: string[];
+  bcc?: string[];
+  subject: string;
+  message: string;
+  status: ReportEmailStatus;
+  sentBy: string;
+  attachmentCount: number;
+}
+
 export interface Report {
   id: string;
   titel: string;
@@ -61,4 +80,11 @@ export interface Report {
   bemerkungen: string;
   unterschriften: ReportUnterschrift[];
   historie: ReportHistoryEntry[];
+  emailStatus: ReportEmailStatus;
+  emailSentTo?: string[];
+  emailSentAt?: string;
+  emailSentBy?: string;
+  emailSubject?: string;
+  emailAttachmentCount?: number;
+  emailHistory: ReportEmailHistoryEntry[];
 }

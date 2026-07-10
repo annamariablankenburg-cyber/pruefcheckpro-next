@@ -10,7 +10,6 @@ import {
   Sparkles,
 } from "lucide-react";
 
-import { Card, CardContent } from "@/components/ui/card";
 import { ApiSettingsCard } from "@/components/shared/ApiSettingsCard";
 import { CloudStorageCard } from "@/components/shared/CloudStorageCard";
 import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
@@ -156,34 +155,27 @@ export default function IntegrationenPage() {
           const Icon = categoryIcons[category];
           const isActive = selectedCategory === category;
           return (
-            <Card
+            <button
               key={category}
-              role="button"
-              tabIndex={0}
+              type="button"
+              aria-pressed={isActive}
               onClick={() => setSelectedCategory((current) => (current === category ? null : category))}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  setSelectedCategory((current) => (current === category ? null : category));
-                }
-              }}
               className={cn(
-                "cursor-pointer py-0 transition-colors hover:border-primary/40 hover:bg-primary/5",
+                "flex flex-col items-center gap-2 rounded-xl border border-border bg-card px-3 py-5 text-center shadow-sm shadow-foreground/5 transition-colors hover:border-primary/40 hover:bg-primary/5",
                 isActive && "border-primary bg-primary/10"
               )}
             >
-              <CardContent className="flex flex-col items-center gap-2 px-3 py-5 text-center">
-                <div
-                  className={cn(
-                    "flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary",
-                    isActive && "bg-primary text-primary-foreground"
-                  )}
-                >
-                  <Icon className="size-5" />
-                </div>
-                <p className="text-sm font-semibold text-foreground">{category}</p>
-                <p className="text-xs text-muted-foreground">{categoryCounts[category]} Integrationen</p>
-              </CardContent>
-            </Card>
+              <div
+                className={cn(
+                  "flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary",
+                  isActive && "bg-primary text-primary-foreground"
+                )}
+              >
+                <Icon className="size-5" />
+              </div>
+              <p className="text-sm font-semibold text-foreground">{category}</p>
+              <p className="text-xs text-muted-foreground">{categoryCounts[category]} Integrationen</p>
+            </button>
           );
         })}
       </div>

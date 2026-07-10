@@ -63,6 +63,9 @@ export interface PruefartDefinition {
   name: string;
   fachbereich: SampleField;
   rowLabel: string;
+  // false nur für Prüfarten mit fachlich fester Zeilenbezeichnung (z. B. Siebgrößen),
+  // bei denen eine fortlaufende Nummerierung die Bedeutung der Zeile verfälschen würde.
+  autoNumberLabel?: boolean;
   fields: PruefartRowField[];
   formeln: PruefartFormel[];
   norm: string;

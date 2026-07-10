@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -10,11 +10,9 @@ import {
   FileText,
   Info,
   PlayCircle,
-  Plus,
   RotateCcw,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -23,13 +21,14 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { AuditTrailPreview } from "@/components/shared/AuditTrailPreview";
 import { CalculationPreview } from "@/components/shared/CalculationPreview";
-import { FakeBarChart, type BarChartDatum } from "@/components/shared/FakeBarChart";
+import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
+import { MeasurementWorkspacePanel } from "@/components/shared/MeasurementWorkspacePanel";
+import { MetaField, MetaRow } from "@/components/shared/MetaRow";
 import { TestEntryStatusBadge } from "@/components/shared/TestEntryStatusBadge";
+import { UnsavedChangesDialog } from "@/components/shared/UnsavedChangesDialog";
 import {
   inertPruefartenByFachbereich,
   mapPruefungNameToPruefart,
@@ -37,11 +36,10 @@ import {
   pruefartRows,
   pruefartenForFachbereich,
 } from "@/config/pruefarten";
+import { computeRowFillState, isFilledValue } from "@/lib/measurementValidation";
 import { cn } from "@/lib/utils";
 import type {
   AuditEntry,
-  Bewertung,
-  PruefartDefinition,
   PruefartKey,
   PruefartRow,
   TestEntry,
@@ -55,225 +53,26 @@ interface TestValueDrawerProps {
   onReopen: (entry: TestEntry) => void;
   onCreateReport: (entry: TestEntry) => void;
   onExportExcel: (entry: TestEntry) => void;
+  onFeedback: (message: string) => void;
 }
 
 const tabs = ["Details", "Berechnungen", "Norm & Info", "Verlauf"] as const;
 type Tab = (typeof tabs)[number];
 
-const bewertungStyles: Record<Bewertung, string> = {
-  Bestanden: "border-success/30 bg-success/5 text-success",
-  Prüfen: "border-warning/30 bg-warning/5 text-warning",
-  "Nicht bestanden": "border-destructive/30 bg-destructive/5 text-destructive",
-};
-
-function parseNumber(value: string): number {
-  const parsed = Number.parseFloat(value.replace(",", "."));
-  return Number.isFinite(parsed) ? parsed : 0;
+function cloneRows(rows: PruefartRow[]): PruefartRow[] {
+  return rows.map((row) => ({ ...row, values: { ...row.values } }));
 }
 
-const heightSteps = ["h-2", "h-6", "h-10", "h-14", "h-20", "h-24", "h-28", "h-32"];
-
-function heightClassFor(value: number, max: number): string {
-  if (max <= 0) return heightSteps[0];
-  const ratio = Math.min(1, Math.max(0, value / max));
-  const index = Math.round(ratio * (heightSteps.length - 1));
-  return heightSteps[index];
+function cloneRowsMap(map: Record<PruefartKey, PruefartRow[]>): Record<PruefartKey, PruefartRow[]> {
+  return Object.fromEntries(
+    (Object.entries(map) as [PruefartKey, PruefartRow[]][]).map(([key, rows]) => [key, cloneRows(rows)])
+  ) as Record<PruefartKey, PruefartRow[]>;
 }
 
-function MetaField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="truncate text-sm font-medium text-foreground">{value}</p>
-    </div>
-  );
-}
-
-function MetaRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="text-right font-medium text-foreground">{value}</span>
-    </div>
-  );
-}
-
-interface PruefartMesswertePanelProps {
-  def: PruefartDefinition;
-  autoCalc: boolean;
-  onAutoCalcChange: (value: boolean) => void;
-}
-
-// Eigene Komponente (statt Effekt), damit die Messwert-Zeilen beim Wechsel
-// der Prüfart über das key-Prop sauber neu initialisiert werden.
-function PruefartMesswertePanel({ def, autoCalc, onAutoCalcChange }: PruefartMesswertePanelProps) {
-  const [rows, setRows] = useState<PruefartRow[]>(() => pruefartRows[def.key]);
-  const [saveNote, setSaveNote] = useState<string | null>(null);
-
-  const calcField = def.fields.find((field) => field.kind === "calculated");
-  const chartData: BarChartDatum[] = useMemo(() => {
-    if (!calcField) return [];
-    const values = rows
-      .filter((row) => row.status === "OK")
-      .map((row) => ({ label: row.label, value: parseNumber(row.values[calcField.key] ?? "0") }));
-    const max = Math.max(...values.map((item) => item.value), 1);
-    return values.map((item) => ({ ...item, heightClass: heightClassFor(item.value, max) }));
-  }, [rows, calcField]);
-
-  function updateRowValue(rowId: string, key: string, value: string) {
-    setRows((current) =>
-      current.map((row) => (row.id === rowId ? { ...row, values: { ...row.values, [key]: value } } : row))
-    );
-  }
-
-  function addRow() {
-    const newRow: PruefartRow = {
-      id: `row-${rows.length + 1}-${Date.now()}`,
-      label: `${def.rowLabel} ${rows.length + 1}`,
-      status: "Offen",
-      values: Object.fromEntries(
-        def.fields.filter((field) => field.kind !== "status").map((field) => [field.key, ""])
-      ),
-    };
-    setRows((current) => [...current, newRow]);
-  }
-
-  function handleSave(kind: "Entwurf" | "Ergebnis") {
-    setSaveNote(`${kind} lokal gespeichert – noch keine echte Speicherung.`);
-    window.setTimeout(() => setSaveNote(null), 2500);
-  }
-
-  return (
-    <div className="flex flex-col gap-6 border-b border-border p-4 lg:border-r lg:border-b-0 lg:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h3 className="text-base font-semibold text-foreground">Prüfwerte erfassen</h3>
-          <p className="text-xs text-muted-foreground">
-            {def.rowLabel}-Werte für {def.name}
-          </p>
-        </div>
-        <label className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Switch checked={autoCalc} onCheckedChange={onAutoCalcChange} />
-          Automatische Berechnung
-        </label>
-      </div>
-
-      <div className="overflow-x-auto rounded-xl border border-border">
-        <table className="w-full min-w-[560px] text-sm">
-          <thead>
-            <tr className="border-b border-border bg-muted/40 text-left text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-              <th className="px-3 py-2 whitespace-nowrap">{def.rowLabel}</th>
-              {def.fields.map((field) => (
-                <th key={field.key} className="px-3 py-2 whitespace-nowrap">
-                  {field.label}
-                  {field.unit ? ` (${field.unit})` : ""}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.id} className="border-b border-border last:border-0">
-                <td className="px-3 py-2 font-medium whitespace-nowrap text-foreground">{row.label}</td>
-                {def.fields.map((field) => {
-                  if (field.kind === "status") {
-                    return (
-                      <td key={field.key} className="px-3 py-2 whitespace-nowrap">
-                        <Badge
-                          variant="secondary"
-                          className={
-                            row.status === "OK" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"
-                          }
-                        >
-                          {row.status === "OK" ? "OK" : "Offen"}
-                        </Badge>
-                      </td>
-                    );
-                  }
-                  if (field.kind === "calculated") {
-                    return (
-                      <td key={field.key} className="px-3 py-2 font-medium whitespace-nowrap text-foreground">
-                        {autoCalc ? (row.values[field.key] ?? "–") : "–"}
-                      </td>
-                    );
-                  }
-                  return (
-                    <td key={field.key} className="px-3 py-2">
-                      <Input
-                        value={row.values[field.key] ?? ""}
-                        onChange={(event) => updateRowValue(row.id, field.key, event.target.value)}
-                        className="h-8 w-24"
-                      />
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <Button type="button" variant="outline" size="sm" className="w-fit" onClick={addRow}>
-          <Plus className="size-3.5" />
-          {def.rowLabel} hinzufügen
-        </Button>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          {saveNote && <span className="text-xs text-muted-foreground">{saveNote}</span>}
-          <Button type="button" variant="outline" size="sm" onClick={() => handleSave("Entwurf")}>
-            Entwurf speichern
-          </Button>
-          <Button type="button" size="sm" onClick={() => handleSave("Ergebnis")}>
-            Ergebnis speichern
-          </Button>
-        </div>
-      </div>
-
-      {calcField && chartData.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <h4 className="text-sm font-semibold text-foreground">
-            {calcField.label} {calcField.unit ? `(${calcField.unit})` : ""}
-          </h4>
-          <FakeBarChart data={chartData} />
-        </div>
-      )}
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-xl border border-border p-4">
-          <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-            Mittelwerte & Bewertung
-          </p>
-          <div className="mt-1 flex flex-col divide-y divide-border">
-            <MetaRow label="Mittelwert" value={def.mittelwert} />
-            <MetaRow label="Standardabweichung" value={def.standardabweichung} />
-          </div>
-        </div>
-        <div className={cn("flex flex-col justify-center gap-1 rounded-xl border p-4", bewertungStyles[def.bewertung])}>
-          <p className="text-xs font-semibold tracking-wide uppercase">Bewertung</p>
-          <p className="text-lg font-semibold">{def.bewertung}</p>
-          <p className="text-xs">{def.bewertungsHinweis}</p>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <h4 className="text-sm font-semibold text-foreground">Berechnungsformeln (nach {def.norm})</h4>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {def.formeln.map((formel) => (
-            <div key={formel.label} className="rounded-xl border border-border p-3">
-              <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">{formel.label}</p>
-              <p className="mt-1 font-mono text-sm text-foreground">{formel.formel}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{formel.hinweis}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex items-start gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-2.5 text-sm text-primary">
-        <Info className="mt-0.5 size-4 shrink-0" />
-        Berechnungen sind aktuell UI-Vorschau und werden später normgerecht angebunden.
-      </div>
-    </div>
-  );
+interface DeleteRowConfirmState {
+  pruefart: PruefartKey;
+  rowId: string;
+  label: string;
 }
 
 interface WorkspaceProps {
@@ -283,6 +82,7 @@ interface WorkspaceProps {
   onReopen: (entry: TestEntry) => void;
   onCreateReport: (entry: TestEntry) => void;
   onExportExcel: (entry: TestEntry) => void;
+  onFeedback: (message: string) => void;
 }
 
 function TestValueWorkspace({
@@ -292,6 +92,7 @@ function TestValueWorkspace({
   onReopen,
   onCreateReport,
   onExportExcel,
+  onFeedback,
 }: WorkspaceProps) {
   const [activePruefart, setActivePruefart] = useState<PruefartKey>(() =>
     mapPruefungNameToPruefart(entry.titel, entry.fachbereich)
@@ -299,6 +100,21 @@ function TestValueWorkspace({
   const [autoCalc, setAutoCalc] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("Details");
   const [comment, setComment] = useState("");
+
+  const initialRowsRef = useRef<Record<PruefartKey, PruefartRow[]>>(cloneRowsMap(pruefartRows));
+  const [rowsByPruefart, setRowsByPruefart] = useState<Record<PruefartKey, PruefartRow[]>>(() =>
+    cloneRowsMap(pruefartRows)
+  );
+  const [savedBaseline, setSavedBaseline] = useState<Record<PruefartKey, PruefartRow[]>>(() =>
+    cloneRowsMap(pruefartRows)
+  );
+  const [historyByPruefart, setHistoryByPruefart] = useState<Partial<Record<PruefartKey, PruefartRow[][]>>>({});
+  const focusSnapshotRef = useRef<PruefartRow[] | null>(null);
+  const [activeRowId, setActiveRowId] = useState<string | null>(null);
+  const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
+  const [pendingSwitchTarget, setPendingSwitchTarget] = useState<PruefartKey | null>(null);
+  const [resetConfirm, setResetConfirm] = useState<"messreihe" | "pruefung" | null>(null);
+  const [deleteRowConfirm, setDeleteRowConfirm] = useState<DeleteRowConfirmState | null>(null);
 
   const def = pruefartDefinitions[activePruefart];
   const availablePruefarten = useMemo(() => pruefartenForFachbereich(entry.fachbereich), [entry.fachbereich]);
@@ -308,6 +124,143 @@ function TestValueWorkspace({
   const canStart = status === "Offen" || status === "Vorbereitung" || status === "Überfällig";
   const canComplete = status === "In Bearbeitung" || status === "Überfällig";
   const canReopen = status === "Abgeschlossen";
+
+  function isDirty(key: PruefartKey): boolean {
+    return JSON.stringify(rowsByPruefart[key]) !== JSON.stringify(savedBaseline[key]);
+  }
+
+  function updateRows(key: PruefartKey, updater: (rows: PruefartRow[]) => PruefartRow[]) {
+    setRowsByPruefart((current) => ({ ...current, [key]: updater(current[key]) }));
+  }
+
+  function renumber(key: PruefartKey, rows: PruefartRow[]): PruefartRow[] {
+    const rowDef = pruefartDefinitions[key];
+    if (rowDef.autoNumberLabel === false) return rows;
+    return rows.map((row, index) => ({ ...row, label: `${rowDef.rowLabel} ${index + 1}` }));
+  }
+
+  function pushHistory(key: PruefartKey, snapshot: PruefartRow[]) {
+    setHistoryByPruefart((current) => {
+      const stack = current[key] ?? [];
+      return { ...current, [key]: [...stack.slice(-19), cloneRows(snapshot)] };
+    });
+  }
+
+  function handleAddRow(key: PruefartKey) {
+    pushHistory(key, rowsByPruefart[key]);
+    const rowDef = pruefartDefinitions[key];
+    const valueFields = rowDef.fields.filter((field) => field.kind !== "status");
+    const newRow: PruefartRow = {
+      id: `row-${key}-${Date.now()}`,
+      label: rowDef.autoNumberLabel === false ? `${rowDef.rowLabel} (neu)` : "",
+      status: "Offen",
+      values: Object.fromEntries(valueFields.map((field) => [field.key, ""])),
+    };
+    updateRows(key, (rows) => renumber(key, [...rows, newRow]));
+  }
+
+  function handleDuplicateRow(key: PruefartKey, rowId: string) {
+    pushHistory(key, rowsByPruefart[key]);
+    updateRows(key, (rows) => {
+      const source = rows.find((row) => row.id === rowId);
+      if (!source) return rows;
+      const rowDef = pruefartDefinitions[key];
+      const copy: PruefartRow = {
+        id: `row-${key}-${Date.now()}`,
+        label: rowDef.autoNumberLabel === false ? `${source.label} (Kopie)` : "",
+        status: source.status,
+        values: { ...source.values },
+      };
+      const index = rows.findIndex((row) => row.id === rowId);
+      const next = [...rows.slice(0, index + 1), copy, ...rows.slice(index + 1)];
+      return renumber(key, next);
+    });
+  }
+
+  function performDeleteRow(key: PruefartKey, rowId: string) {
+    pushHistory(key, rowsByPruefart[key]);
+    updateRows(key, (rows) => renumber(key, rows.filter((row) => row.id !== rowId)));
+  }
+
+  function requestDeleteRow(key: PruefartKey, row: PruefartRow) {
+    const rowDef = pruefartDefinitions[key];
+    const inputKeys = rowDef.fields.filter((field) => field.kind === "input").map((field) => field.key);
+    const hasValues = inputKeys.some((fieldKey) => isFilledValue(row.values[fieldKey]));
+    if (!hasValues) {
+      performDeleteRow(key, row.id);
+      return;
+    }
+    setDeleteRowConfirm({ pruefart: key, rowId: row.id, label: row.label });
+  }
+
+  function handleConfirmDeleteRow() {
+    if (!deleteRowConfirm) return;
+    performDeleteRow(deleteRowConfirm.pruefart, deleteRowConfirm.rowId);
+    setDeleteRowConfirm(null);
+  }
+
+  function handleFieldFocus(key: PruefartKey, rowId: string) {
+    setActiveRowId(rowId);
+    focusSnapshotRef.current = cloneRows(rowsByPruefart[key]);
+  }
+
+  function handleFieldChange(key: PruefartKey, rowId: string, fieldKey: string, value: string) {
+    updateRows(key, (rows) =>
+      rows.map((row) => (row.id === rowId ? { ...row, values: { ...row.values, [fieldKey]: value } } : row))
+    );
+  }
+
+  function handleFieldBlur(key: PruefartKey, rowId: string, fieldKey: string) {
+    setTouchedFields((current) => new Set(current).add(`${rowId}:${fieldKey}`));
+    const snapshot = focusSnapshotRef.current;
+    focusSnapshotRef.current = null;
+    if (snapshot && JSON.stringify(snapshot) !== JSON.stringify(rowsByPruefart[key])) {
+      pushHistory(key, snapshot);
+    }
+  }
+
+  function handleUndo(key: PruefartKey) {
+    const stack = historyByPruefart[key] ?? [];
+    if (stack.length === 0) return;
+    const previous = stack[stack.length - 1];
+    setHistoryByPruefart((current) => ({ ...current, [key]: (current[key] ?? []).slice(0, -1) }));
+    setRowsByPruefart((current) => ({ ...current, [key]: previous }));
+  }
+
+  function handleSaveDraft(key: PruefartKey) {
+    setSavedBaseline((current) => ({ ...current, [key]: cloneRows(rowsByPruefart[key]) }));
+    onFeedback("Entwurf lokal gespeichert – noch keine echte Speicherung.");
+  }
+
+  function handleSaveResult(key: PruefartKey) {
+    setSavedBaseline((current) => ({ ...current, [key]: cloneRows(rowsByPruefart[key]) }));
+    onFeedback("Ergebnis lokal gespeichert – noch keine echte Speicherung.");
+  }
+
+  function handleResetMessreihe(key: PruefartKey) {
+    const original = cloneRows(initialRowsRef.current[key]);
+    setRowsByPruefart((current) => ({ ...current, [key]: original }));
+    setSavedBaseline((current) => ({ ...current, [key]: cloneRows(original) }));
+    setHistoryByPruefart((current) => ({ ...current, [key]: [] }));
+    onFeedback("Prüfwerte dieser Messreihe wurden zurückgesetzt.");
+  }
+
+  function handleResetPruefung() {
+    setRowsByPruefart(cloneRowsMap(initialRowsRef.current));
+    setSavedBaseline(cloneRowsMap(initialRowsRef.current));
+    setHistoryByPruefart({});
+    onFeedback("Alle Prüfwerte dieser Prüfung wurden zurückgesetzt.");
+  }
+
+  function handleSelectPruefart(key: PruefartKey) {
+    if (key === activePruefart) return;
+    if (isDirty(activePruefart)) {
+      setPendingSwitchTarget(key);
+      return;
+    }
+    setActivePruefart(key);
+    setActiveRowId(null);
+  }
 
   const auditEntries: AuditEntry[] = useMemo(() => {
     const entries: AuditEntry[] = [
@@ -359,7 +312,7 @@ function TestValueWorkspace({
       </DrawerHeader>
 
       <DrawerBody className="flex-1 overflow-y-auto p-0">
-        <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr_320px]">
+        <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr_320px]">
           {/* Links: Prüfungsnavigation */}
           <div className="border-b border-border p-4 lg:border-r lg:border-b-0">
             <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
@@ -368,11 +321,17 @@ function TestValueWorkspace({
             <div className="flex flex-col gap-1">
               {availablePruefarten.map((key) => {
                 const item = pruefartDefinitions[key];
+                const keyRows = rowsByPruefart[key];
+                const inputKeys = item.fields.filter((field) => field.kind === "input").map((field) => field.key);
+                const completeCount = keyRows.filter(
+                  (row) => computeRowFillState(row, inputKeys) === "vollstaendig"
+                ).length;
+                const dirty = isDirty(key);
                 return (
                   <button
                     key={key}
                     type="button"
-                    onClick={() => setActivePruefart(key)}
+                    onClick={() => handleSelectPruefart(key)}
                     className={cn(
                       "rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors",
                       activePruefart === key
@@ -380,7 +339,19 @@ function TestValueWorkspace({
                         : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                     )}
                   >
-                    {item.name}
+                    <span className="flex items-center gap-1.5">
+                      {item.name}
+                      {dirty && (
+                        <span
+                          className="size-1.5 shrink-0 rounded-full bg-warning"
+                          aria-label="Ungespeicherte Änderungen"
+                          title="Ungespeicherte Änderungen"
+                        />
+                      )}
+                    </span>
+                    <span className="block text-xs font-normal text-muted-foreground">
+                      {keyRows.length} Messreihen · {completeCount}/{keyRows.length} vollständig
+                    </span>
                   </button>
                 );
               })}
@@ -397,7 +368,26 @@ function TestValueWorkspace({
           </div>
 
           {/* Mitte: Messwerte + Berechnungsvorschau */}
-          <PruefartMesswertePanel key={activePruefart} def={def} autoCalc={autoCalc} onAutoCalcChange={setAutoCalc} />
+          <MeasurementWorkspacePanel
+            key={activePruefart}
+            def={def}
+            rows={rowsByPruefart[activePruefart]}
+            autoCalc={autoCalc}
+            onAutoCalcChange={setAutoCalc}
+            activeRowId={activeRowId}
+            touchedFields={touchedFields}
+            canUndo={(historyByPruefart[activePruefart]?.length ?? 0) > 0}
+            onFieldFocus={(rowId) => handleFieldFocus(activePruefart, rowId)}
+            onFieldChange={(rowId, fieldKey, value) => handleFieldChange(activePruefart, rowId, fieldKey, value)}
+            onFieldBlur={(rowId, fieldKey) => handleFieldBlur(activePruefart, rowId, fieldKey)}
+            onAddRow={() => handleAddRow(activePruefart)}
+            onDuplicateRow={(rowId) => handleDuplicateRow(activePruefart, rowId)}
+            onRequestDeleteRow={(row) => requestDeleteRow(activePruefart, row)}
+            onUndo={() => handleUndo(activePruefart)}
+            onResetMessreihe={() => setResetConfirm("messreihe")}
+            onSaveDraft={() => handleSaveDraft(activePruefart)}
+            onSaveResult={() => handleSaveResult(activePruefart)}
+          />
 
           {/* Rechts: Details / Berechnungen / Norm & Info / Verlauf */}
           <div className="flex flex-col gap-4 p-4 lg:p-6">
@@ -497,12 +487,67 @@ function TestValueWorkspace({
               Wieder öffnen
             </Button>
           )}
+          <Button type="button" variant="outline" onClick={() => setResetConfirm("pruefung")}>
+            <RotateCcw className="size-4" />
+            Prüfung zurücksetzen
+          </Button>
           <Button type="button" onClick={() => onCreateReport(entry)}>
             Weiter: Bericht erstellen
             <ArrowRight className="size-4" />
           </Button>
         </div>
       </div>
+
+      <UnsavedChangesDialog
+        open={pendingSwitchTarget !== null}
+        onOpenChange={(open) => !open && setPendingSwitchTarget(null)}
+        onDiscard={() => {
+          if (pendingSwitchTarget) {
+            setRowsByPruefart((current) => ({
+              ...current,
+              [activePruefart]: cloneRows(savedBaseline[activePruefart]),
+            }));
+            setActivePruefart(pendingSwitchTarget);
+            setActiveRowId(null);
+          }
+          setPendingSwitchTarget(null);
+        }}
+        onSaveDraft={() => {
+          handleSaveDraft(activePruefart);
+          if (pendingSwitchTarget) {
+            setActivePruefart(pendingSwitchTarget);
+            setActiveRowId(null);
+          }
+          setPendingSwitchTarget(null);
+        }}
+      />
+
+      <ConfirmActionDialog<"messreihe" | "pruefung">
+        subject={resetConfirm}
+        title="Prüfwerte zurücksetzen?"
+        description="Alle aktuell eingetragenen Messwerte dieser Prüfung werden gelöscht."
+        confirmLabel="Zurücksetzen"
+        confirmVariant="destructive"
+        onOpenChange={(open) => !open && setResetConfirm(null)}
+        onConfirm={(scope) => {
+          if (scope === "messreihe") {
+            handleResetMessreihe(activePruefart);
+          } else {
+            handleResetPruefung();
+          }
+          setResetConfirm(null);
+        }}
+      />
+
+      <ConfirmActionDialog<DeleteRowConfirmState>
+        subject={deleteRowConfirm}
+        title="Messreihe löschen?"
+        description="Die eingetragenen Werte dieser Messreihe werden entfernt. Diese Aktion kann im aktuellen Entwurf nicht rückgängig gemacht werden."
+        confirmLabel="Löschen"
+        confirmVariant="destructive"
+        onOpenChange={(open) => !open && setDeleteRowConfirm(null)}
+        onConfirm={handleConfirmDeleteRow}
+      />
     </>
   );
 }
@@ -515,6 +560,7 @@ export function TestValueDrawer({
   onReopen,
   onCreateReport,
   onExportExcel,
+  onFeedback,
 }: TestValueDrawerProps) {
   return (
     <Drawer open={entry !== null} onOpenChange={onOpenChange}>
@@ -528,6 +574,7 @@ export function TestValueDrawer({
             onReopen={onReopen}
             onCreateReport={onCreateReport}
             onExportExcel={onExportExcel}
+            onFeedback={onFeedback}
           />
         )}
       </DrawerContent>

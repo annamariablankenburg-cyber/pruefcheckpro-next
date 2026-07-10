@@ -70,4 +70,5 @@ export interface LicenseOverview {
 export interface CompanyQuickAction {
   label: string;
   icon: LucideIcon;
+  onClick: () => void;
 }

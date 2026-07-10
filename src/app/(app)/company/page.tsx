@@ -14,6 +14,7 @@ import { CompanyPrimaryLocationCard } from "@/components/shared/CompanyPrimaryLo
 import { CompanyQuickActions } from "@/components/shared/CompanyQuickActions";
 import { CompanyTabs, type CompanyTab } from "@/components/shared/CompanyTabs";
 import { EmployeesView } from "@/components/shared/EmployeesView";
+import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { InvitationsView } from "@/components/shared/InvitationsView";
 import { InviteEmployeeDialog } from "@/components/shared/InviteEmployeeDialog";
 import { NewLocationDialog } from "@/components/shared/NewLocationDialog";
@@ -38,17 +39,34 @@ const tabs: CompanyTab[] = [
   { value: "einstellungen", label: "Einstellungen" },
 ];
 
-const quickActions: CompanyQuickAction[] = [
-  { label: "Branding öffnen", icon: Palette },
-  { label: "Standorte verwalten", icon: Users },
-  { label: "Mitarbeiter verwalten", icon: UserCog },
-  { label: "Abrechnung öffnen", icon: CreditCard },
-];
-
 export default function CompanyPage() {
   const [activeTab, setActiveTab] = useState("uebersicht");
   const [isNewLocationOpen, setIsNewLocationOpen] = useState(false);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const { message: feedback, showFeedback } = useFeedbackToast();
+
+  const quickActions: CompanyQuickAction[] = [
+    {
+      label: "Branding öffnen",
+      icon: Palette,
+      onClick: () => showFeedback("Branding wird später angebunden."),
+    },
+    {
+      label: "Standorte verwalten",
+      icon: Users,
+      onClick: () => setActiveTab("standorte"),
+    },
+    {
+      label: "Mitarbeiter verwalten",
+      icon: UserCog,
+      onClick: () => setActiveTab("mitarbeiter"),
+    },
+    {
+      label: "Abrechnung öffnen",
+      icon: CreditCard,
+      onClick: () => showFeedback("Abrechnung wird später angebunden."),
+    },
+  ];
 
   return (
     <div className="flex flex-col gap-6 p-4 sm:p-6 lg:p-8">
@@ -106,6 +124,8 @@ export default function CompanyPage() {
 
       <NewLocationDialog open={isNewLocationOpen} onOpenChange={setIsNewLocationOpen} />
       <InviteEmployeeDialog open={isInviteOpen} onOpenChange={setIsInviteOpen} />
+
+      <FeedbackToast message={feedback} />
     </div>
   );
 }

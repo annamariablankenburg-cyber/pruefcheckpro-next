@@ -16,6 +16,7 @@ interface ReportTableActionHandlers {
   onArchive: (report: Report) => void;
   onReactivate: (report: Report) => void;
   onDelete: (report: Report) => void;
+  onSendEmail: (report: Report) => void;
 }
 
 interface ReportTableProps extends ReportTableActionHandlers {
@@ -102,6 +103,7 @@ export function ReportTable({ reports, onResetFilters, ...handlers }: ReportTabl
                       onArchive={() => handlers.onArchive(report)}
                       onReactivate={() => handlers.onReactivate(report)}
                       onDelete={() => handlers.onDelete(report)}
+                      onSendEmail={() => handlers.onSendEmail(report)}
                     />
                   </td>
                 </tr>
@@ -141,6 +143,7 @@ export function ReportTable({ reports, onResetFilters, ...handlers }: ReportTabl
                     onArchive={() => handlers.onArchive(report)}
                     onReactivate={() => handlers.onReactivate(report)}
                     onDelete={() => handlers.onDelete(report)}
+                    onSendEmail={() => handlers.onSendEmail(report)}
                   />
                 </div>
               </div>

@@ -13,6 +13,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
+import { type EmailDraftResult, SendReportEmailDialog } from "@/components/shared/SendReportEmailDialog";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { NewReportDialog } from "@/components/shared/NewReportDialog";
 import { ReportEditorDrawer, type Section } from "@/components/shared/ReportEditorDrawer";
@@ -21,7 +22,7 @@ import { ReportTable } from "@/components/shared/ReportTable";
 import { StatCard } from "@/components/shared/StatCard";
 import { HEUTE } from "@/config/reports";
 import { useReports } from "@/hooks/useReports";
-import type { Report, ReportStatus } from "@/types/report";
+import type { Report, ReportEmailHistoryEntry, ReportStatus } from "@/types/report";
 
 type ConfirmActionType = "saveDraft" | "markDone" | "exportPdf" | "exportExcel" | "archive" | "reactivate";
 
@@ -90,6 +91,11 @@ export function ReportsView() {
   const [confirmAction, setConfirmAction] = useState<{ report: Report; type: ConfirmActionType } | null>(
     null
   );
+  const [emailContext, setEmailContext] = useState<{
+    report: Report;
+    recipients?: string[];
+    subject?: string;
+  } | null>(null);
   const { message: feedback, showFeedback } = useFeedbackToast();
 
   function updateReport(id: string, changes: Partial<Report>) {
@@ -137,6 +143,13 @@ export function ReportsView() {
       status: "Entwurf",
       erstelltAm: HEUTE,
       historie: [{ message: `Dupliziert von ${report.id}.`, timestamp: HEUTE }],
+      emailStatus: "Noch nicht versendet",
+      emailSentTo: undefined,
+      emailSentAt: undefined,
+      emailSentBy: undefined,
+      emailSubject: undefined,
+      emailAttachmentCount: undefined,
+      emailHistory: [],
     };
     createReport(newReport);
     showFeedback(`Bericht „${newReport.titel}" wurde dupliziert.`);
@@ -146,6 +159,65 @@ export function ReportsView() {
     removeReport(subject.id);
     setEditorReport((current) => (current && current.id === subject.id ? null : current));
     setDeleteReport(null);
+  }
+
+  function openSendEmail(report: Report) {
+    setEmailContext({ report });
+  }
+
+  function handleResendEmail(report: Report, entry: ReportEmailHistoryEntry) {
+    setEmailContext({ report, recipients: entry.recipients, subject: entry.subject });
+  }
+
+  function handleCopyEmailText(entry: ReportEmailHistoryEntry) {
+    const text = `An: ${entry.recipients.join(", ")}\nBetreff: ${entry.subject}\n\n${entry.message}`;
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(text).catch(() => {});
+    }
+    showFeedback("E-Mail-Text kopiert.");
+  }
+
+  function handleSaveEmailDraft(report: Report, draft: EmailDraftResult) {
+    updateReport(report.id, {
+      emailStatus: "Versand vorbereitet",
+      emailSentTo: draft.to,
+      emailSubject: draft.subject,
+    });
+    setEmailContext(null);
+    showFeedback("E-Mail-Entwurf lokal gespeichert.");
+  }
+
+  function handleSendTestEmail() {
+    showFeedback("E-Mail-Versand wird später sicher über eine Server-Funktion angebunden.");
+  }
+
+  function handleSendEmail(report: Report, draft: EmailDraftResult) {
+    const attachmentCount = draft.attachments.filter((attachment) => attachment.selected).length;
+    const timestamp = `${HEUTE} ${new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}`;
+    const newEntry: ReportEmailHistoryEntry = {
+      id: `email-${Date.now()}`,
+      timestamp,
+      recipients: draft.to,
+      cc: draft.cc.length > 0 ? draft.cc : undefined,
+      bcc: draft.bcc.length > 0 ? draft.bcc : undefined,
+      subject: draft.subject,
+      message: draft.message,
+      status: "Versendet",
+      sentBy: "Max Mustermann",
+      attachmentCount,
+    };
+
+    updateReport(report.id, {
+      emailStatus: "Versendet",
+      emailSentTo: draft.to,
+      emailSentAt: timestamp,
+      emailSentBy: newEntry.sentBy,
+      emailSubject: draft.subject,
+      emailAttachmentCount: attachmentCount,
+      emailHistory: [newEntry, ...report.emailHistory],
+    });
+    setEmailContext(null);
+    showFeedback("Prüfbericht wurde als versendet markiert.");
   }
 
   return (
@@ -189,6 +261,7 @@ export function ReportsView() {
         onArchive={requestAction("archive")}
         onReactivate={requestAction("reactivate")}
         onDelete={setDeleteReport}
+        onSendEmail={openSendEmail}
       />
 
       <ReportEditorDrawer
@@ -208,6 +281,19 @@ export function ReportsView() {
         onOpenProject={() => router.push("/projekte")}
         onOpenCustomer={() => router.push("/kunden")}
         onOpenSample={() => router.push("/probekoerper")}
+        onSendEmail={openSendEmail}
+        onResendEmail={handleResendEmail}
+        onCopyEmailText={handleCopyEmailText}
+      />
+
+      <SendReportEmailDialog
+        report={emailContext?.report ?? null}
+        initialRecipients={emailContext?.recipients}
+        initialSubject={emailContext?.subject}
+        onOpenChange={(open) => !open && setEmailContext(null)}
+        onSaveDraft={handleSaveEmailDraft}
+        onSendTest={handleSendTestEmail}
+        onSend={handleSendEmail}
       />
 
       <NewReportDialog open={isNewReportOpen} onOpenChange={setIsNewReportOpen} />

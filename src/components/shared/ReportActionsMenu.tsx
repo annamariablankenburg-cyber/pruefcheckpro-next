@@ -6,6 +6,7 @@ import {
   Download,
   Eye,
   FileEdit,
+  Mail,
   MoreHorizontal,
   Trash2,
 } from "lucide-react";
@@ -32,6 +33,7 @@ interface ReportActionsMenuProps {
   onArchive: () => void;
   onReactivate: () => void;
   onDelete: () => void;
+  onSendEmail: () => void;
 }
 
 export function ReportActionsMenu({
@@ -46,6 +48,7 @@ export function ReportActionsMenu({
   onArchive,
   onReactivate,
   onDelete,
+  onSendEmail,
 }: ReportActionsMenuProps) {
   const { status } = report;
   const canMarkDone = status === "Entwurf";
@@ -72,6 +75,10 @@ export function ReportActionsMenu({
         <DropdownMenuItem onSelect={onPreview}>
           <Eye />
           Vorschau öffnen
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={onSendEmail}>
+          <Mail />
+          Per E-Mail senden
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
