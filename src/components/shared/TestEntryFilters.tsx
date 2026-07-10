@@ -9,6 +9,7 @@ export const testEntryFilterOptions = [
   "Asphalt",
   "Geotechnik",
   "Offen",
+  "Vorbereitung",
   "In Bearbeitung",
   "Abgeschlossen",
   "Überfällig",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Archive,
   CheckCircle2,
@@ -67,6 +68,7 @@ const confirmCopy: Record<
 };
 
 export default function ProbekoerperPage() {
+  const router = useRouter();
   const {
     samples,
     filteredSamples,
@@ -164,7 +166,7 @@ export default function ProbekoerperPage() {
         onResetFilters={resetFilters}
         onViewDetails={setDetailSample}
         onEdit={setEditSample}
-        onEnterValues={() => showFeedback("Diese Funktion wird später angebunden.")}
+        onEnterValues={() => router.push("/pruefungen")}
         onStart={requestAction("start")}
         onComplete={requestAction("complete")}
         onReopen={requestAction("reopen")}
@@ -177,7 +179,7 @@ export default function ProbekoerperPage() {
         sample={detailSample}
         onOpenChange={(open) => !open && setDetailSample(null)}
         onEdit={setEditSample}
-        onEnterValues={() => showFeedback("Diese Funktion wird später angebunden.")}
+        onEnterValues={() => router.push("/pruefungen")}
         onStart={requestAction("start")}
         onComplete={requestAction("complete")}
         onReopen={requestAction("reopen")}

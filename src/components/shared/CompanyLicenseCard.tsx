@@ -7,9 +7,10 @@ import type { LicenseOverview } from "@/types/company";
 
 interface CompanyLicenseCardProps {
   license: LicenseOverview;
+  onManagePlan?: () => void;
 }
 
-export function CompanyLicenseCard({ license }: CompanyLicenseCardProps) {
+export function CompanyLicenseCard({ license, onManagePlan }: CompanyLicenseCardProps) {
   const storagePercentage = Math.round((license.storageUsedGb / license.storageTotalGb) * 100);
   const userPercentage = Math.round((license.usedUsers / license.userLimit) * 100);
 
@@ -58,6 +59,7 @@ export function CompanyLicenseCard({ license }: CompanyLicenseCardProps) {
 
         <button
           type="button"
+          onClick={onManagePlan}
           className="flex w-fit items-center gap-1 text-sm font-medium text-primary hover:underline"
         >
           Tarif verwalten

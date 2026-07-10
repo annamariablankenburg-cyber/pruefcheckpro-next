@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { AuthDivider } from "@/components/shared/AuthDivider";
+import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { GoogleIcon } from "@/components/shared/GoogleIcon";
 import { getAuthErrorMessage, loginWithEmail } from "@/lib/firebase/auth";
 import { updateLastLogin } from "@/lib/firebase/users";
@@ -25,6 +26,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { message: feedback, showFeedback } = useFeedbackToast();
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -49,7 +51,12 @@ export default function LoginPage() {
       </CardHeader>
 
       <CardContent className="flex flex-col gap-6">
-        <Button type="button" variant="outline" className="w-full">
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          onClick={() => showFeedback("Diese Funktion wird später angebunden.")}
+        >
           <GoogleIcon />
           Mit Google anmelden
         </Button>
@@ -123,6 +130,8 @@ export default function LoginPage() {
           </p>
         </div>
       </CardContent>
+
+      <FeedbackToast message={feedback} />
     </Card>
   );
 }

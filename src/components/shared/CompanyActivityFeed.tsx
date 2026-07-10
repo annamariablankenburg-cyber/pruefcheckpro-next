@@ -4,9 +4,10 @@ import type { CompanyActivity } from "@/types/company";
 
 interface CompanyActivityFeedProps {
   activities: CompanyActivity[];
+  onViewAll?: () => void;
 }
 
-export function CompanyActivityFeed({ activities }: CompanyActivityFeedProps) {
+export function CompanyActivityFeed({ activities, onViewAll }: CompanyActivityFeedProps) {
   return (
     <Card>
       <CardHeader>
@@ -27,6 +28,7 @@ export function CompanyActivityFeed({ activities }: CompanyActivityFeedProps) {
 
         <button
           type="button"
+          onClick={onViewAll}
           className="flex w-fit items-center gap-1 text-sm font-medium text-primary hover:underline"
         >
           Alle Aktivitäten anzeigen

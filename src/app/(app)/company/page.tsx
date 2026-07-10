@@ -98,11 +98,17 @@ export default function CompanyPage() {
             />
             <div className="flex flex-col gap-6">
               <CompanyQuickActions actions={quickActions} />
-              <CompanyActivityFeed activities={companyActivities} />
+              <CompanyActivityFeed
+                activities={companyActivities}
+                onViewAll={() => showFeedback("Diese Funktion wird später angebunden.")}
+              />
             </div>
           </div>
 
-          <CompanyLicenseCard license={licenseOverview} />
+          <CompanyLicenseCard
+            license={licenseOverview}
+            onManagePlan={() => showFeedback("Abrechnung wird später angebunden.")}
+          />
         </div>
       )}
 

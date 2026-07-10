@@ -37,7 +37,9 @@ export function CompanyLocationsList({
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-foreground">{location.name}</p>
-              <p className="truncate text-xs text-muted-foreground">{location.address}</p>
+              <p className="truncate text-xs text-muted-foreground" title={location.address}>
+                {location.address}
+              </p>
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
               <span className="text-xs text-muted-foreground">

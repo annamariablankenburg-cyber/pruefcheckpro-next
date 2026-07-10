@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { AuthDivider } from "@/components/shared/AuthDivider";
+import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { GoogleIcon } from "@/components/shared/GoogleIcon";
 import { getAuthErrorMessage, registerWithEmail } from "@/lib/firebase/auth";
 import { createUserProfile } from "@/lib/firebase/users";
@@ -31,6 +32,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { message: feedback, showFeedback } = useFeedbackToast();
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -56,7 +58,12 @@ export default function RegisterPage() {
       </CardHeader>
 
       <CardContent className="flex flex-col gap-6">
-        <Button type="button" variant="outline" className="w-full">
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          onClick={() => showFeedback("Diese Funktion wird später angebunden.")}
+        >
           <GoogleIcon />
           Mit Google registrieren
         </Button>
@@ -136,6 +143,8 @@ export default function RegisterPage() {
           </p>
         </div>
       </CardContent>
+
+      <FeedbackToast message={feedback} />
     </Card>
   );
 }

@@ -91,8 +91,11 @@ export function LaborbookTable({ entries, onResetFilters, ...handlers }: Laborbo
                       {entry.mitarbeiter}
                     </div>
                   </td>
-                  <td className="max-w-[280px] truncate px-4 py-3 text-muted-foreground">
-                    {entry.titel}
+                  <td
+                    className="max-w-[280px] truncate px-4 py-3 text-muted-foreground"
+                    title={entry.beschreibung}
+                  >
+                    {entry.beschreibung}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <LaborbookStatusBadge status={entry.status} />

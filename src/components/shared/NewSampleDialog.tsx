@@ -67,8 +67,9 @@ export function NewSampleDialog({ open, onOpenChange, sample, onSave }: NewSampl
   const [probenart, setProbenart] = useState<SampleType>(sample?.probenart ?? probenartOptions[0]);
   const [entnahmedatum, setEntnahmedatum] = useState(sample?.entnahmedatum ?? "");
   const [pruefer, setPruefer] = useState(sample?.pruefer ?? "");
-  const [pruefalter, setPruefalter] =
-    useState<(typeof pruefalterOptions)[number]>("28 Tage");
+  const [pruefalter, setPruefalter] = useState<(typeof pruefalterOptions)[number]>(
+    (sample?.pruefalter as (typeof pruefalterOptions)[number] | undefined) ?? "28 Tage"
+  );
   const [pruefdatum, setPruefdatum] = useState(sample?.pruefdatum ?? "");
   const [qrCode, setQrCode] = useState(sample?.qrCode ?? false);
   const [barcode, setBarcode] = useState(sample?.barcode ?? false);
@@ -84,6 +85,7 @@ export function NewSampleDialog({ open, onOpenChange, sample, onSave }: NewSampl
         probenart,
         entnahmedatum,
         pruefer,
+        pruefalter,
         pruefdatum,
         qrCode,
         barcode,

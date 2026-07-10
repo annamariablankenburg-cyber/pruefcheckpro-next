@@ -29,7 +29,9 @@ export function DeliveryNoteList({ notes, onAdd }: DeliveryNoteListProps) {
                 <Truck className="size-4" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-foreground">{note.title}</p>
+                <p className="truncate text-sm font-medium text-foreground" title={note.title}>
+                  {note.title}
+                </p>
               </div>
               <span className="shrink-0 text-xs text-muted-foreground">{note.date}</span>
             </div>

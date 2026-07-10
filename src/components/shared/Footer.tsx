@@ -13,10 +13,7 @@ const footerLinks = [
   },
   {
     heading: "Unternehmen",
-    links: [
-      { label: "Über uns", href: "/ueber-uns" },
-      { label: "Kontakt", href: "/kontakt" },
-    ],
+    links: [{ label: "Kontakt", href: "/kontakt" }],
   },
   {
     heading: "Rechtliches",

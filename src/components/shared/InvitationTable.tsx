@@ -134,10 +134,16 @@ export function InvitationTable({
                 >
                   <EmployeeAvatar initials={invitation.initials} />
                   <span className="min-w-0">
-                    <span className="block truncate font-semibold text-foreground">
+                    <span
+                      className="block truncate font-semibold text-foreground"
+                      title={invitation.name}
+                    >
                       {invitation.name}
                     </span>
-                    <span className="block truncate text-xs text-muted-foreground">
+                    <span
+                      className="block truncate text-xs text-muted-foreground"
+                      title={invitation.email}
+                    >
                       {invitation.email}
                     </span>
                   </span>

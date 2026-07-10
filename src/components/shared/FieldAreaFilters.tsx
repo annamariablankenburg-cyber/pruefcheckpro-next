@@ -9,6 +9,11 @@ interface FieldAreaFiltersProps<F extends string> {
   filter: F;
   onFilterChange: (filter: F) => void;
   options: readonly F[];
+  // Die Filter-Tags (Labor/Baustelle/Frischzustand/…) gelten nur für
+  // Prüfverfahren – Formeln, Normen und Glossar kennen diese Tags nicht.
+  // Auf diesen Tabs wird daher nur die Suche angezeigt, damit keine
+  // Filter-Chips sichtbar sind, die keine Wirkung auf die Liste haben.
+  showFilterOptions?: boolean;
 }
 
 // Generische Suche+Filter-Leiste für die Fachbereichsseiten. Anders als
@@ -21,6 +26,7 @@ export function FieldAreaFilters<F extends string>({
   filter,
   onFilterChange,
   options,
+  showFilterOptions = true,
 }: FieldAreaFiltersProps<F>) {
   return (
     <div className="flex flex-col gap-3">
@@ -34,23 +40,25 @@ export function FieldAreaFilters<F extends string>({
         />
       </div>
 
-      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-        {options.map((option) => (
-          <button
-            key={option}
-            type="button"
-            onClick={() => onFilterChange(option)}
-            className={cn(
-              "shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors",
-              filter === option
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
-            )}
-          >
-            {option}
-          </button>
-        ))}
-      </div>
+      {showFilterOptions && (
+        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+          {options.map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => onFilterChange(option)}
+              className={cn(
+                "shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors",
+                filter === option
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
+              )}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

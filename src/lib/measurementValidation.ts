@@ -20,7 +20,7 @@ export function validateMeasurementValue(rawValue: string, required: boolean): s
     return "Bitte eine gültige Zahl eingeben.";
   }
   if (parsed < 0) {
-    return "Wert muss größer als 0 sein.";
+    return "Wert darf nicht negativ sein.";
   }
   return undefined;
 }

@@ -145,7 +145,10 @@ export function LocationTable({
                   </span>
                   <span className="min-w-0">
                     <p className="font-semibold text-foreground">{location.name}</p>
-                    <p className="truncate text-xs text-muted-foreground">
+                    <p
+                      className="truncate text-xs text-muted-foreground"
+                      title={`${location.street}, ${location.postalCode} ${location.city}`}
+                    >
                       {location.street}, {location.postalCode} {location.city}
                     </p>
                   </span>
@@ -180,7 +183,9 @@ export function LocationTable({
                 </div>
                 <div>
                   <p className="text-muted-foreground">E-Mail</p>
-                  <p className="truncate font-medium text-foreground">{location.email}</p>
+                  <p className="truncate font-medium text-foreground" title={location.email}>
+                    {location.email}
+                  </p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Mitarbeiter</p>

@@ -24,12 +24,16 @@ function formatResult(value: number): string {
 export function CalculatorCard({ definition }: CalculatorCardProps) {
   const [values, setValues] = useState<Record<string, string>>(() => emptyValues(definition));
 
-  const allFilled = definition.inputs.every((field) => values[field.key]?.trim().length > 0);
+  // Mind. ein Feld muss ausgefüllt sein, bevor gerechnet wird – Rechner wie
+  // "Mittelwert" erlauben bewusst bis zu drei Einzelwerte statt aller Felder.
+  // Fehlende Pflichtfelder werden über die Guards in den jeweiligen compute()-
+  // Funktionen bzw. den Number.isFinite()-Check unten abgefangen.
+  const anyFilled = definition.inputs.some((field) => values[field.key]?.trim().length > 0);
   const result = useMemo(() => {
-    if (!allFilled) return null;
+    if (!anyFilled) return null;
     const computed = definition.compute(values);
     return computed !== null && Number.isFinite(computed) ? computed : null;
-  }, [allFilled, definition, values]);
+  }, [anyFilled, definition, values]);
 
   function handleChange(key: string, value: string) {
     setValues((current) => ({ ...current, [key]: value }));

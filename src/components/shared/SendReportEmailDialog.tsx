@@ -219,7 +219,7 @@ function EmailComposeWorkspace({
       <ConfirmActionDialog<boolean>
         subject={isConfirmSendOpen ? true : null}
         title="Prüfbericht per E-Mail senden?"
-        description="E-Mail-Versand wird später sicher über eine Server-Funktion angebunden."
+        description="Der Bericht wird als versendet markiert und im E-Mail-Verlauf gespeichert (nur lokale Simulation, kein echter E-Mail-Versand)."
         confirmLabel="E-Mail senden"
         onOpenChange={(open) => !open && setIsConfirmSendOpen(false)}
         onConfirm={handleConfirmSend}

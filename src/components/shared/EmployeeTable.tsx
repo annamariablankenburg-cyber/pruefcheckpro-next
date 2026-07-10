@@ -149,10 +149,16 @@ export function EmployeeTable({
                 >
                   <EmployeeAvatar initials={employee.initials} />
                   <span className="min-w-0">
-                    <span className="block truncate font-semibold text-foreground">
+                    <span
+                      className="block truncate font-semibold text-foreground"
+                      title={employee.name}
+                    >
                       {employee.name}
                     </span>
-                    <span className="block truncate text-xs text-muted-foreground">
+                    <span
+                      className="block truncate text-xs text-muted-foreground"
+                      title={employee.email}
+                    >
                       {employee.email}
                     </span>
                   </span>

@@ -1502,7 +1502,7 @@ const geotechnikFormulas: Formula[] = [
   {
     id: "geo-formel-wassergehalt",
     name: "Wassergehalt",
-    formula: "w = (m_feucht − m_trocken) / m_trocken",
+    formula: "w = (m_feucht − m_trocken) / m_trocken × 100",
     unit: "%",
     variables: [
       { symbol: "m_feucht", description: "Masse der feuchten Probe in g" },
@@ -1526,7 +1526,7 @@ const geotechnikFormulas: Formula[] = [
   {
     id: "geo-formel-verdichtungsgrad",
     name: "Verdichtungsgrad",
-    formula: "D_Pr = ρ_d / ρ_d,max",
+    formula: "D_Pr = ρ_d / ρ_d,max × 100",
     unit: "%",
     variables: [
       { symbol: "ρ_d", description: "Erreichte Trockendichte in kg/m³" },

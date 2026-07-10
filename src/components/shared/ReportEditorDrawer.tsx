@@ -231,7 +231,7 @@ function ReportEditorWorkspace({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {saveNote && <span className="text-xs text-muted-foreground">{saveNote}</span>}
-            <Button type="button" variant="outline" size="sm" onClick={() => onPreview(report)}>
+            <Button type="button" variant="outline" size="sm" onClick={() => setActiveSection("Export")}>
               <Eye className="size-4" />
               Vorschau
             </Button>

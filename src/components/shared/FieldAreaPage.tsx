@@ -53,6 +53,7 @@ interface FieldAreaPageProps {
 export function FieldAreaPage({ fieldAreaId }: FieldAreaPageProps) {
   const {
     config,
+    procedures,
     filteredProcedures,
     search,
     setSearch,
@@ -106,9 +107,9 @@ export function FieldAreaPage({ fieldAreaId }: FieldAreaPageProps) {
   );
 
   const highlightedProcedures = useMemo(() => {
-    const favorites = config.procedures.filter((procedure) => procedure.favorite);
-    return (favorites.length > 0 ? favorites : config.procedures).slice(0, 4);
-  }, [config.procedures]);
+    const favorites = procedures.filter((procedure) => procedure.favorite);
+    return (favorites.length > 0 ? favorites : procedures).slice(0, 4);
+  }, [procedures]);
 
   function openProcedure(procedure: FieldAreaProcedure) {
     setDetailProcedure(procedure);
@@ -154,6 +155,7 @@ export function FieldAreaPage({ fieldAreaId }: FieldAreaPageProps) {
           filter={filter}
           onFilterChange={setFilter}
           options={filterOptions}
+          showFilterOptions={activeTab === "verfahren"}
         />
       )}
 
@@ -174,7 +176,7 @@ export function FieldAreaPage({ fieldAreaId }: FieldAreaPageProps) {
 
           <div className="flex flex-col gap-4">
             <h2 className="text-lg font-semibold tracking-tight text-foreground">
-              {config.procedures.some((procedure) => procedure.favorite) ? "Favorisierte Prüfverfahren" : "Prüfverfahren im Überblick"}
+              {procedures.some((procedure) => procedure.favorite) ? "Favorisierte Prüfverfahren" : "Prüfverfahren im Überblick"}
             </h2>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {highlightedProcedures.map((procedure) => (

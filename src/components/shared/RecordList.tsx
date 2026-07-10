@@ -56,7 +56,9 @@ export function RecordList({
                 <Icon className="size-4" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-foreground">{item.title}</p>
+                <p className="truncate text-sm font-medium text-foreground" title={item.title}>
+                  {item.title}
+                </p>
               </div>
               <span className="shrink-0 text-xs text-muted-foreground">{item.date}</span>
             </div>

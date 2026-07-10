@@ -162,7 +162,7 @@ export default function Home() {
                 className="border-white/20 bg-transparent text-white hover:bg-white/10"
                 asChild
               >
-                <a href="#demo">Live Demo ansehen</a>
+                <a href="#ai">Live Demo ansehen</a>
               </Button>
             </div>
 

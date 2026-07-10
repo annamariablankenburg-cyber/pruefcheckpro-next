@@ -44,7 +44,10 @@ export function WebhookTable({ webhooks, onAdd, onDelete }: WebhookTableProps) {
               <tbody>
                 {webhooks.map((webhook) => (
                   <tr key={webhook.id} className="border-b border-border last:border-0">
-                    <td className="max-w-[220px] truncate px-3.5 py-2.5 font-mono text-xs text-foreground">
+                    <td
+                      className="max-w-[220px] truncate px-3.5 py-2.5 font-mono text-xs text-foreground"
+                      title={webhook.url}
+                    >
                       {webhook.url}
                     </td>
                     <td className="px-3.5 py-2.5 text-muted-foreground">{webhook.event}</td>
