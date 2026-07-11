@@ -2,7 +2,14 @@ import type { RecordListItem } from "@/components/shared/RecordList";
 
 export type SampleField = "Beton" | "Asphalt" | "Geotechnik";
 
-export type SampleType = "Würfel" | "Prisma" | "Bohrkern" | "Boden" | "Asphalt" | "Sonstige";
+export type SampleType =
+  | "Würfel"
+  | "Prisma"
+  | "Zylinder"
+  | "Bohrkern"
+  | "Boden"
+  | "Asphalt"
+  | "Sonstige";
 
 export type SampleStatus =
   | "Offen"

@@ -217,7 +217,7 @@ export function ReportsView() {
       emailHistory: [newEntry, ...report.emailHistory],
     });
     setEmailContext(null);
-    showFeedback("Prüfbericht wurde als versendet markiert.");
+    showFeedback("Prüfbericht wurde versandbereit vorbereitet.");
   }
 
   return (

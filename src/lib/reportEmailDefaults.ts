@@ -10,7 +10,12 @@ export interface EmailAttachmentOption {
   fileType: string;
   sizeLabel: string;
   selected: boolean;
+  // Der Prüfbericht-PDF-Anhang ist immer aktiviert und kann nicht entfernt werden.
+  locked?: boolean;
 }
+
+export const emailTemplates = ["Standard", "Kunde", "Intern"] as const;
+export type EmailTemplate = (typeof emailTemplates)[number];
 
 export function buildDefaultRecipients(report: Report): string[] {
   const customer = report.customerId ? customerRepository.getById(report.customerId) : undefined;
@@ -41,6 +46,48 @@ export function buildDefaultMessage(report: Report): string {
   ].join("\n");
 }
 
+// Vorlagen für den E-Mail-Versand: Standard (neutral), Kunde (persönlicher,
+// kundenzugewandter Ton) und Intern (an das eigene Team, ohne Anrede).
+export function buildSubjectForTemplate(report: Report, template: EmailTemplate): string {
+  const base = buildDefaultSubject(report);
+  return template === "Intern" ? `[Intern] ${base}` : base;
+}
+
+export function buildMessageForTemplate(report: Report, template: EmailTemplate): string {
+  const customer = report.customerId ? customerRepository.getById(report.customerId) : undefined;
+  const company = companyRepository.getProfile();
+  const contact = report.ansprechpartner || customer?.contactPerson || report.kunde;
+  const probeText = report.probeId ? ` zur Probe ${report.probeId}` : "";
+
+  if (template === "Intern") {
+    return [
+      "Hallo Team,",
+      "",
+      `anbei der Prüfbericht${probeText} für das Projekt ${report.projekt} zur internen Ablage und Prüfung.`,
+      "",
+      `Status: ${report.status}`,
+      `Fachbereich: ${report.fachbereich}`,
+      "",
+      company.name,
+    ].join("\n");
+  }
+
+  if (template === "Kunde") {
+    return [
+      `Guten Tag ${contact},`,
+      "",
+      `vielen Dank für Ihr Vertrauen. Anbei erhalten Sie wie besprochen den Prüfbericht${probeText} für Ihr Projekt ${report.projekt}.`,
+      "",
+      "Bei Fragen zu den Ergebnissen sprechen Sie uns gerne jederzeit an.",
+      "",
+      "Mit freundlichen Grüßen",
+      company.name,
+    ].join("\n");
+  }
+
+  return buildDefaultMessage(report);
+}
+
 export function buildAttachmentOptions(report: Report): EmailAttachmentOption[] {
   const options: EmailAttachmentOption[] = [
     {
@@ -49,6 +96,7 @@ export function buildAttachmentOptions(report: Report): EmailAttachmentOption[] 
       fileType: "PDF",
       sizeLabel: "1,2 MB",
       selected: true,
+      locked: true,
     },
   ];
 

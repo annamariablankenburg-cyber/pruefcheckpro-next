@@ -20,6 +20,36 @@ export interface ActiveSite {
   telefon: string;
   wetter: string;
   gps: string;
+  latitude: number;
+  longitude: number;
+}
+
+export interface SitePhoto {
+  id: string;
+  colorClass: string;
+  description: string;
+  favorite: boolean;
+  capturedAt: string;
+}
+
+export interface SiteNote {
+  id: string;
+  text: string;
+  author: string;
+  timestamp: string;
+}
+
+export interface SiteChecklistItem {
+  id: string;
+  label: string;
+  checked: boolean;
+}
+
+export type SiteSyncCategory = "Proben" | "Fotos" | "Messwerte" | "Notizen";
+
+export interface SiteSyncQueueEntry {
+  category: SiteSyncCategory;
+  count: number;
 }
 
 export interface SitePruefung {

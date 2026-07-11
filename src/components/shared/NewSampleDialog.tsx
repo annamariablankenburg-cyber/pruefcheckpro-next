@@ -30,9 +30,10 @@ const fachbereichOptions: SampleField[] = ["Beton", "Asphalt", "Geotechnik"];
 const probenartOptions: SampleType[] = [
   "Würfel",
   "Prisma",
+  "Zylinder",
   "Bohrkern",
-  "Boden",
   "Asphalt",
+  "Boden",
   "Sonstige",
 ];
 

@@ -5,6 +5,7 @@ import {
   ArrowRight,
   Barcode,
   CheckCircle2,
+  Copy,
   FileText,
   History,
   Image as ImageIcon,
@@ -41,6 +42,7 @@ interface SampleDetailDrawerProps {
   onReopen: (sample: Sample) => void;
   onArchive: (sample: Sample) => void;
   onReactivate: (sample: Sample) => void;
+  onDuplicate: (sample: Sample) => void;
   onDelete: (sample: Sample) => void;
   onAddAttachment: (sample: Sample) => void;
   onAddDocument: (sample: Sample) => void;
@@ -80,6 +82,7 @@ export function SampleDetailDrawer({
   onReopen,
   onArchive,
   onReactivate,
+  onDuplicate,
   onDelete,
   onAddAttachment,
   onAddDocument,
@@ -293,6 +296,10 @@ export function SampleDetailDrawer({
                     Reaktivieren
                   </Button>
                 )}
+                <Button type="button" variant="outline" onClick={() => onDuplicate(sample)}>
+                  <Copy className="size-4" />
+                  Duplizieren
+                </Button>
                 <Button
                   type="button"
                   variant="destructive"

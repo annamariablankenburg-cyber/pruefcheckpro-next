@@ -2,6 +2,7 @@ import {
   Archive,
   ArchiveRestore,
   CheckCircle2,
+  Copy,
   Eye,
   MoreHorizontal,
   Pencil,
@@ -31,6 +32,7 @@ interface SampleActionsMenuProps {
   onReopen: () => void;
   onArchive: () => void;
   onReactivate: () => void;
+  onDuplicate: () => void;
   onDelete: () => void;
 }
 
@@ -44,6 +46,7 @@ export function SampleActionsMenu({
   onReopen,
   onArchive,
   onReactivate,
+  onDuplicate,
   onDelete,
 }: SampleActionsMenuProps) {
   const { status } = sample;
@@ -111,6 +114,10 @@ export function SampleActionsMenu({
             Reaktivieren
           </DropdownMenuItem>
         )}
+        <DropdownMenuItem onSelect={onDuplicate}>
+          <Copy />
+          Duplizieren
+        </DropdownMenuItem>
 
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={onDelete}>

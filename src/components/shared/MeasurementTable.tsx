@@ -1,5 +1,7 @@
 "use client";
 
+import { TriangleAlert } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { MeasurementRowActions } from "@/components/shared/MeasurementRowActions";
@@ -19,6 +21,7 @@ interface MeasurementTableProps {
   onFieldBlur: (rowId: string, fieldKey: string) => void;
   onDuplicateRow: (rowId: string) => void;
   onDeleteRow: (rowId: string) => void;
+  outlierRowIds?: Set<string>;
 }
 
 const fillStateBadge: Record<RowFillState, string> = {
@@ -44,6 +47,7 @@ export function MeasurementTable({
   onFieldBlur,
   onDuplicateRow,
   onDeleteRow,
+  outlierRowIds,
 }: MeasurementTableProps) {
   const visibleFields = def.fields.filter((field) => field.kind !== "status");
   const inputKeys = def.fields.filter((field) => field.kind === "input").map((field) => field.key);
@@ -93,9 +97,20 @@ export function MeasurementTable({
                 </td>
                 {visibleFields.map((field) => {
                   if (field.kind === "calculated") {
+                    const isOutlier = Boolean(outlierRowIds?.has(row.id));
                     return (
                       <td key={field.key} className="px-3 py-2 align-top font-medium whitespace-nowrap text-foreground">
-                        {autoCalc ? row.values[field.key] || "–" : "–"}
+                        <span className="inline-flex items-center gap-1.5">
+                          {autoCalc ? row.values[field.key] || "–" : "–"}
+                          {isOutlier && autoCalc && (
+                            <TriangleAlert
+                              className="size-3.5 shrink-0 text-warning"
+                              aria-label={`${row.label}: Wert weicht auffällig vom Mittelwert ab`}
+                            >
+                              <title>Wert weicht auffällig vom Mittelwert ab (Plausibilitätshinweis)</title>
+                            </TriangleAlert>
+                          )}
+                        </span>
                       </td>
                     );
                   }

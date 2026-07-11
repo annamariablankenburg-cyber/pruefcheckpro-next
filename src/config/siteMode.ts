@@ -5,6 +5,7 @@ import {
   Cpu,
   FlaskConical,
   MapPin,
+  NotebookPen,
   PlayCircle,
   QrCode,
 } from "lucide-react";
@@ -17,8 +18,11 @@ import type { DeviceStatus, DeviceType } from "@/types/device";
 import type { Sample, SampleField, SampleStatus } from "@/types/sample";
 import type {
   ActiveSite,
+  SiteChecklistItem,
   SiteDevice,
   SiteDeviceStatus,
+  SiteNote,
+  SitePhoto,
   SiteQuickActionItem,
   SiteSample,
   SiteSampleStatus,
@@ -31,9 +35,10 @@ import type {
 
 export const siteQuickActions: SiteQuickActionItem[] = [
   { id: "qa-neue-probe", label: "Neue Probe", icon: FlaskConical },
-  { id: "qa-pruefung-starten", label: "Prüfung starten", icon: PlayCircle },
+  { id: "qa-pruefung-starten", label: "Messwerte erfassen", icon: PlayCircle },
   { id: "qa-geraet-waehlen", label: "Gerät auswählen", icon: Cpu },
   { id: "qa-foto", label: "Foto aufnehmen", icon: Camera },
+  { id: "qa-notiz", label: "Notiz", icon: NotebookPen },
   { id: "qa-qr", label: "QR-Code scannen", icon: QrCode },
   { id: "qa-barcode", label: "Barcode scannen", icon: Barcode },
   { id: "qa-standort", label: "Standort erfassen", icon: MapPin },
@@ -52,7 +57,59 @@ export const activeSite: ActiveSite = {
   telefon: activeProject?.phone ?? activeCustomer?.phone ?? "—",
   wetter: "Wetterdaten werden nach Aktivierung des Standortdienstes angezeigt.",
   gps: "48,7758° N, 9,1829° E",
+  latitude: 48.7758,
+  longitude: 9.1829,
 };
+
+// Fotos werden heute nur lokal gehalten (kein echter Kamerazugriff im
+// Browser) – Platzhalter-Farbflächen stehen stellvertretend für Vorschaubilder.
+export const sitePhotos: SitePhoto[] = [
+  {
+    id: "photo-1",
+    colorClass: "bg-primary/15",
+    description: "Übersicht Entnahmestelle, Achse 3",
+    favorite: true,
+    capturedAt: "Heute, 08:12 Uhr",
+  },
+  {
+    id: "photo-2",
+    colorClass: "bg-success/15",
+    description: "Würfelprobe direkt nach Entnahme",
+    favorite: false,
+    capturedAt: "Heute, 08:15 Uhr",
+  },
+  {
+    id: "photo-3",
+    colorClass: "bg-warning/15",
+    description: "Beschriftung Probenetikett",
+    favorite: false,
+    capturedAt: "Heute, 08:16 Uhr",
+  },
+];
+
+export const siteNotes: SiteNote[] = [
+  {
+    id: "note-1",
+    text: "Wetter trocken, ca. 14 °C. Betontemperatur bei Entnahme 18 °C.",
+    author: "Anna Neumann",
+    timestamp: "Heute, 08:10 Uhr",
+  },
+  {
+    id: "note-2",
+    text: "Kunde vor Ort informiert, Zugang zu Achse 3 ab 08:00 Uhr möglich.",
+    author: "Anna Neumann",
+    timestamp: "Heute, 07:55 Uhr",
+  },
+];
+
+export const siteChecklistItems: SiteChecklistItem[] = [
+  { id: "check-psa", label: "PSA geprüft", checked: true },
+  { id: "check-wetter", label: "Wetter dokumentiert", checked: true },
+  { id: "check-probennummer", label: "Probennummer vergeben", checked: false },
+  { id: "check-fotos", label: "Fotos erstellt", checked: false },
+  { id: "check-gps", label: "GPS geprüft", checked: false },
+  { id: "check-kunde", label: "Kunde informiert", checked: true },
+];
 
 function toSiteSampleStatus(status: SampleStatus): SiteSampleStatus {
   if (status === "Vorbereitung") return "Offen";

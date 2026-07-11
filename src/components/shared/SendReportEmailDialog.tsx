@@ -12,6 +12,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 import { EmailAttachmentSelector } from "@/components/shared/EmailAttachmentSelector";
@@ -20,10 +21,12 @@ import { EmailRecipientFields } from "@/components/shared/EmailRecipientFields";
 import { companyRepository } from "@/lib/repositories/companyRepository";
 import {
   buildAttachmentOptions,
-  buildDefaultMessage,
   buildDefaultRecipients,
-  buildDefaultSubject,
+  buildMessageForTemplate,
+  buildSubjectForTemplate,
+  emailTemplates,
   type EmailAttachmentOption,
+  type EmailTemplate,
 } from "@/lib/reportEmailDefaults";
 import type { Report } from "@/types/report";
 
@@ -77,10 +80,18 @@ function EmailComposeWorkspace({
   const [cc, setCc] = useState<string[]>([]);
   const [bcc, setBcc] = useState<string[]>([]);
   const [replyTo, setReplyTo] = useState("");
-  const [subject, setSubject] = useState(initialSubject ?? buildDefaultSubject(report));
-  const [message, setMessage] = useState(() => buildDefaultMessage(report));
+  const [template, setTemplate] = useState<EmailTemplate>("Standard");
+  const [subject, setSubject] = useState(initialSubject ?? buildSubjectForTemplate(report, "Standard"));
+  const [message, setMessage] = useState(() => buildMessageForTemplate(report, "Standard"));
   const [attachments, setAttachments] = useState<EmailAttachmentOption[]>(() => buildAttachmentOptions(report));
   const [isConfirmSendOpen, setIsConfirmSendOpen] = useState(false);
+
+  function handleTemplateChange(value: string) {
+    const nextTemplate = value as EmailTemplate;
+    setTemplate(nextTemplate);
+    setSubject(buildSubjectForTemplate(report, nextTemplate));
+    setMessage(buildMessageForTemplate(report, nextTemplate));
+  }
 
   const hasRecipient = to.some((value) => value.trim().length > 0);
   const hasSubject = subject.trim().length > 0;
@@ -90,13 +101,15 @@ function EmailComposeWorkspace({
   function toggleAttachment(id: string) {
     setAttachments((current) =>
       current.map((attachment) =>
-        attachment.id === id ? { ...attachment, selected: !attachment.selected } : attachment
+        attachment.id === id && !attachment.locked
+          ? { ...attachment, selected: !attachment.selected }
+          : attachment
       )
     );
   }
 
   function removeAttachment(id: string) {
-    setAttachments((current) => current.filter((attachment) => attachment.id !== id));
+    setAttachments((current) => current.filter((attachment) => attachment.id !== id || attachment.locked));
   }
 
   function addAttachment() {
@@ -152,6 +165,25 @@ function EmailComposeWorkspace({
               replyTo={replyTo}
               onReplyToChange={setReplyTo}
             />
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-foreground">Vorlage</label>
+              <Select value={template} onValueChange={handleTemplateChange}>
+                <SelectTrigger className="w-full sm:w-56">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {emailTemplates.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Befüllt Betreff und Nachricht neu. Bereits vorgenommene Änderungen gehen dabei verloren.
+              </p>
+            </div>
 
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-foreground">

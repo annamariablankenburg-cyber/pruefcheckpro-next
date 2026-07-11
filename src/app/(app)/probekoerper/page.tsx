@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { BulkActionsToolbar } from "@/components/shared/BulkActionsToolbar";
+import { BulkFieldDialog } from "@/components/shared/BulkFieldDialog";
 import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 import { DeleteSampleDialog } from "@/components/shared/DeleteSampleDialog";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
@@ -21,10 +23,12 @@ import { SampleDetailDrawer } from "@/components/shared/SampleDetailDrawer";
 import { SampleFilters } from "@/components/shared/SampleFilters";
 import { SampleTable } from "@/components/shared/SampleTable";
 import { StatCard } from "@/components/shared/StatCard";
+import { employees } from "@/config/employees";
 import { useSamples } from "@/hooks/useSamples";
 import type { Sample, SampleStatus } from "@/types/sample";
 
 type ConfirmActionType = "start" | "complete" | "reopen" | "archive" | "reactivate";
+type BulkConfirmType = "delete" | "archive";
 
 interface ConfirmActionState {
   sample: Sample;
@@ -67,6 +71,34 @@ const confirmCopy: Record<
   },
 };
 
+const bulkConfirmCopy: Record<
+  BulkConfirmType,
+  { title: string; description: (count: number) => string; confirmLabel: string }
+> = {
+  delete: {
+    title: "Ausgewählte Proben löschen?",
+    description: (count) =>
+      `${count} ${count === 1 ? "Probe wird" : "Proben werden"} unwiderruflich gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.`,
+    confirmLabel: "Löschen",
+  },
+  archive: {
+    title: "Ausgewählte Proben archivieren?",
+    description: (count) =>
+      `${count} ${count === 1 ? "Probe wird" : "Proben werden"} archiviert und aus der aktiven Übersicht ausgeblendet.`,
+    confirmLabel: "Archivieren",
+  },
+};
+
+const testerOptions = employees.map((employee) => employee.name);
+const statusOptions: SampleStatus[] = [
+  "Offen",
+  "Vorbereitung",
+  "In Prüfung",
+  "Überfällig",
+  "Abgeschlossen",
+  "Archiviert",
+];
+
 export default function ProbekoerperPage() {
   const router = useRouter();
   const {
@@ -76,9 +108,15 @@ export default function ProbekoerperPage() {
     setSearch,
     filter,
     setFilter,
+    advancedFilters,
+    setAdvancedFilters,
     resetFilters,
     updateSample: updateSampleData,
     removeSample,
+    createSample,
+    bulkUpdateStatus,
+    bulkUpdatePruefer,
+    bulkRemove,
   } = useSamples();
 
   const [isNewSampleOpen, setIsNewSampleOpen] = useState(false);
@@ -86,6 +124,10 @@ export default function ProbekoerperPage() {
   const [editSample, setEditSample] = useState<Sample | null>(null);
   const [deleteSample, setDeleteSample] = useState<Sample | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmActionState | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkConfirm, setBulkConfirm] = useState<BulkConfirmType | null>(null);
+  const [isBulkTesterOpen, setIsBulkTesterOpen] = useState(false);
+  const [isBulkStatusOpen, setIsBulkStatusOpen] = useState(false);
   const { message: feedback, showFeedback } = useFeedbackToast();
 
   function updateSample(id: string, changes: Partial<Sample>) {
@@ -125,7 +167,76 @@ export default function ProbekoerperPage() {
     if (!deleteSample) return;
     removeSample(deleteSample.id);
     setDetailSample((current) => (current && current.id === deleteSample.id ? null : current));
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      next.delete(deleteSample.id);
+      return next;
+    });
     setDeleteSample(null);
+  }
+
+  function handleDuplicate(sample: Sample) {
+    const newId = `${sample.id}-KOPIE`;
+    const duplicate: Sample = {
+      ...sample,
+      id: newId,
+      status: "Offen",
+      pruefungen: [],
+      historie: [{ message: `Dupliziert von ${sample.id}.`, timestamp: sample.entnahmedatum }],
+    };
+    createSample(duplicate);
+    showFeedback(`Probe „${sample.id}" wurde als „${newId}" dupliziert.`);
+  }
+
+  function toggleSelect(sample: Sample) {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(sample.id)) next.delete(sample.id);
+      else next.add(sample.id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll(visibleSamples: Sample[]) {
+    setSelectedIds((current) => {
+      const allSelected = visibleSamples.every((sample) => current.has(sample.id));
+      if (allSelected) return new Set();
+      return new Set(visibleSamples.map((sample) => sample.id));
+    });
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+  }
+
+  function handleBulkConfirm() {
+    if (!bulkConfirm) return;
+    const ids = Array.from(selectedIds);
+    if (bulkConfirm === "delete") {
+      bulkRemove(ids);
+      showFeedback(`${ids.length} ${ids.length === 1 ? "Probe wurde" : "Proben wurden"} gelöscht.`);
+    } else {
+      bulkUpdateStatus(ids, "Archiviert");
+      showFeedback(`${ids.length} ${ids.length === 1 ? "Probe wurde" : "Proben wurden"} archiviert.`);
+    }
+    setBulkConfirm(null);
+    clearSelection();
+  }
+
+  function handleBulkTesterConfirm(value: string) {
+    const ids = Array.from(selectedIds);
+    bulkUpdatePruefer(ids, value);
+    setIsBulkTesterOpen(false);
+    showFeedback(`Prüfer für ${ids.length} ${ids.length === 1 ? "Probe" : "Proben"} auf „${value}" gesetzt.`);
+    clearSelection();
+  }
+
+  function handleBulkStatusConfirm(value: string) {
+    const ids = Array.from(selectedIds);
+    bulkUpdateStatus(ids, value as SampleStatus);
+    setIsBulkStatusOpen(false);
+    showFeedback(`Status für ${ids.length} ${ids.length === 1 ? "Probe" : "Proben"} auf „${value}" gesetzt.`);
+    clearSelection();
   }
 
   return (
@@ -159,11 +270,27 @@ export default function ProbekoerperPage() {
         onSearchChange={setSearch}
         filter={filter}
         onFilterChange={setFilter}
+        samples={samples}
+        advancedFilters={advancedFilters}
+        onAdvancedFiltersChange={setAdvancedFilters}
+      />
+
+      <BulkActionsToolbar
+        count={selectedIds.size}
+        onClear={clearSelection}
+        onDelete={() => setBulkConfirm("delete")}
+        onArchive={() => setBulkConfirm("archive")}
+        onChangeTester={() => setIsBulkTesterOpen(true)}
+        onChangeStatus={() => setIsBulkStatusOpen(true)}
+        onExport={() => showFeedback("Diese Funktion wird später angebunden.")}
       />
 
       <SampleTable
         samples={filteredSamples}
         onResetFilters={resetFilters}
+        selectedIds={selectedIds}
+        onToggleSelect={toggleSelect}
+        onToggleSelectAll={toggleSelectAll}
         onViewDetails={setDetailSample}
         onEdit={setEditSample}
         onEnterValues={() => router.push("/pruefungen")}
@@ -172,6 +299,7 @@ export default function ProbekoerperPage() {
         onReopen={requestAction("reopen")}
         onArchive={requestAction("archive")}
         onReactivate={requestAction("reactivate")}
+        onDuplicate={handleDuplicate}
         onDelete={setDeleteSample}
       />
 
@@ -185,6 +313,7 @@ export default function ProbekoerperPage() {
         onReopen={requestAction("reopen")}
         onArchive={requestAction("archive")}
         onReactivate={requestAction("reactivate")}
+        onDuplicate={handleDuplicate}
         onDelete={setDeleteSample}
         onAddAttachment={() => showFeedback("Diese Funktion wird später angebunden.")}
         onAddDocument={() => showFeedback("Diese Funktion wird später angebunden.")}
@@ -213,6 +342,38 @@ export default function ProbekoerperPage() {
         confirmLabel={confirmAction ? confirmCopy[confirmAction.type].confirmLabel : ""}
         onOpenChange={(open) => !open && setConfirmAction(null)}
         onConfirm={handleConfirmAction}
+      />
+
+      <ConfirmActionDialog<boolean>
+        subject={bulkConfirm ? true : null}
+        title={bulkConfirm ? bulkConfirmCopy[bulkConfirm].title : ""}
+        description={bulkConfirm ? bulkConfirmCopy[bulkConfirm].description(selectedIds.size) : ""}
+        confirmLabel={bulkConfirm ? bulkConfirmCopy[bulkConfirm].confirmLabel : ""}
+        confirmVariant={bulkConfirm === "delete" ? "destructive" : "default"}
+        onOpenChange={(open) => !open && setBulkConfirm(null)}
+        onConfirm={handleBulkConfirm}
+      />
+
+      <BulkFieldDialog
+        open={isBulkTesterOpen}
+        onOpenChange={setIsBulkTesterOpen}
+        title="Prüfer für Auswahl ändern"
+        description={`Setzt den Prüfer für ${selectedIds.size} ausgewählte ${selectedIds.size === 1 ? "Probe" : "Proben"}.`}
+        fieldLabel="Prüfer"
+        options={testerOptions}
+        confirmLabel="Übernehmen"
+        onConfirm={handleBulkTesterConfirm}
+      />
+
+      <BulkFieldDialog
+        open={isBulkStatusOpen}
+        onOpenChange={setIsBulkStatusOpen}
+        title="Status für Auswahl ändern"
+        description={`Setzt den Status für ${selectedIds.size} ausgewählte ${selectedIds.size === 1 ? "Probe" : "Proben"}.`}
+        fieldLabel="Status"
+        options={statusOptions}
+        confirmLabel="Übernehmen"
+        onConfirm={handleBulkStatusConfirm}
       />
 
       <FeedbackToast message={feedback} />

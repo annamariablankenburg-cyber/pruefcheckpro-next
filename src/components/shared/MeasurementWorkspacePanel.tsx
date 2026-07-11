@@ -89,6 +89,30 @@ export function MeasurementWorkspacePanel({
     ? numericValues.reduce((sum, entry) => sum + entry.value, 0) / numericValues.length
     : null;
 
+  const min = numericValues.length > 0 ? Math.min(...numericValues.map((entry) => entry.value)) : null;
+  const max = numericValues.length > 0 ? Math.max(...numericValues.map((entry) => entry.value)) : null;
+  const stdDev =
+    numericValues.length > 1 && mean !== null
+      ? Math.sqrt(
+          numericValues.reduce((sum, entry) => sum + (entry.value - mean) ** 2, 0) / (numericValues.length - 1)
+        )
+      : null;
+
+  // Plausibilitätsprüfung: rein rechnerischer Hinweis, keine normative
+  // Bewertung. Markiert Messwerte, die stark vom Mittelwert der sichtbaren
+  // Reihe abweichen (> 15 %), damit sie fachlich gegengeprüft werden können.
+  const outlierRowIds = useMemo(() => {
+    if (mean === null || mean === 0) return new Set<string>();
+    const ids = numericValues
+      .filter((entry) => Math.abs(entry.value - mean) / Math.abs(mean) > 0.15)
+      .map((entry) => entry.row.id);
+    return new Set(ids);
+  }, [numericValues, mean]);
+
+  function formatNumber(value: number | null): string {
+    return value !== null ? value.toFixed(2).replace(".", ",") : "–";
+  }
+
   return (
     <div className="flex flex-col gap-6 border-b border-border p-4 lg:border-r lg:border-b-0 lg:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -118,6 +142,7 @@ export function MeasurementWorkspacePanel({
           const row = rows.find((item) => item.id === rowId);
           if (row) onRequestDeleteRow(row);
         }}
+        outlierRowIds={outlierRowIds}
       />
 
       <div className="flex flex-wrap items-center gap-2">
@@ -160,13 +185,26 @@ export function MeasurementWorkspacePanel({
           {numericValues.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">Noch keine Berechnung möglich.</p>
           ) : (
-            <div className="mt-1 flex flex-col divide-y divide-border">
-              <MetaRow label="Anzahl Messwerte" value={String(numericValues.length)} />
-              <MetaRow
-                label={`Mittelwert${calcField?.unit ? ` (${calcField.unit})` : ""}`}
-                value={mean !== null ? mean.toFixed(2).replace(".", ",") : "–"}
-              />
-            </div>
+            <>
+              <div className="mt-1 flex flex-col divide-y divide-border">
+                <MetaRow label="Anzahl Messwerte" value={String(numericValues.length)} />
+                <MetaRow label={`Mittelwert${calcField?.unit ? ` (${calcField.unit})` : ""}`} value={formatNumber(mean)} />
+                <MetaRow label={`Minimum${calcField?.unit ? ` (${calcField.unit})` : ""}`} value={formatNumber(min)} />
+                <MetaRow label={`Maximum${calcField?.unit ? ` (${calcField.unit})` : ""}`} value={formatNumber(max)} />
+                <MetaRow
+                  label={`Standardabweichung${calcField?.unit ? ` (${calcField.unit})` : ""}`}
+                  value={stdDev !== null ? formatNumber(stdDev) : "– (min. 2 Werte nötig)"}
+                />
+              </div>
+              {outlierRowIds.size > 0 && (
+                <p className="mt-2 flex items-start gap-1.5 text-xs text-warning">
+                  <Info className="mt-0.5 size-3.5 shrink-0" />
+                  {outlierRowIds.size === 1
+                    ? "1 Messwert weicht auffällig vom Mittelwert ab (Plausibilitätshinweis, keine Normprüfung)."
+                    : `${outlierRowIds.size} Messwerte weichen auffällig vom Mittelwert ab (Plausibilitätshinweis, keine Normprüfung).`}
+                </p>
+              )}
+            </>
           )}
         </div>
         <div
@@ -202,7 +240,8 @@ export function MeasurementWorkspacePanel({
 
       <div className="flex items-start gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-2.5 text-sm text-primary">
         <Info className="mt-0.5 size-4 shrink-0" />
-        Berechnungen dienen der rechnerischen Unterstützung und müssen fachlich geprüft werden.
+        Berechnungen dienen der rechnerischen Unterstützung und müssen fachlich geprüft werden. Alle
+        Werte sind auf 2 Nachkommastellen gerundet.
       </div>
     </div>
   );

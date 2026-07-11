@@ -1,4 +1,4 @@
-import { Cloud, ExternalLink, MapPin, Phone } from "lucide-react";
+import { Cloud, ExternalLink, MapPin, Navigation, Phone } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,6 +30,8 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 }
 
 export function SiteProjectCard({ site, onOpenProject }: SiteProjectCardProps) {
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${site.latitude},${site.longitude}`;
+
   return (
     <Card>
       <CardContent className="flex flex-col gap-4">
@@ -70,19 +72,30 @@ export function SiteProjectCard({ site, onOpenProject }: SiteProjectCardProps) {
           <div className="flex items-center gap-3 rounded-xl border border-dashed border-border p-3.5">
             <MapPin className="size-5 shrink-0 text-muted-foreground" />
             <div>
-              <p className="text-xs text-muted-foreground">GPS</p>
+              <p className="text-xs text-muted-foreground">Koordinaten</p>
               <p className="text-sm font-medium text-foreground">{site.gps}</p>
             </div>
           </div>
         </div>
 
-        <a
-          href={`tel:${site.telefon.replace(/\s+/g, "")}`}
-          className="flex items-center justify-center gap-2 rounded-xl border border-border py-3 text-sm font-semibold text-foreground transition-colors hover:border-primary/40 hover:bg-primary/5"
-        >
-          <Phone className="size-4" />
-          Ansprechpartner anrufen
-        </a>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <a
+            href={`tel:${site.telefon.replace(/\s+/g, "")}`}
+            className="flex items-center justify-center gap-2 rounded-xl border border-border py-3 text-sm font-semibold text-foreground transition-colors hover:border-primary/40 hover:bg-primary/5"
+          >
+            <Phone className="size-4" />
+            Ansprechpartner anrufen
+          </a>
+          <a
+            href={mapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 rounded-xl border border-border py-3 text-sm font-semibold text-foreground transition-colors hover:border-primary/40 hover:bg-primary/5"
+          >
+            <Navigation className="size-4" />
+            Navigation öffnen
+          </a>
+        </div>
       </CardContent>
     </Card>
   );

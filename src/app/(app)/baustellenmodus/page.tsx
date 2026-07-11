@@ -1,27 +1,48 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CloudUpload, FlaskConical } from "lucide-react";
+import { AlertTriangle, FlaskConical } from "lucide-react";
 
 import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { SiteActiveSelectionCard } from "@/components/shared/SiteActiveSelectionCard";
-import { SiteCameraPanel } from "@/components/shared/SiteCameraPanel";
+import { SiteChecklistCard } from "@/components/shared/SiteChecklistCard";
 import { SiteDetailDrawer } from "@/components/shared/SiteDetailDrawer";
 import { SiteDeviceCard } from "@/components/shared/SiteDeviceCard";
 import { SiteDeviceSelectDialog } from "@/components/shared/SiteDeviceSelectDialog";
 import { SiteLocationCaptureDialog } from "@/components/shared/SiteLocationCaptureDialog";
-import { SiteOfflineBanner } from "@/components/shared/SiteOfflineBanner";
+import { SiteNoteDialog } from "@/components/shared/SiteNoteDialog";
+import { SiteNotesList } from "@/components/shared/SiteNotesList";
 import { SitePhotoCaptureDialog } from "@/components/shared/SitePhotoCaptureDialog";
+import { SitePhotoGallery } from "@/components/shared/SitePhotoGallery";
 import { SiteProjectCard } from "@/components/shared/SiteProjectCard";
 import { SiteQuickActions } from "@/components/shared/SiteQuickActions";
 import { SiteSampleCard } from "@/components/shared/SiteSampleCard";
 import { SiteScannerDialog } from "@/components/shared/SiteScannerDialog";
-import { SiteToastActions } from "@/components/shared/SiteToastActions";
+import { SiteSyncQueueCard } from "@/components/shared/SiteSyncQueueCard";
 import { StatCard } from "@/components/shared/StatCard";
-import { activeSite, siteDevices, siteQuickActions, siteSamples } from "@/config/siteMode";
-import type { SiteDevice, SiteQuickActionItem, SiteSample } from "@/types/siteMode";
+import {
+  activeSite,
+  siteChecklistItems,
+  siteDevices,
+  siteNotes,
+  sitePhotos,
+  siteQuickActions,
+  siteSamples,
+} from "@/config/siteMode";
+import type {
+  SiteChecklistItem,
+  SiteDevice,
+  SiteNote,
+  SitePhoto,
+  SiteQuickActionItem,
+  SiteSample,
+  SiteSyncQueueEntry,
+} from "@/types/siteMode";
+
+const photoColorRotation = ["bg-primary/15", "bg-success/15", "bg-warning/15", "bg-destructive/15"];
+let photoCounter = sitePhotos.length;
 
 export default function BaustellenmodusPage() {
   const router = useRouter();
@@ -34,13 +55,33 @@ export default function BaustellenmodusPage() {
   const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
   const [scannerMode, setScannerMode] = useState<"qr" | "barcode" | null>(null);
   const [isSyncConfirmOpen, setIsSyncConfirmOpen] = useState(false);
+  const [photos, setPhotos] = useState<SitePhoto[]>(sitePhotos);
+  const [notes, setNotes] = useState<SiteNote[]>(siteNotes);
+  const [checklist, setChecklist] = useState<SiteChecklistItem[]>(siteChecklistItems);
+  const [noteDialog, setNoteDialog] = useState<{ open: boolean; note: SiteNote | null }>({
+    open: false,
+    note: null,
+  });
   const { message: feedback, showFeedback } = useFeedbackToast();
 
   const kpis = {
     heute: siteSamples.filter((sample) => sample.status !== "Abgeschlossen").length,
     ueberfaellig: siteSamples.filter((sample) => sample.status === "Überfällig").length,
-    zuSynchronisieren: siteSamples.length + siteDevices.length,
   };
+
+  const syncQueue: SiteSyncQueueEntry[] = useMemo(() => {
+    const proben = siteSamples.filter((sample) => sample.status !== "Abgeschlossen").length;
+    const messwerte = siteSamples.reduce(
+      (sum, sample) => sum + sample.pruefungen.filter((p) => p.status !== "Abgeschlossen").length,
+      0
+    );
+    return [
+      { category: "Proben", count: proben },
+      { category: "Fotos", count: photos.length },
+      { category: "Messwerte", count: messwerte },
+      { category: "Notizen", count: notes.length },
+    ];
+  }, [photos.length, notes.length]);
 
   function handleOpenSample(sample: SiteSample) {
     setActiveSample(sample);
@@ -60,6 +101,9 @@ export default function BaustellenmodusPage() {
         break;
       case "qa-foto":
         setIsPhotoDialogOpen(true);
+        break;
+      case "qa-notiz":
+        setNoteDialog({ open: true, note: null });
         break;
       case "qa-qr":
         setScannerMode("qr");
@@ -91,14 +135,67 @@ export default function BaustellenmodusPage() {
     );
   }
 
-  function handleOpenCamera() {
+  function addMockPhoto() {
+    photoCounter += 1;
+    const colorClass = photoColorRotation[photoCounter % photoColorRotation.length];
+    const timestamp = new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+    setPhotos((current) => [
+      {
+        id: `photo-${photoCounter}`,
+        colorClass,
+        description: "",
+        favorite: false,
+        capturedAt: `Heute, ${timestamp} Uhr`,
+      },
+      ...current,
+    ]);
     setIsPhotoDialogOpen(false);
-    showFeedback("Diese Funktion wird später angebunden.");
+    showFeedback("Foto wurde lokal zur Galerie hinzugefügt.");
   }
 
-  function handleChooseFile() {
-    setIsPhotoDialogOpen(false);
-    showFeedback("Diese Funktion wird später angebunden.");
+  function handleTogglePhotoFavorite(photo: SitePhoto) {
+    setPhotos((current) =>
+      current.map((item) => (item.id === photo.id ? { ...item, favorite: !item.favorite } : item))
+    );
+  }
+
+  function handlePhotoDescriptionChange(photo: SitePhoto, description: string) {
+    setPhotos((current) => current.map((item) => (item.id === photo.id ? { ...item, description } : item)));
+  }
+
+  function handleDeletePhoto(photo: SitePhoto) {
+    setPhotos((current) => current.filter((item) => item.id !== photo.id));
+    showFeedback("Foto wurde gelöscht.");
+  }
+
+  function handleSaveNote(text: string) {
+    const trimmed = text.trim();
+    if (trimmed.length === 0) return;
+    if (noteDialog.note) {
+      setNotes((current) =>
+        current.map((item) => (item.id === noteDialog.note!.id ? { ...item, text: trimmed } : item))
+      );
+      showFeedback("Notiz wurde aktualisiert.");
+    } else {
+      const timestamp = new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+      setNotes((current) => [
+        { id: `note-${Date.now()}`, text: trimmed, author: "Anna Neumann", timestamp: `Heute, ${timestamp} Uhr` },
+        ...current,
+      ]);
+      showFeedback("Notiz wurde hinzugefügt.");
+    }
+    setNoteDialog({ open: false, note: null });
+  }
+
+  function handleDeleteNote(note: SiteNote) {
+    setNotes((current) => current.filter((item) => item.id !== note.id));
+    showFeedback("Notiz wurde gelöscht.");
+  }
+
+  function handleToggleChecklistItem(item: SiteChecklistItem) {
+    setChecklist((current) =>
+      current.map((entry) => (entry.id === item.id ? { ...entry, checked: !entry.checked } : entry))
+    );
   }
 
   function handleLocationConfirm() {
@@ -123,12 +220,17 @@ export default function BaustellenmodusPage() {
         </p>
       </div>
 
-      <SiteOfflineBanner onSync={() => setIsSyncConfirmOpen(true)} />
+      <SiteSyncQueueCard entries={syncQueue} isOnline={false} onSync={() => setIsSyncConfirmOpen(true)} />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <StatCard icon={FlaskConical} label="Aktive Proben" value={kpis.heute} />
         <StatCard icon={AlertTriangle} label="Überfällig" value={kpis.ueberfaellig} tone="danger" />
-        <StatCard icon={CloudUpload} label="Zu synchronisieren" value={kpis.zuSynchronisieren} tone="warning" />
+        <StatCard
+          icon={AlertTriangle}
+          label="Zu synchronisieren"
+          value={syncQueue.reduce((sum, entry) => sum + entry.count, 0)}
+          tone="warning"
+        />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
@@ -164,20 +266,22 @@ export default function BaustellenmodusPage() {
         </div>
       </div>
 
-      <SiteCameraPanel
-        onPhoto={() => setIsPhotoDialogOpen(true)}
-        onPhotographDocument={() => setIsPhotoDialogOpen(true)}
-        onQrCode={() => setScannerMode("qr")}
-        onBarcode={() => setScannerMode("barcode")}
+      <SitePhotoGallery
+        photos={photos}
+        onToggleFavorite={handleTogglePhotoFavorite}
+        onDescriptionChange={handlePhotoDescriptionChange}
+        onDelete={handleDeletePhoto}
+        onAdd={() => setIsPhotoDialogOpen(true)}
       />
 
-      <SiteToastActions
-        onSync={() => setIsSyncConfirmOpen(true)}
-        onSaveOffline={() => showFeedback("Diese Funktion wird später angebunden.")}
-        onAttachPhoto={() => setIsPhotoDialogOpen(true)}
-        onUseLocation={() => setIsLocationDialogOpen(true)}
-        onAnalyzeWithAi={() => showFeedback("Diese Funktion wird später angebunden.")}
+      <SiteNotesList
+        notes={notes}
+        onAdd={() => setNoteDialog({ open: true, note: null })}
+        onEdit={(note) => setNoteDialog({ open: true, note })}
+        onDelete={handleDeleteNote}
       />
+
+      <SiteChecklistCard items={checklist} onToggle={handleToggleChecklistItem} />
 
       <SiteDetailDrawer
         sample={activeSample}
@@ -199,8 +303,8 @@ export default function BaustellenmodusPage() {
       <SitePhotoCaptureDialog
         open={isPhotoDialogOpen}
         onOpenChange={setIsPhotoDialogOpen}
-        onOpenCamera={handleOpenCamera}
-        onChooseFile={handleChooseFile}
+        onOpenCamera={addMockPhoto}
+        onChooseFile={addMockPhoto}
       />
 
       <SiteScannerDialog
@@ -214,6 +318,13 @@ export default function BaustellenmodusPage() {
         onOpenChange={setIsLocationDialogOpen}
         currentLocation={activeSite.gps}
         onConfirm={handleLocationConfirm}
+      />
+
+      <SiteNoteDialog
+        open={noteDialog.open}
+        note={noteDialog.note}
+        onOpenChange={(open) => setNoteDialog((current) => ({ ...current, open }))}
+        onSave={handleSaveNote}
       />
 
       <ConfirmActionDialog<boolean>

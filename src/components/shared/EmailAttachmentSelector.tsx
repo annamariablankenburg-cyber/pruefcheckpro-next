@@ -20,7 +20,12 @@ export function EmailAttachmentSelector({ attachments, onToggle, onRemove, onAdd
       <div className="flex flex-col divide-y divide-border rounded-xl border border-border">
         {attachments.map((attachment) => (
           <div key={attachment.id} className="flex items-center gap-3 px-3.5 py-2.5">
-            <Checkbox checked={attachment.selected} onCheckedChange={() => onToggle(attachment.id)} />
+            <Checkbox
+              checked={attachment.selected}
+              disabled={attachment.locked}
+              onCheckedChange={() => !attachment.locked && onToggle(attachment.id)}
+              aria-label={attachment.locked ? `${attachment.label} (immer angehängt)` : attachment.label}
+            />
             <Paperclip className="size-4 shrink-0 text-muted-foreground" />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-foreground" title={attachment.label}>
@@ -28,17 +33,20 @@ export function EmailAttachmentSelector({ attachments, onToggle, onRemove, onAdd
               </p>
               <p className="text-xs text-muted-foreground">
                 {attachment.fileType} · {attachment.sizeLabel}
+                {attachment.locked && " · immer angehängt"}
               </p>
             </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label={`${attachment.label} entfernen`}
-              onClick={() => onRemove(attachment.id)}
-            >
-              <X className="size-4" />
-            </Button>
+            {!attachment.locked && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={`${attachment.label} entfernen`}
+                onClick={() => onRemove(attachment.id)}
+              >
+                <X className="size-4" />
+              </Button>
+            )}
           </div>
         ))}
         {attachments.length === 0 && (
