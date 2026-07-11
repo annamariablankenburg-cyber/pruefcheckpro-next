@@ -69,7 +69,6 @@ interface ReportEditorDrawerProps {
   onArchive: (report: Report) => void;
   onReactivate: (report: Report) => void;
   onDelete: (report: Report) => void;
-  onPreview: (report: Report) => void;
   onOpenProject: (report: Report) => void;
   onOpenCustomer: (report: Report) => void;
   onOpenSample: (report: Report) => void;
@@ -130,7 +129,6 @@ interface WorkspaceProps {
   onArchive: (report: Report) => void;
   onReactivate: (report: Report) => void;
   onDelete: (report: Report) => void;
-  onPreview: (report: Report) => void;
   onOpenProject: (report: Report) => void;
   onOpenCustomer: (report: Report) => void;
   onOpenSample: (report: Report) => void;
@@ -151,7 +149,6 @@ function ReportEditorWorkspace({
   onArchive,
   onReactivate,
   onDelete,
-  onPreview,
   onOpenProject,
   onOpenCustomer,
   onOpenSample,

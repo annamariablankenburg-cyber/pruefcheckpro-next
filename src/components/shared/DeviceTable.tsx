@@ -120,7 +120,7 @@ export function DeviceTable({ devices, onResetFilters, ...handlers }: DeviceTabl
                   onClick={() => handlers.onViewDetails(device)}
                   className="min-w-0 text-left"
                 >
-                  <span className="block truncate font-semibold text-foreground">
+                  <span className="block truncate font-semibold text-foreground" title={device.name}>
                     {device.name}
                   </span>
                   <span className="block text-xs text-muted-foreground">

@@ -153,7 +153,7 @@ export function ProjectTable({ projects, onResetFilters, ...handlers }: ProjectT
                   onClick={() => handlers.onViewDetails(project)}
                   className="min-w-0 text-left"
                 >
-                  <span className="block truncate font-semibold text-foreground">
+                  <span className="block truncate font-semibold text-foreground" title={project.name}>
                     {project.name}
                   </span>
                   <span className="block text-xs text-muted-foreground">{project.number}</span>

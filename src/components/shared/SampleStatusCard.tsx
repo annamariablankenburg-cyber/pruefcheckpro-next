@@ -51,8 +51,10 @@ export function SampleStatusCard({ samples, footerHref }: SampleStatusCardProps)
             className="-mx-3 flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-muted/60"
           >
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-foreground">{sample.id}</p>
-              <p className="truncate text-xs text-muted-foreground">
+              <p className="truncate text-sm font-medium text-foreground" title={sample.id}>
+                {sample.id}
+              </p>
+              <p className="truncate text-xs text-muted-foreground" title={`${sample.material} · ${sample.date}`}>
                 {sample.material} · {sample.date}
               </p>
             </div>

@@ -116,7 +116,7 @@ export function CalendarPreviewCard({ days, footerHref }: CalendarPreviewCardPro
                         {priority === "hoch" && (
                           <Flame className="size-3.5 shrink-0 text-warning" />
                         )}
-                        <p className={cn("truncate text-sm", priorityTextStyles[priority])}>
+                        <p className={cn("truncate text-sm", priorityTextStyles[priority])} title={event.title}>
                           {event.title}
                         </p>
                       </div>

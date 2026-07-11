@@ -277,7 +277,6 @@ export function ReportsView() {
         onArchive={requestAction("archive")}
         onReactivate={requestAction("reactivate")}
         onDelete={setDeleteReport}
-        onPreview={() => showFeedback("Diese Funktion wird später angebunden.")}
         onOpenProject={() => router.push("/projekte")}
         onOpenCustomer={() => router.push("/kunden")}
         onOpenSample={() => router.push("/probekoerper")}

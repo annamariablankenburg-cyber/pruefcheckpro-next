@@ -70,8 +70,12 @@ export function TaskListCard({
                 )}
               />
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-foreground">{task.title}</p>
-                <p className="truncate text-xs text-muted-foreground">{task.tag}</p>
+                <p className="truncate text-sm font-medium text-foreground" title={task.title}>
+                  {task.title}
+                </p>
+                <p className="truncate text-xs text-muted-foreground" title={task.tag}>
+                  {task.tag}
+                </p>
               </div>
             </div>
             <span

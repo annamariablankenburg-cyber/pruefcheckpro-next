@@ -137,7 +137,7 @@ export function CustomerTable({ customers, onResetFilters, ...handlers }: Custom
                   onClick={() => handlers.onViewDetails(customer)}
                   className="min-w-0 text-left"
                 >
-                  <span className="block truncate font-semibold text-foreground">
+                  <span className="block truncate font-semibold text-foreground" title={customer.name}>
                     {customer.name}
                   </span>
                   <span className="block text-xs text-muted-foreground">{customer.number}</span>
@@ -174,7 +174,9 @@ export function CustomerTable({ customers, onResetFilters, ...handlers }: Custom
                 </div>
                 <div>
                   <p className="text-muted-foreground">E-Mail</p>
-                  <p className="truncate font-medium text-foreground">{customer.email}</p>
+                  <p className="truncate font-medium text-foreground" title={customer.email}>
+                    {customer.email}
+                  </p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Telefon</p>
