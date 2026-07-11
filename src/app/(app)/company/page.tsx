@@ -39,8 +39,16 @@ const tabs: CompanyTab[] = [
   { value: "einstellungen", label: "Einstellungen" },
 ];
 
+// Erlaubt Deep-Links auf einen bestimmten Tab (z. B. von /admin aus:
+// /company?tab=mitarbeiter), ohne eine neue Route anzulegen.
+function initialTabFromUrl(): string {
+  if (typeof window === "undefined") return "uebersicht";
+  const requestedTab = new URLSearchParams(window.location.search).get("tab");
+  return requestedTab && tabs.some((tab) => tab.value === requestedTab) ? requestedTab : "uebersicht";
+}
+
 export default function CompanyPage() {
-  const [activeTab, setActiveTab] = useState("uebersicht");
+  const [activeTab, setActiveTab] = useState(initialTabFromUrl);
   const [isNewLocationOpen, setIsNewLocationOpen] = useState(false);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const { message: feedback, showFeedback } = useFeedbackToast();
