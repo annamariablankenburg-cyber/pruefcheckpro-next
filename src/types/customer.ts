@@ -47,4 +47,8 @@ export interface Customer {
   deliveryNotes: DeliveryNote[];
   documentsCount: number;
   history: CustomerHistoryEntry[];
+  // Optional: nur bei Firestore-Datensätzen gesetzt (ISO-String). Mock-Daten
+  // führen diese Felder nicht – rein additiv, bricht bestehende UI nicht.
+  createdAt?: string;
+  updatedAt?: string;
 }
