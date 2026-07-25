@@ -1,0 +1,44 @@
+rules_version = '2';
+
+// Erster Satz an Security Rules für den Customer-Firestore-Slice (siehe
+// docs/firebase/customer-firestore-slice.md). Bewusst restriktiv: nur die
+// bereits real angebundene Collection (companies/{companyId}/customers) wird
+// geöffnet, alles andere bleibt per Fallback gesperrt. Kein
+// "allow read, write: if true" irgendwo in diesem Projekt.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // companyId liegt heute als Feld auf users/{uid} (AppUser.companyId, siehe
+    // src/types/user.ts), nicht als Firebase-Auth-Custom-Claim – deshalb ein
+    // get()-Lookup statt request.auth.token.companyId. Sobald Custom Claims
+    // für companyId/Rolle eingeführt werden (siehe docs/database/permissions.md,
+    // Abschnitt 5 "Durchsetzung: UI vs. Firestore Security Rules"), kann das
+    // hier ohne zusätzliche Leseoperation aus request.auth.token.companyId
+    // gelesen werden.
+    function belongsToCompany(companyId) {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId == companyId;
+    }
+
+    match /companies/{companyId}/customers/{customerId} {
+      // Angemeldet + eigene companyId. Keine rollenabhängige Einschränkung
+      // (Admin/Laborleiter vs. Prüfer/Azubi/Gast, siehe
+      // docs/database/permissions.md Abschnitt 3 "Kunden erstellen/bearbeiten/
+      // löschen") – dafür fehlen heute noch die Custom Claims. Bis dahin
+      // bewusst restriktiv auf "eigene Firma", nicht auf "jeder darf alles"
+      // (siehe docs/firebase/customer-firestore-slice.md, "Bekannte offene
+      // Punkte").
+      allow read, write: if belongsToCompany(companyId);
+    }
+
+    // Alles andere ist heute nicht Teil dieses Slices und bleibt gesperrt,
+    // bis es explizit angebunden und mit eigenen Regeln versehen wird.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

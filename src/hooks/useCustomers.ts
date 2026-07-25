@@ -34,6 +34,8 @@ export function useCustomers() {
   }, []);
 
   useEffect(() => {
+    // Lädt die Kundenliste beim ersten Mount vom Service (Mock oder Firestore).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshCustomers();
   }, [refreshCustomers]);
 
