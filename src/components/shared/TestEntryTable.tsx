@@ -12,6 +12,7 @@ interface TestEntryTableActionHandlers {
   onReopen: (entry: TestEntry) => void;
   onCreateReport: (entry: TestEntry) => void;
   onExportExcel: (entry: TestEntry) => void;
+  onDelete: (entry: TestEntry) => void;
 }
 
 interface TestEntryTableProps extends TestEntryTableActionHandlers {
@@ -88,6 +89,7 @@ export function TestEntryTable({ entries, onResetFilters, ...handlers }: TestEnt
                       onReopen={() => handlers.onReopen(entry)}
                       onCreateReport={() => handlers.onCreateReport(entry)}
                       onExportExcel={() => handlers.onExportExcel(entry)}
+                      onDelete={() => handlers.onDelete(entry)}
                     />
                   </td>
                 </tr>
@@ -109,6 +111,7 @@ export function TestEntryTable({ entries, onResetFilters, ...handlers }: TestEnt
             onReopen={handlers.onReopen}
             onCreateReport={handlers.onCreateReport}
             onExportExcel={handlers.onExportExcel}
+            onDelete={handlers.onDelete}
           />
         ))}
       </div>

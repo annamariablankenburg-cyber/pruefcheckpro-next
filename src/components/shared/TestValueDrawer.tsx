@@ -1,6 +1,13 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import {
+  forwardRef,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  type Ref,
+} from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -36,13 +43,14 @@ import {
   pruefartRows,
   pruefartenForFachbereich,
 } from "@/config/pruefarten";
-import { computeRowFillState, isFilledValue } from "@/lib/measurementValidation";
+import { computeRowFillState, computeStatsFromValues, isFilledValue, parseMeasurementNumber } from "@/lib/measurementValidation";
 import { cn } from "@/lib/utils";
 import type {
   AuditEntry,
   PruefartKey,
   PruefartRow,
   TestEntry,
+  TestValueResultSnapshot,
 } from "@/types/testValue";
 
 interface TestValueDrawerProps {
@@ -54,6 +62,8 @@ interface TestValueDrawerProps {
   onCreateReport: (entry: TestEntry) => void;
   onExportExcel: (entry: TestEntry) => void;
   onFeedback: (message: string) => void;
+  onSaveDraft: (sampleId: string, changes: Partial<TestEntry>) => Promise<TestEntry | undefined>;
+  onSaveResult: (sampleId: string, changes: Partial<TestEntry>) => Promise<TestEntry | undefined>;
 }
 
 const tabs = ["Details", "Berechnungen", "Norm & Info", "Verlauf"] as const;
@@ -69,10 +79,40 @@ function cloneRowsMap(map: Record<PruefartKey, PruefartRow[]>): Record<PruefartK
   ) as Record<PruefartKey, PruefartRow[]>;
 }
 
+// Startwerte je Prüfart: bereits gespeicherte Messreihen der Prüfung, sonst
+// die Beispieldaten aus config/pruefarten.ts. Erst nach dem ersten
+// "Entwurf/Ergebnis speichern" hält entry.rowsByPruefart echte, individuelle
+// Daten für diese Prüfung (siehe types/testValue.ts).
+function buildInitialRows(entry: TestEntry): Record<PruefartKey, PruefartRow[]> {
+  const keys = Object.keys(pruefartRows) as PruefartKey[];
+  const result = {} as Record<PruefartKey, PruefartRow[]>;
+  for (const key of keys) {
+    const persisted = entry.rowsByPruefart?.[key];
+    result[key] = cloneRows(persisted ?? pruefartRows[key] ?? []);
+  }
+  return result;
+}
+
+function formatAuditTimestamp(date: Date): string {
+  return `${date.toLocaleDateString("de-DE")}, ${date.toLocaleTimeString("de-DE", {
+    hour: "2-digit",
+    minute: "2-digit",
+  })} Uhr`;
+}
+
 interface DeleteRowConfirmState {
   pruefart: PruefartKey;
   rowId: string;
   label: string;
+}
+
+// Vereinheitlicht die beiden Auslöser für den "Ungespeicherte Änderungen"-
+// Dialog: Prüfart-Wechsel bei ungespeicherten Messreihen UND Schließen des
+// Workspaces bei ungespeicherten Messreihen (siehe requestClose()).
+type UnsavedChangesPrompt = { type: "switch"; target: PruefartKey } | { type: "close" } | null;
+
+export interface TestValueWorkspaceHandle {
+  requestClose: () => void;
 }
 
 interface WorkspaceProps {
@@ -83,38 +123,49 @@ interface WorkspaceProps {
   onCreateReport: (entry: TestEntry) => void;
   onExportExcel: (entry: TestEntry) => void;
   onFeedback: (message: string) => void;
+  onSaveDraft: (sampleId: string, changes: Partial<TestEntry>) => Promise<TestEntry | undefined>;
+  onSaveResult: (sampleId: string, changes: Partial<TestEntry>) => Promise<TestEntry | undefined>;
+  onConfirmClose: () => void;
 }
 
-function TestValueWorkspace({
-  entry,
-  onStart,
-  onComplete,
-  onReopen,
-  onCreateReport,
-  onExportExcel,
-  onFeedback,
-}: WorkspaceProps) {
-  const [activePruefart, setActivePruefart] = useState<PruefartKey>(() =>
-    mapPruefungNameToPruefart(entry.titel, entry.fachbereich)
+const TestValueWorkspace = forwardRef(function TestValueWorkspace(
+  {
+    entry,
+    onStart,
+    onComplete,
+    onReopen,
+    onCreateReport,
+    onExportExcel,
+    onFeedback,
+    onSaveDraft,
+    onSaveResult,
+    onConfirmClose,
+  }: WorkspaceProps,
+  ref: Ref<TestValueWorkspaceHandle>
+) {
+  const [activePruefart, setActivePruefart] = useState<PruefartKey>(
+    () => entry.activePruefart ?? mapPruefungNameToPruefart(entry.titel, entry.fachbereich)
   );
   const [autoCalc, setAutoCalc] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("Details");
-  const [comment, setComment] = useState("");
+  const [comment, setComment] = useState(entry.notes ?? "");
 
-  const initialRowsRef = useRef<Record<PruefartKey, PruefartRow[]>>(cloneRowsMap(pruefartRows));
+  const initialRowsRef = useRef<Record<PruefartKey, PruefartRow[]>>(buildInitialRows(entry));
   const [rowsByPruefart, setRowsByPruefart] = useState<Record<PruefartKey, PruefartRow[]>>(() =>
-    cloneRowsMap(pruefartRows)
+    cloneRowsMap(initialRowsRef.current)
   );
   const [savedBaseline, setSavedBaseline] = useState<Record<PruefartKey, PruefartRow[]>>(() =>
-    cloneRowsMap(pruefartRows)
+    cloneRowsMap(initialRowsRef.current)
   );
   const [historyByPruefart, setHistoryByPruefart] = useState<Partial<Record<PruefartKey, PruefartRow[][]>>>({});
   const focusSnapshotRef = useRef<PruefartRow[] | null>(null);
   const [activeRowId, setActiveRowId] = useState<string | null>(null);
   const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
-  const [pendingSwitchTarget, setPendingSwitchTarget] = useState<PruefartKey | null>(null);
+  const [unsavedChangesPrompt, setUnsavedChangesPrompt] = useState<UnsavedChangesPrompt>(null);
   const [resetConfirm, setResetConfirm] = useState<"messreihe" | "pruefung" | null>(null);
   const [deleteRowConfirm, setDeleteRowConfirm] = useState<DeleteRowConfirmState | null>(null);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [isSavingResult, setIsSavingResult] = useState(false);
 
   const def = pruefartDefinitions[activePruefart];
   const availablePruefarten = useMemo(() => pruefartenForFachbereich(entry.fachbereich), [entry.fachbereich]);
@@ -128,6 +179,16 @@ function TestValueWorkspace({
   function isDirty(key: PruefartKey): boolean {
     return JSON.stringify(rowsByPruefart[key]) !== JSON.stringify(savedBaseline[key]);
   }
+
+  useImperativeHandle(ref, () => ({
+    requestClose() {
+      if (isDirty(activePruefart)) {
+        setUnsavedChangesPrompt({ type: "close" });
+      } else {
+        onConfirmClose();
+      }
+    },
+  }));
 
   function updateRows(key: PruefartKey, updater: (rows: PruefartRow[]) => PruefartRow[]) {
     setRowsByPruefart((current) => ({ ...current, [key]: updater(current[key]) }));
@@ -227,27 +288,112 @@ function TestValueWorkspace({
     setRowsByPruefart((current) => ({ ...current, [key]: previous }));
   }
 
-  function handleSaveDraft(key: PruefartKey) {
-    setSavedBaseline((current) => ({ ...current, [key]: cloneRows(rowsByPruefart[key]) }));
-    onFeedback("Entwurf lokal gespeichert – noch keine echte Speicherung.");
+  // Speichert die aktuellen Messreihen + Notizen als Entwurf über den echten
+  // Service (Mock oder Firestore). Gibt true zurück, wenn das Speichern
+  // erfolgreich war, damit Aufrufer (z. B. der Ungespeicherte-Änderungen-
+  // Dialog) den Dirty-State nur bei Erfolg zurücksetzen.
+  async function handleSaveDraft(key: PruefartKey): Promise<boolean> {
+    if (isSavingDraft || isSavingResult) return false;
+    setIsSavingDraft(true);
+    try {
+      const now = new Date();
+      const changes: Partial<TestEntry> = {
+        rowsByPruefart: { ...entry.rowsByPruefart, [key]: cloneRows(rowsByPruefart[key]) },
+        activePruefart: key,
+        notes: comment,
+        history: [
+          ...(entry.history ?? []),
+          { actor: entry.pruefer, action: "hat einen Entwurf gespeichert", timestamp: formatAuditTimestamp(now) },
+        ],
+      };
+      const updated = await onSaveDraft(entry.sampleId, changes);
+      if (!updated) {
+        onFeedback("Entwurf konnte nicht gespeichert werden.");
+        return false;
+      }
+      setSavedBaseline((current) => ({ ...current, [key]: cloneRows(rowsByPruefart[key]) }));
+      onFeedback("Entwurf gespeichert.");
+      return true;
+    } catch {
+      onFeedback("Entwurf konnte nicht gespeichert werden.");
+      return false;
+    } finally {
+      setIsSavingDraft(false);
+    }
   }
 
-  function handleSaveResult(key: PruefartKey) {
-    setSavedBaseline((current) => ({ ...current, [key]: cloneRows(rowsByPruefart[key]) }));
-    onFeedback("Ergebnis lokal gespeichert – noch keine echte Speicherung.");
+  // Speichert Messreihen + rein rechnerisch ermitteltes Ergebnis (siehe
+  // computeStatsFromValues). bewertung/bewertungsHinweis werden unverändert
+  // aus der statischen PruefartDefinition übernommen – keine neu berechnete,
+  // verbindliche Normbewertung.
+  async function handleSaveResult(key: PruefartKey): Promise<boolean> {
+    if (isSavingDraft || isSavingResult) return false;
+    setIsSavingResult(true);
+    try {
+      const rows = rowsByPruefart[key];
+      const calcField = def.fields.find((field) => field.kind === "calculated");
+      const numericValues = calcField
+        ? rows
+            .map((row) => parseMeasurementNumber(row.values[calcField.key]))
+            .filter((value): value is number => value !== null)
+        : [];
+      const stats = computeStatsFromValues(numericValues);
+      const resultSnapshot: TestValueResultSnapshot = {
+        count: numericValues.length,
+        mittelwert: stats.mean,
+        minimum: stats.minimum,
+        maximum: stats.maximum,
+        standardabweichung: stats.standardDeviation,
+        bewertung: def.bewertung,
+        bewertungsHinweis: def.bewertungsHinweis,
+        savedAt: new Date().toISOString(),
+      };
+      const formattedErgebnis =
+        stats.mean !== null
+          ? `${stats.mean.toFixed(2).replace(".", ",")}${calcField?.unit ? ` ${calcField.unit}` : ""}`
+          : entry.ergebnis;
+      const now = new Date();
+      const changes: Partial<TestEntry> = {
+        rowsByPruefart: { ...entry.rowsByPruefart, [key]: cloneRows(rows) },
+        resultsByPruefart: { ...entry.resultsByPruefart, [key]: resultSnapshot },
+        activePruefart: key,
+        notes: comment,
+        ergebnis: formattedErgebnis,
+        history: [
+          ...(entry.history ?? []),
+          { actor: entry.pruefer, action: "hat ein Ergebnis gespeichert", timestamp: formatAuditTimestamp(now) },
+        ],
+      };
+      const updated = await onSaveResult(entry.sampleId, changes);
+      if (!updated) {
+        onFeedback("Ergebnis konnte nicht gespeichert werden.");
+        return false;
+      }
+      setSavedBaseline((current) => ({ ...current, [key]: cloneRows(rows) }));
+      onFeedback("Ergebnis gespeichert.");
+      return true;
+    } catch {
+      onFeedback("Ergebnis konnte nicht gespeichert werden.");
+      return false;
+    } finally {
+      setIsSavingResult(false);
+    }
   }
 
+  // Reset betrifft bewusst nur den lokalen State (siehe Abschnitt 14 des
+  // Auftrags) – erst ein anschließendes "Entwurf/Ergebnis speichern"
+  // schreibt nach Firestore. Zurückgesetzt wird auf den Stand, mit dem der
+  // Workspace in dieser Sitzung geöffnet wurde (initialRowsRef), nicht auf
+  // ungespeicherte Zwischenstände.
   function handleResetMessreihe(key: PruefartKey) {
     const original = cloneRows(initialRowsRef.current[key]);
     setRowsByPruefart((current) => ({ ...current, [key]: original }));
-    setSavedBaseline((current) => ({ ...current, [key]: cloneRows(original) }));
     setHistoryByPruefart((current) => ({ ...current, [key]: [] }));
     onFeedback("Prüfwerte dieser Messreihe wurden zurückgesetzt.");
   }
 
   function handleResetPruefung() {
     setRowsByPruefart(cloneRowsMap(initialRowsRef.current));
-    setSavedBaseline(cloneRowsMap(initialRowsRef.current));
     setHistoryByPruefart({});
     onFeedback("Alle Prüfwerte dieser Prüfung wurden zurückgesetzt.");
   }
@@ -255,24 +401,55 @@ function TestValueWorkspace({
   function handleSelectPruefart(key: PruefartKey) {
     if (key === activePruefart) return;
     if (isDirty(activePruefart)) {
-      setPendingSwitchTarget(key);
+      setUnsavedChangesPrompt({ type: "switch", target: key });
       return;
     }
     setActivePruefart(key);
     setActiveRowId(null);
   }
 
+  async function handleUnsavedChangesSaveDraft() {
+    const success = await handleSaveDraft(activePruefart);
+    if (!success) return;
+    if (unsavedChangesPrompt?.type === "switch") {
+      setActivePruefart(unsavedChangesPrompt.target);
+      setActiveRowId(null);
+    } else if (unsavedChangesPrompt?.type === "close") {
+      onConfirmClose();
+    }
+    setUnsavedChangesPrompt(null);
+  }
+
+  function handleUnsavedChangesDiscard() {
+    setRowsByPruefart((current) => ({
+      ...current,
+      [activePruefart]: cloneRows(savedBaseline[activePruefart]),
+    }));
+    if (unsavedChangesPrompt?.type === "switch") {
+      setActivePruefart(unsavedChangesPrompt.target);
+      setActiveRowId(null);
+    } else if (unsavedChangesPrompt?.type === "close") {
+      onConfirmClose();
+    }
+    setUnsavedChangesPrompt(null);
+  }
+
+  // Historie: echte, persistierte Einträge sobald vorhanden (siehe
+  // handleSaveDraft/handleSaveResult); für Alt-/Mock-Prüfungen ohne eigene
+  // Historie wird weiterhin ein plausibler Verlauf aus Status/Prüfer
+  // synthetisiert, damit der Verlauf-Tab nicht leer wirkt.
   const auditEntries: AuditEntry[] = useMemo(() => {
-    const entries: AuditEntry[] = [
+    if (entry.history && entry.history.length > 0) return entry.history;
+    const synthesized: AuditEntry[] = [
       { actor: entry.pruefer, action: "hat Prüfwerte erfasst", timestamp: `${entry.pruefdatum}, 09:12 Uhr` },
     ];
     if (status === "In Bearbeitung" || status === "Abgeschlossen") {
-      entries.push({ actor: entry.pruefer, action: "hat die Berechnung ausgeführt", timestamp: `${entry.pruefdatum}, 09:40 Uhr` });
+      synthesized.push({ actor: entry.pruefer, action: "hat die Berechnung ausgeführt", timestamp: `${entry.pruefdatum}, 09:40 Uhr` });
     }
     if (status === "Abgeschlossen") {
-      entries.push({ actor: entry.pruefer, action: "hat das Ergebnis gespeichert", timestamp: `${entry.pruefdatum}, 09:51 Uhr` });
+      synthesized.push({ actor: entry.pruefer, action: "hat das Ergebnis gespeichert", timestamp: `${entry.pruefdatum}, 09:51 Uhr` });
     }
-    return entries;
+    return synthesized;
   }, [entry, status]);
 
   return (
@@ -387,6 +564,8 @@ function TestValueWorkspace({
             onResetMessreihe={() => setResetConfirm("messreihe")}
             onSaveDraft={() => handleSaveDraft(activePruefart)}
             onSaveResult={() => handleSaveResult(activePruefart)}
+            isSavingDraft={isSavingDraft}
+            isSavingResult={isSavingResult}
           />
 
           {/* Rechts: Details / Berechnungen / Norm & Info / Verlauf */}
@@ -499,27 +678,11 @@ function TestValueWorkspace({
       </div>
 
       <UnsavedChangesDialog
-        open={pendingSwitchTarget !== null}
-        onOpenChange={(open) => !open && setPendingSwitchTarget(null)}
-        onDiscard={() => {
-          if (pendingSwitchTarget) {
-            setRowsByPruefart((current) => ({
-              ...current,
-              [activePruefart]: cloneRows(savedBaseline[activePruefart]),
-            }));
-            setActivePruefart(pendingSwitchTarget);
-            setActiveRowId(null);
-          }
-          setPendingSwitchTarget(null);
-        }}
-        onSaveDraft={() => {
-          handleSaveDraft(activePruefart);
-          if (pendingSwitchTarget) {
-            setActivePruefart(pendingSwitchTarget);
-            setActiveRowId(null);
-          }
-          setPendingSwitchTarget(null);
-        }}
+        open={unsavedChangesPrompt !== null}
+        onOpenChange={(open) => !open && setUnsavedChangesPrompt(null)}
+        onDiscard={handleUnsavedChangesDiscard}
+        onSaveDraft={handleUnsavedChangesSaveDraft}
+        isLoading={isSavingDraft}
       />
 
       <ConfirmActionDialog<"messreihe" | "pruefung">
@@ -550,7 +713,7 @@ function TestValueWorkspace({
       />
     </>
   );
-}
+});
 
 export function TestValueDrawer({
   entry,
@@ -561,13 +724,28 @@ export function TestValueDrawer({
   onCreateReport,
   onExportExcel,
   onFeedback,
+  onSaveDraft,
+  onSaveResult,
 }: TestValueDrawerProps) {
+  const workspaceRef = useRef<TestValueWorkspaceHandle>(null);
+
   return (
-    <Drawer open={entry !== null} onOpenChange={onOpenChange}>
+    <Drawer
+      open={entry !== null}
+      onOpenChange={(open) => {
+        if (open) return;
+        if (workspaceRef.current) {
+          workspaceRef.current.requestClose();
+        } else {
+          onOpenChange(false);
+        }
+      }}
+    >
       <DrawerContent className="w-full sm:max-w-none lg:w-[97vw] xl:max-w-[1440px]">
         {entry && (
           <TestValueWorkspace
             key={entry.sampleId}
+            ref={workspaceRef}
             entry={entry}
             onStart={onStart}
             onComplete={onComplete}
@@ -575,6 +753,9 @@ export function TestValueDrawer({
             onCreateReport={onCreateReport}
             onExportExcel={onExportExcel}
             onFeedback={onFeedback}
+            onSaveDraft={onSaveDraft}
+            onSaveResult={onSaveResult}
+            onConfirmClose={() => onOpenChange(false)}
           />
         )}
       </DrawerContent>

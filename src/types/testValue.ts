@@ -4,6 +4,22 @@ export type TestType = "beton-wuerfel" | "beton-prisma" | "proctor" | "asphalt";
 
 export type TestEntryStatus = "Offen" | "Vorbereitung" | "In Bearbeitung" | "Abgeschlossen" | "Überfällig";
 
+// Snapshot der rein rechnerisch ermittelten Kennzahlen einer Messreihe zum
+// Zeitpunkt von "Ergebnis speichern" (siehe firestoreTestValueService.saveResult).
+// `bewertung`/`bewertungsHinweis` sind unverändert aus der statischen
+// PruefartDefinition übernommen (Konfigurationswert, kein neu berechnetes
+// Urteil) – es wird bewusst KEINE verbindliche Normbewertung erzeugt.
+export interface TestValueResultSnapshot {
+  count: number;
+  mittelwert: number | null;
+  minimum: number | null;
+  maximum: number | null;
+  standardabweichung: number | null;
+  bewertung: Bewertung;
+  bewertungsHinweis: string;
+  savedAt: string;
+}
+
 export interface TestEntry {
   sampleId: string;
   bezeichnung: string;
@@ -17,6 +33,40 @@ export interface TestEntry {
   pruefer: string;
   status: TestEntryStatus;
   ergebnis: string;
+  // Ab hier additiv (siehe docs/firebase/test-values-firestore-slice.md,
+  // Abschnitt "Datenmodell"). `id` spiegelt bewusst `sampleId` (bestehender
+  // Primärschlüssel, siehe testValueConverter.ts) – kein Rename des
+  // bestehenden Schlüssels, nur Vorbereitung auf eine spätere 1:n-Beziehung
+  // Probe→Prüfungen über getTestEntriesBySampleId().
+  id?: string;
+  // Anzeige-Snapshots aus der referenzierten Probe (read-only Sample-Zugriff,
+  // siehe firestoreTestValueService.ts).
+  projectId?: string;
+  customerId?: string;
+  // Prüfkommentar (Details-Tab in TestValueDrawer) – vorher rein lokaler
+  // React-State, nie gespeichert.
+  notes?: string;
+  // Zuletzt aktive Prüfart, damit der Workspace beim Wiederöffnen dort
+  // ansetzt, wo zuletzt gearbeitet wurde.
+  activePruefart?: PruefartKey;
+  // Messreihen je Prüfart als eingebettetes Array (keine Subcollection, siehe
+  // Abschnitt 9 des Auftrags). Fehlt ein Key, greift der Workspace auf die
+  // Beispieldaten aus config/pruefarten.ts (pruefartRows) als Startwerte
+  // zurück – erst nach dem ersten "Entwurf/Ergebnis speichern" hält dieses
+  // Feld echte, individuelle Daten.
+  rowsByPruefart?: Partial<Record<PruefartKey, PruefartRow[]>>;
+  // Bei "Ergebnis speichern" gesetzte, rein rechnerische Kennzahlen je
+  // Prüfart (siehe TestValueResultSnapshot).
+  resultsByPruefart?: Partial<Record<PruefartKey, TestValueResultSnapshot>>;
+  // Echte Verlaufshistorie (ersetzt die zuvor pro Render aus Status/Prüfer
+  // synthetisch erzeugten AuditEntry-Einträge in TestValueDrawer). Für
+  // Alt-/Mock-Einträge ohne history greift die UI weiterhin auf die
+  // synthetisierte Anzeige zurück (siehe TestValueDrawer.tsx).
+  history?: AuditEntry[];
+  createdAt?: string;
+  updatedAt?: string;
+  draftSavedAt?: string;
+  completedAt?: string;
 }
 
 export interface TestValueField {

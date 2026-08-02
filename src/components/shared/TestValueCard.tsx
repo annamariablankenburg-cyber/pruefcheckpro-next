@@ -14,6 +14,7 @@ interface TestValueCardProps {
   onReopen: (entry: TestEntry) => void;
   onCreateReport: (entry: TestEntry) => void;
   onExportExcel: (entry: TestEntry) => void;
+  onDelete: (entry: TestEntry) => void;
 }
 
 export function TestValueCard({
@@ -24,6 +25,7 @@ export function TestValueCard({
   onReopen,
   onCreateReport,
   onExportExcel,
+  onDelete,
 }: TestValueCardProps) {
   return (
     <Card
@@ -45,6 +47,7 @@ export function TestValueCard({
               onReopen={() => onReopen(entry)}
               onCreateReport={() => onCreateReport(entry)}
               onExportExcel={() => onExportExcel(entry)}
+              onDelete={() => onDelete(entry)}
             />
           </div>
         </div>

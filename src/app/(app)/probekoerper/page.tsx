@@ -384,7 +384,7 @@ export default function ProbekoerperPage() {
             onToggleSelectAll={selectAllVisibleSamples}
             onViewDetails={setDetailSample}
             onEdit={openEditDialog}
-            onEnterValues={() => router.push("/pruefungen")}
+            onEnterValues={(sample) => router.push(`/pruefungen?sampleId=${encodeURIComponent(sample.id)}`)}
             onStart={requestAction("start")}
             onComplete={requestAction("complete")}
             onReopen={requestAction("reopen")}

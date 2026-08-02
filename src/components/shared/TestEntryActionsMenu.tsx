@@ -6,6 +6,7 @@ import {
   PlayCircle,
   RotateCcw,
   TestTubeDiagonal,
+  Trash2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ interface TestEntryActionsMenuProps {
   onReopen: () => void;
   onCreateReport: () => void;
   onExportExcel: () => void;
+  onDelete: () => void;
 }
 
 export function TestEntryActionsMenu({
@@ -36,6 +38,7 @@ export function TestEntryActionsMenu({
   onReopen,
   onCreateReport,
   onExportExcel,
+  onDelete,
 }: TestEntryActionsMenuProps) {
   const { status } = entry;
   const canStart = status === "Offen" || status === "Vorbereitung" || status === "Überfällig";
@@ -90,6 +93,12 @@ export function TestEntryActionsMenu({
         <DropdownMenuItem onSelect={onExportExcel}>
           <Download />
           Excel exportieren
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+        <DropdownMenuItem variant="destructive" onSelect={onDelete}>
+          <Trash2 />
+          Löschen
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

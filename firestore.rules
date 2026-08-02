@@ -3,8 +3,9 @@ rules_version = '2';
 // Security Rules für die bereits real angebundenen Vertical Slices (siehe
 // docs/firebase/customer-firestore-slice.md,
 // docs/firebase/project-firestore-slice.md,
-// docs/firebase/device-firestore-slice.md und
-// docs/firebase/sample-firestore-slice.md). Bewusst restriktiv: nur
+// docs/firebase/device-firestore-slice.md,
+// docs/firebase/sample-firestore-slice.md und
+// docs/firebase/test-values-firestore-slice.md). Bewusst restriktiv: nur
 // Collections mit echter Firestore-Anbindung werden geöffnet, alles andere
 // bleibt per Fallback gesperrt. Kein "allow read, write: if true" irgendwo
 // in diesem Projekt.
@@ -81,6 +82,21 @@ service cloud.firestore {
       // nicht umgesetzt (siehe docs/firebase/sample-firestore-slice.md,
       // "Bekannte offene Punkte"). Bis dahin bewusst restriktiv auf "eigene
       // Firma", nicht auf "jeder darf alles".
+      allow read, write: if belongsToCompany(companyId);
+    }
+
+    match /companies/{companyId}/testValues/{testValueId} {
+      // Gleiches companyId-Muster wie customers/projects/devices/samples:
+      // angemeldet + eigene companyId. Lesen ist für alle
+      // Unternehmensmitglieder gedacht (siehe docs/database/permissions.md,
+      // "Prüfungen ansehen/erstellen/bearbeiten" ist bei Admin/Laborleiter/
+      // Prüfer erlaubt, Azubi/Gast nur ansehen); Schreiben ist heute
+      // ebenfalls für jeden angemeldeten Nutzer der eigenen Firma offen, da
+      // noch keine Custom Claims für eine rollenabhängige Einschränkung
+      // existieren. Bis dahin bewusst restriktiv auf "eigene Firma", nicht
+      // auf "jeder darf alles" (siehe
+      // docs/firebase/test-values-firestore-slice.md, "Bekannte offene
+      // Punkte").
       allow read, write: if belongsToCompany(companyId);
     }
 

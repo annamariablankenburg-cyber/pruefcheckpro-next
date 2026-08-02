@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Info, Plus, RotateCcw, Undo2 } from "lucide-react";
+import { Info, Loader2, Plus, RotateCcw, Undo2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -9,7 +9,7 @@ import { FakeBarChart, type BarChartDatum } from "@/components/shared/FakeBarCha
 import { MeasurementTable } from "@/components/shared/MeasurementTable";
 import { MetaRow } from "@/components/shared/MetaRow";
 import { cn } from "@/lib/utils";
-import { parseMeasurementNumber } from "@/lib/measurementValidation";
+import { computeStatsFromValues, parseMeasurementNumber } from "@/lib/measurementValidation";
 import type { Bewertung, PruefartDefinition, PruefartRow } from "@/types/testValue";
 
 interface MeasurementWorkspacePanelProps {
@@ -30,6 +30,8 @@ interface MeasurementWorkspacePanelProps {
   onResetMessreihe: () => void;
   onSaveDraft: () => void;
   onSaveResult: () => void;
+  isSavingDraft?: boolean;
+  isSavingResult?: boolean;
 }
 
 const bewertungStyles: Record<Bewertung, string> = {
@@ -65,6 +67,8 @@ export function MeasurementWorkspacePanel({
   onResetMessreihe,
   onSaveDraft,
   onSaveResult,
+  isSavingDraft = false,
+  isSavingResult = false,
 }: MeasurementWorkspacePanelProps) {
   const calcField = def.fields.find((field) => field.kind === "calculated");
 
@@ -85,18 +89,12 @@ export function MeasurementWorkspacePanel({
     }));
   }, [numericValues]);
 
-  const mean = numericValues.length > 0
-    ? numericValues.reduce((sum, entry) => sum + entry.value, 0) / numericValues.length
-    : null;
-
-  const min = numericValues.length > 0 ? Math.min(...numericValues.map((entry) => entry.value)) : null;
-  const max = numericValues.length > 0 ? Math.max(...numericValues.map((entry) => entry.value)) : null;
-  const stdDev =
-    numericValues.length > 1 && mean !== null
-      ? Math.sqrt(
-          numericValues.reduce((sum, entry) => sum + (entry.value - mean) ** 2, 0) / (numericValues.length - 1)
-        )
-      : null;
+  // Gemeinsam mit dem persistierten Ergebnis-Snapshot genutzt (siehe
+  // TestValueDrawer.handleSaveResult), damit Live-Vorschau und gespeichertes
+  // Ergebnis nie auseinanderlaufen.
+  const { mean, minimum: min, maximum: max, standardDeviation: stdDev } = computeStatsFromValues(
+    numericValues.map((entry) => entry.value)
+  );
 
   // Plausibilitätsprüfung: rein rechnerischer Hinweis, keine normative
   // Bewertung. Markiert Messwerte, die stark vom Mittelwert der sichtbaren
@@ -108,6 +106,8 @@ export function MeasurementWorkspacePanel({
       .map((entry) => entry.row.id);
     return new Set(ids);
   }, [numericValues, mean]);
+
+  const isSaving = isSavingDraft || isSavingResult;
 
   function formatNumber(value: number | null): string {
     return value !== null ? value.toFixed(2).replace(".", ",") : "–";
@@ -146,23 +146,25 @@ export function MeasurementWorkspacePanel({
       />
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" variant="outline" size="sm" className="w-fit" onClick={onAddRow}>
+        <Button type="button" variant="outline" size="sm" className="w-fit" onClick={onAddRow} disabled={isSaving}>
           <Plus className="size-3.5" />
           {def.rowLabel} hinzufügen
         </Button>
-        <Button type="button" variant="outline" size="sm" onClick={onUndo} disabled={!canUndo}>
+        <Button type="button" variant="outline" size="sm" onClick={onUndo} disabled={!canUndo || isSaving}>
           <Undo2 className="size-3.5" />
           Letzte Änderung rückgängig
         </Button>
-        <Button type="button" variant="outline" size="sm" onClick={onResetMessreihe}>
+        <Button type="button" variant="outline" size="sm" onClick={onResetMessreihe} disabled={isSaving}>
           <RotateCcw className="size-3.5" />
           Messreihe zurücksetzen
         </Button>
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={onSaveDraft}>
+          <Button type="button" variant="outline" size="sm" onClick={onSaveDraft} disabled={isSaving}>
+            {isSavingDraft && <Loader2 className="size-3.5 animate-spin" />}
             Entwurf speichern
           </Button>
-          <Button type="button" size="sm" onClick={onSaveResult}>
+          <Button type="button" size="sm" onClick={onSaveResult} disabled={isSaving}>
+            {isSavingResult && <Loader2 className="size-3.5 animate-spin" />}
             Ergebnis speichern
           </Button>
         </div>
