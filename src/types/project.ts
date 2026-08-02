@@ -43,4 +43,8 @@ export interface Project {
   // Rein informativer Hinweis für aktive Projekte, deren Fälligkeitsdatum
   // bereits verstrichen ist (kein eigener Status mehr).
   overdue?: boolean;
+  // Optional: nur bei Firestore-Datensätzen gesetzt (ISO-String). Mock-Daten
+  // führen diese Felder nicht – rein additiv, bricht bestehende UI nicht.
+  createdAt?: string;
+  updatedAt?: string;
 }

@@ -1,10 +1,11 @@
 rules_version = '2';
 
-// Erster Satz an Security Rules für den Customer-Firestore-Slice (siehe
-// docs/firebase/customer-firestore-slice.md). Bewusst restriktiv: nur die
-// bereits real angebundene Collection (companies/{companyId}/customers) wird
-// geöffnet, alles andere bleibt per Fallback gesperrt. Kein
-// "allow read, write: if true" irgendwo in diesem Projekt.
+// Security Rules für die bereits real angebundenen Vertical Slices (siehe
+// docs/firebase/customer-firestore-slice.md und
+// docs/firebase/project-firestore-slice.md). Bewusst restriktiv: nur
+// Collections mit echter Firestore-Anbindung werden geöffnet, alles andere
+// bleibt per Fallback gesperrt. Kein "allow read, write: if true" irgendwo
+// in diesem Projekt.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -35,7 +36,21 @@ service cloud.firestore {
       allow read, write: if belongsToCompany(companyId);
     }
 
-    // Alles andere ist heute nicht Teil dieses Slices und bleibt gesperrt,
+    match /companies/{companyId}/projects/{projectId} {
+      // Gleiches Muster wie companies/{companyId}/customers: angemeldet +
+      // eigene companyId. Lesen ist für alle Unternehmensmitglieder gedacht
+      // (siehe docs/database/permissions.md, "Projekte ansehen" ist bei allen
+      // 5 Kernrollen erlaubt); Schreiben ist heute ebenfalls für jeden
+      // angemeldeten Nutzer der eigenen Firma offen, da noch keine Custom
+      // Claims für eine rollenabhängige Einschränkung existieren (nur
+      // Admin/Laborleiter dürften laut Rechte-Matrix erstellen/bearbeiten/
+      // löschen). Bis dahin bewusst restriktiv auf "eigene Firma", nicht auf
+      // "jeder darf alles" (siehe docs/firebase/project-firestore-slice.md,
+      // "Bekannte offene Punkte").
+      allow read, write: if belongsToCompany(companyId);
+    }
+
+    // Alles andere ist heute nicht Teil dieser Slices und bleibt gesperrt,
     // bis es explizit angebunden und mit eigenen Regeln versehen wird.
     match /{document=**} {
       allow read, write: if false;
