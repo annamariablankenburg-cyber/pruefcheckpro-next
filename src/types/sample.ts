@@ -60,4 +60,8 @@ export interface Sample {
   dokumente: RecordListItem[];
   lieferscheine: RecordListItem[];
   historie: SampleHistoryEntry[];
+  // Optional: nur bei Firestore-Datensätzen gesetzt (ISO-String). Mock-Daten
+  // führen diese Felder nicht – rein additiv, bricht bestehende UI nicht.
+  createdAt?: string;
+  updatedAt?: string;
 }

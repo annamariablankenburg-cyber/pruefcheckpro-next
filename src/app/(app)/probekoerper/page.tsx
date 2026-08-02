@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  AlertTriangle,
   Archive,
   CheckCircle2,
   FlaskConical,
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { BulkActionsToolbar } from "@/components/shared/BulkActionsToolbar";
 import { BulkFieldDialog } from "@/components/shared/BulkFieldDialog";
 import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
@@ -37,37 +39,37 @@ interface ConfirmActionState {
 
 const confirmCopy: Record<
   ConfirmActionType,
-  { title: string; description: string; confirmLabel: string; nextStatus: SampleStatus }
+  { title: string; description: string; confirmLabel: string; successMessage: string }
 > = {
   start: {
     title: "Prüfung starten?",
     description: "Die Probe wird auf den Status „In Prüfung“ gesetzt.",
     confirmLabel: "In Prüfung starten",
-    nextStatus: "In Prüfung",
+    successMessage: "Prüfung gestartet.",
   },
   complete: {
     title: "Probe abschließen?",
     description: "Die Probe wird als „Abgeschlossen“ markiert.",
     confirmLabel: "Abschließen",
-    nextStatus: "Abgeschlossen",
+    successMessage: "Probe abgeschlossen.",
   },
   reopen: {
     title: "Probe wieder öffnen?",
     description: "Die Probe wird erneut auf „In Prüfung“ gesetzt.",
     confirmLabel: "Wieder öffnen",
-    nextStatus: "In Prüfung",
+    successMessage: "Probe wieder geöffnet.",
   },
   archive: {
     title: "Probe archivieren?",
     description: "Die Probe wird archiviert und aus der aktiven Übersicht ausgeblendet.",
     confirmLabel: "Archivieren",
-    nextStatus: "Archiviert",
+    successMessage: "Probe archiviert.",
   },
   reactivate: {
     title: "Probe reaktivieren?",
     description: "Die Probe wird wieder als „Abgeschlossen“ in die aktive Übersicht aufgenommen.",
     confirmLabel: "Reaktivieren",
-    nextStatus: "Abgeschlossen",
+    successMessage: "Probe reaktiviert.",
   },
 };
 
@@ -78,7 +80,7 @@ const bulkConfirmCopy: Record<
   delete: {
     title: "Ausgewählte Proben löschen?",
     description: (count) =>
-      `${count} ${count === 1 ? "Probe wird" : "Proben werden"} unwiderruflich gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.`,
+      `${count} ${count === 1 ? "Probe wird" : "Proben werden"} unwiderruflich gelöscht. Diese Aktion kann nicht rückgängig gemacht werden. Verknüpfte Prüfwerte und Berichte werden nicht automatisch gelöscht.`,
     confirmLabel: "Löschen",
   },
   archive: {
@@ -99,11 +101,28 @@ const statusOptions: SampleStatus[] = [
   "Archiviert",
 ];
 
+type SampleDialogState = { mode: "create" } | { mode: "edit"; sample: Sample } | null;
+
+function bulkResultMessage(action: string, succeeded: number, failed: number): string {
+  if (failed === 0) {
+    return `${succeeded} ${succeeded === 1 ? "Probe" : "Proben"} ${action}.`;
+  }
+  if (succeeded === 0) {
+    return `${action[0].toUpperCase()}${action.slice(1)} fehlgeschlagen.`;
+  }
+  return `${succeeded} von ${succeeded + failed} Proben ${action}, ${failed} fehlgeschlagen.`;
+}
+
 export default function ProbekoerperPage() {
   const router = useRouter();
   const {
     samples,
     filteredSamples,
+    selectedSamples,
+    selectedIds,
+    loading,
+    error,
+    refreshSamples,
     search,
     setSearch,
     filter,
@@ -111,28 +130,39 @@ export default function ProbekoerperPage() {
     advancedFilters,
     setAdvancedFilters,
     resetFilters,
-    updateSample: updateSampleData,
-    removeSample,
     createSample,
-    bulkUpdateStatus,
-    bulkUpdatePruefer,
-    bulkRemove,
+    updateSample,
+    startSample,
+    completeSample,
+    reopenSample,
+    archiveSample,
+    reactivateSample,
+    duplicateSample,
+    removeSample,
+    bulkUpdateSamples,
+    bulkArchiveSamples,
+    bulkRemoveSamples,
+    toggleSampleSelection,
+    selectAllVisibleSamples,
+    clearSelection,
   } = useSamples();
 
-  const [isNewSampleOpen, setIsNewSampleOpen] = useState(false);
+  const [sampleDialog, setSampleDialog] = useState<SampleDialogState>(null);
   const [detailSample, setDetailSample] = useState<Sample | null>(null);
-  const [editSample, setEditSample] = useState<Sample | null>(null);
   const [deleteSample, setDeleteSample] = useState<Sample | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmActionState | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [actionPending, setActionPending] = useState(false);
+  const [deletePending, setDeletePending] = useState(false);
   const [bulkConfirm, setBulkConfirm] = useState<BulkConfirmType | null>(null);
+  const [bulkPending, setBulkPending] = useState(false);
   const [isBulkTesterOpen, setIsBulkTesterOpen] = useState(false);
   const [isBulkStatusOpen, setIsBulkStatusOpen] = useState(false);
+  const [isDuplicating, setIsDuplicating] = useState(false);
   const { message: feedback, showFeedback } = useFeedbackToast();
 
-  function updateSample(id: string, changes: Partial<Sample>) {
-    updateSampleData(id, changes);
-    setDetailSample((current) => (current && current.id === id ? { ...current, ...changes } : current));
+  function applyUpdatedSample(updated: Sample | undefined) {
+    if (!updated) return;
+    setDetailSample((current) => (current && current.id === updated.id ? updated : current));
   }
 
   const kpis = useMemo(
@@ -151,93 +181,129 @@ export default function ProbekoerperPage() {
     return (sample: Sample) => setConfirmAction({ sample, type });
   }
 
-  function handleConfirmAction(subject: Sample) {
-    if (!confirmAction) return;
-    const { nextStatus } = confirmCopy[confirmAction.type];
-    updateSample(subject.id, { status: nextStatus });
-    setConfirmAction(null);
+  function openEditDialog(sample: Sample) {
+    setSampleDialog({ mode: "edit", sample });
   }
 
-  function handleSaveSample(id: string, changes: Partial<Sample>) {
-    updateSample(id, changes);
-    setEditSample(null);
-  }
-
-  function handleConfirmDelete() {
-    if (!deleteSample) return;
-    removeSample(deleteSample.id);
-    setDetailSample((current) => (current && current.id === deleteSample.id ? null : current));
-    setSelectedIds((current) => {
-      const next = new Set(current);
-      next.delete(deleteSample.id);
-      return next;
-    });
-    setDeleteSample(null);
-  }
-
-  function handleDuplicate(sample: Sample) {
-    const newId = `${sample.id}-KOPIE`;
-    const duplicate: Sample = {
-      ...sample,
-      id: newId,
-      status: "Offen",
-      pruefungen: [],
-      historie: [{ message: `Dupliziert von ${sample.id}.`, timestamp: sample.entnahmedatum }],
-    };
-    createSample(duplicate);
-    showFeedback(`Probe „${sample.id}" wurde als „${newId}" dupliziert.`);
-  }
-
-  function toggleSelect(sample: Sample) {
-    setSelectedIds((current) => {
-      const next = new Set(current);
-      if (next.has(sample.id)) next.delete(sample.id);
-      else next.add(sample.id);
-      return next;
-    });
-  }
-
-  function toggleSelectAll(visibleSamples: Sample[]) {
-    setSelectedIds((current) => {
-      const allSelected = visibleSamples.every((sample) => current.has(sample.id));
-      if (allSelected) return new Set();
-      return new Set(visibleSamples.map((sample) => sample.id));
-    });
-  }
-
-  function clearSelection() {
-    setSelectedIds(new Set());
-  }
-
-  function handleBulkConfirm() {
-    if (!bulkConfirm) return;
-    const ids = Array.from(selectedIds);
-    if (bulkConfirm === "delete") {
-      bulkRemove(ids);
-      showFeedback(`${ids.length} ${ids.length === 1 ? "Probe wurde" : "Proben wurden"} gelöscht.`);
-    } else {
-      bulkUpdateStatus(ids, "Archiviert");
-      showFeedback(`${ids.length} ${ids.length === 1 ? "Probe wurde" : "Proben wurden"} archiviert.`);
+  async function handleConfirmAction(subject: Sample) {
+    if (!confirmAction || actionPending) return;
+    setActionPending(true);
+    try {
+      let updated: Sample | undefined;
+      switch (confirmAction.type) {
+        case "start":
+          updated = await startSample(subject.id);
+          break;
+        case "complete":
+          updated = await completeSample(subject.id);
+          break;
+        case "reopen":
+          updated = await reopenSample(subject.id);
+          break;
+        case "archive":
+          updated = await archiveSample(subject.id);
+          break;
+        case "reactivate":
+          updated = await reactivateSample(subject.id);
+          break;
+      }
+      applyUpdatedSample(updated);
+      setConfirmAction(null);
+      showFeedback(confirmCopy[confirmAction.type].successMessage);
+    } catch {
+      showFeedback("Aktion konnte nicht ausgeführt werden.");
+    } finally {
+      setActionPending(false);
     }
-    setBulkConfirm(null);
-    clearSelection();
   }
 
-  function handleBulkTesterConfirm(value: string) {
-    const ids = Array.from(selectedIds);
-    bulkUpdatePruefer(ids, value);
-    setIsBulkTesterOpen(false);
-    showFeedback(`Prüfer für ${ids.length} ${ids.length === 1 ? "Probe" : "Proben"} auf „${value}" gesetzt.`);
-    clearSelection();
+  async function handleConfirmDelete() {
+    if (!deleteSample || deletePending) return;
+    setDeletePending(true);
+    try {
+      const success = await removeSample(deleteSample.id);
+      if (success) {
+        setDetailSample((current) => (current && current.id === deleteSample.id ? null : current));
+        showFeedback("Probe gelöscht.");
+      } else {
+        showFeedback("Probe konnte nicht gelöscht werden.");
+      }
+      setDeleteSample(null);
+    } catch {
+      showFeedback("Probe konnte nicht gelöscht werden.");
+    } finally {
+      setDeletePending(false);
+    }
   }
 
-  function handleBulkStatusConfirm(value: string) {
-    const ids = Array.from(selectedIds);
-    bulkUpdateStatus(ids, value as SampleStatus);
-    setIsBulkStatusOpen(false);
-    showFeedback(`Status für ${ids.length} ${ids.length === 1 ? "Probe" : "Proben"} auf „${value}" gesetzt.`);
-    clearSelection();
+  async function handleDuplicate(sample: Sample) {
+    if (isDuplicating) return;
+    setIsDuplicating(true);
+    try {
+      const created = await duplicateSample(sample.id);
+      showFeedback(`Probe „${sample.id}" wurde als „${created.id}" dupliziert.`);
+    } catch {
+      showFeedback("Probe konnte nicht dupliziert werden.");
+    } finally {
+      setIsDuplicating(false);
+    }
   }
+
+  async function handleBulkConfirm() {
+    if (!bulkConfirm || bulkPending) return;
+    setBulkPending(true);
+    try {
+      const ids = Array.from(selectedIds);
+      if (bulkConfirm === "delete") {
+        const result = await bulkRemoveSamples(ids);
+        showFeedback(bulkResultMessage("gelöscht", result.succeededIds.length, result.failedIds.length));
+      } else {
+        const result = await bulkArchiveSamples(ids);
+        showFeedback(bulkResultMessage("archiviert", result.succeededIds.length, result.failedIds.length));
+      }
+      setBulkConfirm(null);
+    } catch {
+      showFeedback("Massenaktion konnte nicht ausgeführt werden.");
+    } finally {
+      setBulkPending(false);
+    }
+  }
+
+  async function handleBulkTesterConfirm(value: string) {
+    if (bulkPending) return;
+    setBulkPending(true);
+    try {
+      const ids = Array.from(selectedIds);
+      const result = await bulkUpdateSamples(ids, { pruefer: value });
+      showFeedback(
+        bulkResultMessage(`auf „${value}" gesetzt`, result.succeededIds.length, result.failedIds.length)
+      );
+      setIsBulkTesterOpen(false);
+    } catch {
+      showFeedback("Prüfer konnte nicht geändert werden.");
+    } finally {
+      setBulkPending(false);
+    }
+  }
+
+  async function handleBulkStatusConfirm(value: string) {
+    if (bulkPending) return;
+    setBulkPending(true);
+    try {
+      const ids = Array.from(selectedIds);
+      const result = await bulkUpdateSamples(ids, { status: value as SampleStatus });
+      showFeedback(
+        bulkResultMessage(`auf „${value}" gesetzt`, result.succeededIds.length, result.failedIds.length)
+      );
+      setIsBulkStatusOpen(false);
+    } catch {
+      showFeedback("Status konnte nicht geändert werden.");
+    } finally {
+      setBulkPending(false);
+    }
+  }
+
+  const hasBlockingState = loading || Boolean(error);
 
   return (
     <div className="flex flex-col gap-6 p-4 sm:p-6 lg:p-8">
@@ -250,63 +316,90 @@ export default function ProbekoerperPage() {
             Verwalte Proben, Prüfungen und Laborstatus an einem Ort.
           </p>
         </div>
-        <Button onClick={() => setIsNewSampleOpen(true)} className="w-fit">
+        <Button
+          onClick={() => setSampleDialog({ mode: "create" })}
+          className="w-fit"
+          disabled={hasBlockingState}
+        >
           <Plus className="size-4" />
           Neue Probe
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <StatCard icon={FlaskConical} label="Proben gesamt" value={kpis.total} />
-        <StatCard icon={TestTubeDiagonal} label="In Prüfung" value={kpis.inProgress} tone="default" />
-        <StatCard icon={ListTodo} label="Vorbereitung/Offen" value={kpis.prepOrOpen} tone="warning" />
-        <StatCard icon={TriangleAlert} label="Überfällig" value={kpis.overdue} tone="danger" />
-        <StatCard icon={CheckCircle2} label="Abgeschlossen" value={kpis.done} tone="success" />
-        <StatCard icon={Archive} label="Archiviert" value={kpis.archived} />
-      </div>
+      {loading ? (
+        <div className="flex flex-col gap-6">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <Card key={index} className="h-[104px] animate-pulse bg-muted/40" />
+            ))}
+          </div>
+          <Card className="h-72 animate-pulse bg-muted/40" />
+        </div>
+      ) : error ? (
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+            <AlertTriangle className="size-8 text-destructive" />
+            <p className="text-sm text-muted-foreground">{error}</p>
+            <Button type="button" variant="outline" size="sm" onClick={refreshSamples}>
+              Erneut versuchen
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            <StatCard icon={FlaskConical} label="Proben gesamt" value={kpis.total} />
+            <StatCard icon={TestTubeDiagonal} label="In Prüfung" value={kpis.inProgress} tone="default" />
+            <StatCard icon={ListTodo} label="Vorbereitung/Offen" value={kpis.prepOrOpen} tone="warning" />
+            <StatCard icon={TriangleAlert} label="Überfällig" value={kpis.overdue} tone="danger" />
+            <StatCard icon={CheckCircle2} label="Abgeschlossen" value={kpis.done} tone="success" />
+            <StatCard icon={Archive} label="Archiviert" value={kpis.archived} />
+          </div>
 
-      <SampleFilters
-        search={search}
-        onSearchChange={setSearch}
-        filter={filter}
-        onFilterChange={setFilter}
-        samples={samples}
-        advancedFilters={advancedFilters}
-        onAdvancedFiltersChange={setAdvancedFilters}
-      />
+          <SampleFilters
+            search={search}
+            onSearchChange={setSearch}
+            filter={filter}
+            onFilterChange={setFilter}
+            samples={samples}
+            advancedFilters={advancedFilters}
+            onAdvancedFiltersChange={setAdvancedFilters}
+          />
 
-      <BulkActionsToolbar
-        count={selectedIds.size}
-        onClear={clearSelection}
-        onDelete={() => setBulkConfirm("delete")}
-        onArchive={() => setBulkConfirm("archive")}
-        onChangeTester={() => setIsBulkTesterOpen(true)}
-        onChangeStatus={() => setIsBulkStatusOpen(true)}
-        onExport={() => showFeedback("Diese Funktion wird später angebunden.")}
-      />
+          <BulkActionsToolbar
+            count={selectedSamples.length}
+            onClear={clearSelection}
+            onDelete={() => setBulkConfirm("delete")}
+            onArchive={() => setBulkConfirm("archive")}
+            onChangeTester={() => setIsBulkTesterOpen(true)}
+            onChangeStatus={() => setIsBulkStatusOpen(true)}
+            onExport={() => showFeedback("Diese Funktion wird später angebunden.")}
+          />
 
-      <SampleTable
-        samples={filteredSamples}
-        onResetFilters={resetFilters}
-        selectedIds={selectedIds}
-        onToggleSelect={toggleSelect}
-        onToggleSelectAll={toggleSelectAll}
-        onViewDetails={setDetailSample}
-        onEdit={setEditSample}
-        onEnterValues={() => router.push("/pruefungen")}
-        onStart={requestAction("start")}
-        onComplete={requestAction("complete")}
-        onReopen={requestAction("reopen")}
-        onArchive={requestAction("archive")}
-        onReactivate={requestAction("reactivate")}
-        onDuplicate={handleDuplicate}
-        onDelete={setDeleteSample}
-      />
+          <SampleTable
+            samples={filteredSamples}
+            onResetFilters={resetFilters}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSampleSelection}
+            onToggleSelectAll={selectAllVisibleSamples}
+            onViewDetails={setDetailSample}
+            onEdit={openEditDialog}
+            onEnterValues={() => router.push("/pruefungen")}
+            onStart={requestAction("start")}
+            onComplete={requestAction("complete")}
+            onReopen={requestAction("reopen")}
+            onArchive={requestAction("archive")}
+            onReactivate={requestAction("reactivate")}
+            onDuplicate={handleDuplicate}
+            onDelete={setDeleteSample}
+          />
+        </>
+      )}
 
       <SampleDetailDrawer
         sample={detailSample}
         onOpenChange={(open) => !open && setDetailSample(null)}
-        onEdit={setEditSample}
+        onEdit={openEditDialog}
         onEnterValues={() => router.push("/pruefungen")}
         onStart={requestAction("start")}
         onComplete={requestAction("complete")}
@@ -320,19 +413,24 @@ export default function ProbekoerperPage() {
         onAddDeliveryNote={() => showFeedback("Diese Funktion wird später angebunden.")}
       />
 
-      <NewSampleDialog open={isNewSampleOpen} onOpenChange={setIsNewSampleOpen} />
-
       <NewSampleDialog
-        open={editSample !== null}
-        onOpenChange={(open) => !open && setEditSample(null)}
-        sample={editSample}
-        onSave={handleSaveSample}
+        open={sampleDialog !== null}
+        onOpenChange={(open) => !open && setSampleDialog(null)}
+        sample={sampleDialog?.mode === "edit" ? sampleDialog.sample : null}
+        samples={samples}
+        onCreate={createSample}
+        onUpdate={updateSample}
+        onSaved={(saved, mode) => {
+          applyUpdatedSample(saved);
+          showFeedback(mode === "edit" ? "Probe aktualisiert." : "Probe angelegt.");
+        }}
       />
 
       <DeleteSampleDialog
         sample={deleteSample}
         onOpenChange={(open) => !open && setDeleteSample(null)}
         onConfirm={handleConfirmDelete}
+        isLoading={deletePending}
       />
 
       <ConfirmActionDialog<Sample>
@@ -340,6 +438,7 @@ export default function ProbekoerperPage() {
         title={confirmAction ? confirmCopy[confirmAction.type].title : ""}
         description={confirmAction ? confirmCopy[confirmAction.type].description : ""}
         confirmLabel={confirmAction ? confirmCopy[confirmAction.type].confirmLabel : ""}
+        isLoading={actionPending}
         onOpenChange={(open) => !open && setConfirmAction(null)}
         onConfirm={handleConfirmAction}
       />
@@ -347,9 +446,10 @@ export default function ProbekoerperPage() {
       <ConfirmActionDialog<boolean>
         subject={bulkConfirm ? true : null}
         title={bulkConfirm ? bulkConfirmCopy[bulkConfirm].title : ""}
-        description={bulkConfirm ? bulkConfirmCopy[bulkConfirm].description(selectedIds.size) : ""}
+        description={bulkConfirm ? bulkConfirmCopy[bulkConfirm].description(selectedSamples.length) : ""}
         confirmLabel={bulkConfirm ? bulkConfirmCopy[bulkConfirm].confirmLabel : ""}
         confirmVariant={bulkConfirm === "delete" ? "destructive" : "default"}
+        isLoading={bulkPending}
         onOpenChange={(open) => !open && setBulkConfirm(null)}
         onConfirm={handleBulkConfirm}
       />
@@ -358,22 +458,24 @@ export default function ProbekoerperPage() {
         open={isBulkTesterOpen}
         onOpenChange={setIsBulkTesterOpen}
         title="Prüfer für Auswahl ändern"
-        description={`Setzt den Prüfer für ${selectedIds.size} ausgewählte ${selectedIds.size === 1 ? "Probe" : "Proben"}.`}
+        description={`Setzt den Prüfer für ${selectedSamples.length} ausgewählte ${selectedSamples.length === 1 ? "Probe" : "Proben"}.`}
         fieldLabel="Prüfer"
         options={testerOptions}
         confirmLabel="Übernehmen"
         onConfirm={handleBulkTesterConfirm}
+        isLoading={bulkPending}
       />
 
       <BulkFieldDialog
         open={isBulkStatusOpen}
         onOpenChange={setIsBulkStatusOpen}
         title="Status für Auswahl ändern"
-        description={`Setzt den Status für ${selectedIds.size} ausgewählte ${selectedIds.size === 1 ? "Probe" : "Proben"}.`}
+        description={`Setzt den Status für ${selectedSamples.length} ausgewählte ${selectedSamples.length === 1 ? "Probe" : "Proben"}.`}
         fieldLabel="Status"
         options={statusOptions}
         confirmLabel="Übernehmen"
         onConfirm={handleBulkStatusConfirm}
+        isLoading={bulkPending}
       />
 
       <FeedbackToast message={feedback} />

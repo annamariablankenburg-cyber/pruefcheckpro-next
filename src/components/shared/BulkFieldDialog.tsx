@@ -22,6 +22,9 @@ interface BulkFieldDialogProps {
   options: string[];
   confirmLabel: string;
   onConfirm: (value: string) => void;
+  // Optional: blendet die Aktion als "läuft gerade" ein (Doppelklick-Schutz),
+  // analog zu ConfirmActionDialog. Ohne Angabe unverändertes Verhalten.
+  isLoading?: boolean;
 }
 
 // Generischer Massenerfassungs-Dialog für ein einzelnes Feld (Prüfer ändern,
@@ -35,6 +38,7 @@ export function BulkFieldDialog({
   options,
   confirmLabel,
   onConfirm,
+  isLoading = false,
 }: BulkFieldDialogProps) {
   const [value, setValue] = useState(options[0] ?? "");
 
@@ -42,6 +46,7 @@ export function BulkFieldDialog({
     <Dialog
       open={open}
       onOpenChange={(next) => {
+        if (isLoading) return;
         if (next) setValue(options[0] ?? "");
         onOpenChange(next);
       }}
@@ -56,7 +61,7 @@ export function BulkFieldDialog({
           <label htmlFor="bulk-field-select" className="text-sm font-medium text-foreground">
             {fieldLabel}
           </label>
-          <Select value={value} onValueChange={setValue}>
+          <Select value={value} onValueChange={setValue} disabled={isLoading}>
             <SelectTrigger id="bulk-field-select" className="h-9">
               <SelectValue />
             </SelectTrigger>
@@ -71,10 +76,15 @@ export function BulkFieldDialog({
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isLoading}
+          >
             Abbrechen
           </Button>
-          <Button type="button" onClick={() => onConfirm(value)}>
+          <Button type="button" onClick={() => onConfirm(value)} disabled={isLoading}>
             {confirmLabel}
           </Button>
         </DialogFooter>

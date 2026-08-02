@@ -13,13 +13,22 @@ interface DeleteSampleDialogProps {
   sample: Sample | null;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
+  // Optional: blendet den Löschvorgang als "läuft gerade" ein (Doppelklick-
+  // Schutz), analog zu ConfirmActionDialog. Ohne Angabe unverändertes
+  // Verhalten.
+  isLoading?: boolean;
 }
 
 // Rollenlogik ist noch nicht implementiert. Löschen soll später nur für
 // Rollen außer Azubi erlaubt sein – heute nur UI-Vorbereitung mit Hinweis.
-export function DeleteSampleDialog({ sample, onOpenChange, onConfirm }: DeleteSampleDialogProps) {
+export function DeleteSampleDialog({
+  sample,
+  onOpenChange,
+  onConfirm,
+  isLoading = false,
+}: DeleteSampleDialogProps) {
   return (
-    <Dialog open={sample !== null} onOpenChange={onOpenChange}>
+    <Dialog open={sample !== null} onOpenChange={(next) => !isLoading && onOpenChange(next)}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Probe wirklich löschen?</DialogTitle>
@@ -30,10 +39,15 @@ export function DeleteSampleDialog({ sample, onOpenChange, onConfirm }: DeleteSa
         </DialogHeader>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isLoading}
+          >
             Abbrechen
           </Button>
-          <Button type="button" variant="destructive" onClick={onConfirm}>
+          <Button type="button" variant="destructive" onClick={onConfirm} disabled={isLoading}>
             Löschen
           </Button>
         </DialogFooter>
