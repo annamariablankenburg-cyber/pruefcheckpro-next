@@ -50,4 +50,8 @@ export interface Device {
   notes?: string;
   documents: DeviceDocument[];
   history: DeviceHistoryEntry[];
+  // Optional: nur bei Firestore-Datensätzen gesetzt (ISO-String). Mock-Daten
+  // führen diese Felder nicht – rein additiv, bricht bestehende UI nicht.
+  createdAt?: string;
+  updatedAt?: string;
 }

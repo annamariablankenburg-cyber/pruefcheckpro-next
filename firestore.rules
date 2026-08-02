@@ -1,8 +1,9 @@
 rules_version = '2';
 
 // Security Rules für die bereits real angebundenen Vertical Slices (siehe
-// docs/firebase/customer-firestore-slice.md und
-// docs/firebase/project-firestore-slice.md). Bewusst restriktiv: nur
+// docs/firebase/customer-firestore-slice.md,
+// docs/firebase/project-firestore-slice.md und
+// docs/firebase/device-firestore-slice.md). Bewusst restriktiv: nur
 // Collections mit echter Firestore-Anbindung werden geöffnet, alles andere
 // bleibt per Fallback gesperrt. Kein "allow read, write: if true" irgendwo
 // in diesem Projekt.
@@ -47,6 +48,20 @@ service cloud.firestore {
       // löschen). Bis dahin bewusst restriktiv auf "eigene Firma", nicht auf
       // "jeder darf alles" (siehe docs/firebase/project-firestore-slice.md,
       // "Bekannte offene Punkte").
+      allow read, write: if belongsToCompany(companyId);
+    }
+
+    match /companies/{companyId}/devices/{deviceId} {
+      // Gleiches companyId-Muster wie companies/{companyId}/customers und
+      // .../projects: angemeldet + eigene companyId. Lesen ist für alle
+      // Unternehmensmitglieder gedacht (siehe docs/database/permissions.md,
+      // "Geräte ansehen" ist bei allen 5 Kernrollen erlaubt); Schreiben ist
+      // heute ebenfalls für jeden angemeldeten Nutzer der eigenen Firma
+      // offen, da noch keine Custom Claims für eine rollenabhängige
+      // Einschränkung existieren (nur Admin/Laborleiter dürften laut
+      // Rechte-Matrix Geräte bearbeiten). Bis dahin bewusst restriktiv auf
+      // "eigene Firma", nicht auf "jeder darf alles" (siehe
+      // docs/firebase/device-firestore-slice.md, "Bekannte offene Punkte").
       allow read, write: if belongsToCompany(companyId);
     }
 
