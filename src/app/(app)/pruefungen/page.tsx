@@ -132,6 +132,7 @@ function PruefungenPageContent() {
       return;
     }
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- zeigt einen klaren Ladezustand, während die Prüfung für die per "?sampleId=" angeforderte Probe erst angelegt werden muss
     setIsPreparingEntry(true);
     createTestEntry(buildTestEntryFromSample(sample))
       .then((created) => {

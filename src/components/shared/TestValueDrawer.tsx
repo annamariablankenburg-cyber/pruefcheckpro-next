@@ -150,12 +150,15 @@ const TestValueWorkspace = forwardRef(function TestValueWorkspace(
   const [activeTab, setActiveTab] = useState<Tab>("Details");
   const [comment, setComment] = useState(entry.notes ?? "");
 
+  // Jeder Aufruf von buildInitialRows(entry) liefert unabhängig geklonte
+  // Daten – bewusst dreimal aufgerufen (statt den Ref während des Renderns
+  // zu lesen) für initialRowsRef/rowsByPruefart/savedBaseline.
   const initialRowsRef = useRef<Record<PruefartKey, PruefartRow[]>>(buildInitialRows(entry));
   const [rowsByPruefart, setRowsByPruefart] = useState<Record<PruefartKey, PruefartRow[]>>(() =>
-    cloneRowsMap(initialRowsRef.current)
+    buildInitialRows(entry)
   );
   const [savedBaseline, setSavedBaseline] = useState<Record<PruefartKey, PruefartRow[]>>(() =>
-    cloneRowsMap(initialRowsRef.current)
+    buildInitialRows(entry)
   );
   const [historyByPruefart, setHistoryByPruefart] = useState<Partial<Record<PruefartKey, PruefartRow[][]>>>({});
   const focusSnapshotRef = useRef<PruefartRow[] | null>(null);
