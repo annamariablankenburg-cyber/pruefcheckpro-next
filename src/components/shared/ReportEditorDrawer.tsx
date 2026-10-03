@@ -11,6 +11,7 @@ import {
   Eye,
   FileText,
   Image as ImageIcon,
+  Loader2,
   Mail,
   PenLine,
   Save,
@@ -60,7 +61,7 @@ interface ReportEditorDrawerProps {
   report: Report | null;
   initialSection?: Section;
   onOpenChange: (open: boolean) => void;
-  onSave: (report: Report) => void;
+  onSave: (report: Report) => Promise<Report | undefined>;
   onSaveDraft: (report: Report) => void;
   onMarkDone: (report: Report) => void;
   onExportPdf: (report: Report) => void;
@@ -120,7 +121,7 @@ function SectionTitle({ children }: { children: string }) {
 interface WorkspaceProps {
   report: Report;
   initialSection?: Section;
-  onSave: (report: Report) => void;
+  onSave: (report: Report) => Promise<Report | undefined>;
   onSaveDraft: (report: Report) => void;
   onMarkDone: (report: Report) => void;
   onExportPdf: (report: Report) => void;
@@ -172,6 +173,7 @@ function ReportEditorWorkspace({
     showStamp: true,
   });
   const [saveNote, setSaveNote] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const status = report.status;
   const canMarkDone = status === "Entwurf";
@@ -207,10 +209,18 @@ function ReportEditorWorkspace({
     setSettings((current) => ({ ...current, [key]: !current[key] }));
   }
 
-  function handleSave() {
-    onSave(buildSnapshot());
-    setSaveNote("Änderungen lokal gespeichert – noch keine echte Speicherung.");
-    window.setTimeout(() => setSaveNote(null), 2500);
+  async function handleSave() {
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      const saved = await onSave(buildSnapshot());
+      setSaveNote(saved ? "Änderungen gespeichert." : "Änderungen konnten nicht gespeichert werden.");
+    } catch {
+      setSaveNote("Änderungen konnten nicht gespeichert werden.");
+    } finally {
+      setIsSaving(false);
+      window.setTimeout(() => setSaveNote(null), 2500);
+    }
   }
 
   return (
@@ -236,8 +246,8 @@ function ReportEditorWorkspace({
               <Mail className="size-4" />
               Per E-Mail senden
             </Button>
-            <Button type="button" variant="outline" size="sm" onClick={handleSave}>
-              <Save className="size-4" />
+            <Button type="button" variant="outline" size="sm" onClick={handleSave} disabled={isSaving}>
+              {isSaving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
               Speichern
             </Button>
           </div>

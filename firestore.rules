@@ -100,6 +100,18 @@ service cloud.firestore {
       allow read, write: if belongsToCompany(companyId);
     }
 
+    match /companies/{companyId}/reports/{reportId} {
+      // Gleiches companyId-Muster wie customers/projects/devices/samples/
+      // testValues: angemeldet + eigene companyId. Lesen ist für alle
+      // Unternehmensmitglieder gedacht; Schreiben ist heute ebenfalls für
+      // jeden angemeldeten Nutzer der eigenen Firma offen, da noch keine
+      // Custom Claims für eine rollenabhängige Einschränkung existieren.
+      // Bis dahin bewusst restriktiv auf "eigene Firma", nicht auf "jeder
+      // darf alles" (siehe docs/firebase/report-firestore-slice.md,
+      // "Bekannte offene Punkte").
+      allow read, write: if belongsToCompany(companyId);
+    }
+
     // Alles andere ist heute nicht Teil dieser Slices und bleibt gesperrt,
     // bis es explizit angebunden und mit eigenen Regeln versehen wird.
     match /{document=**} {

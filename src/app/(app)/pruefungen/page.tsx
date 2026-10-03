@@ -21,8 +21,8 @@ import { StatCard } from "@/components/shared/StatCard";
 import { TestEntryFilters } from "@/components/shared/TestEntryFilters";
 import { TestEntryTable } from "@/components/shared/TestEntryTable";
 import { TestValueDrawer } from "@/components/shared/TestValueDrawer";
-import { reportRepository } from "@/lib/repositories/reportRepository";
 import { buildTestEntryFromSample, HEUTE } from "@/config/testValues";
+import { useReports } from "@/hooks/useReports";
 import { useSamples } from "@/hooks/useSamples";
 import { useTestEntries } from "@/hooks/useTestEntries";
 import type { TestEntry } from "@/types/testValue";
@@ -98,6 +98,11 @@ function PruefungenPageContent() {
   // Prüfung aus einer gültigen, nicht archivierten Probe abzuleiten (siehe
   // Abschnitt 7 des Auftrags). Keine Schreibzugriffe auf Probendaten.
   const { samples, loading: samplesLoading } = useSamples();
+  // Read-only Zugriff auf Berichte: nur um zu prüfen, ob für eine Probe
+  // bereits ein Bericht existiert ("Bericht erstellen"-Aktion unten). Kein
+  // direkter Zugriff auf reportRepository/reportService, damit diese Seite
+  // unabhängig vom aktiven NEXT_PUBLIC_DATA_SOURCE funktioniert.
+  const { reports } = useReports();
 
   const [isNewEntryOpen, setIsNewEntryOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmActionState | null>(null);
@@ -163,7 +168,7 @@ function PruefungenPageContent() {
   }
 
   function handleCreateReport(entry: TestEntry) {
-    const hasLinkedReport = reportRepository.getAll().some((report) => report.probeId === entry.sampleId);
+    const hasLinkedReport = reports.some((report) => report.probeId === entry.sampleId);
     if (hasLinkedReport) {
       showFeedback("Verknüpfter Bericht wird geöffnet.");
       router.push("/pdf-export");
