@@ -46,7 +46,7 @@ interface CalendarPreviewCardProps {
 
 export function CalendarPreviewCard({ days, footerHref }: CalendarPreviewCardProps) {
   return (
-    <Card className="h-full">
+    <Card variant="elevated" className="h-full">
       <CardHeader>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -130,10 +130,10 @@ export function CalendarPreviewCard({ days, footerHref }: CalendarPreviewCardPro
 
         <Link
           href={footerHref}
-          className="inline-flex w-fit items-center gap-1 pt-1 text-sm font-medium text-primary hover:underline"
+          className="group/link inline-flex w-fit items-center gap-1 pt-1 text-sm font-medium text-primary hover:underline"
         >
           Zum Kalender
-          <ArrowRight className="size-3.5" />
+          <ArrowRight className="size-3.5 transition-transform duration-200 ease-(--ease-out-soft) motion-safe:group-hover/link:translate-x-0.5" />
         </Link>
       </CardContent>
     </Card>

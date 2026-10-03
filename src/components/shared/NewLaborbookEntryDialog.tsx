@@ -162,6 +162,7 @@ function RelationSelect({
   disabled,
   legacyLabel,
   options,
+  showLabel = true,
 }: {
   label: string;
   value: string;
@@ -169,10 +170,12 @@ function RelationSelect({
   disabled?: boolean;
   legacyLabel?: string;
   options: SelectItemOption[];
+  // false, wenn die Beschriftung bereits vom umgebenden Feld gezeigt wird.
+  showLabel?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <FieldLabel>{label}</FieldLabel>
+      {showLabel && <FieldLabel>{label}</FieldLabel>}
       <Select value={value} onValueChange={onValueChange} disabled={disabled}>
         <SelectTrigger className="h-9 w-full">
           <SelectValue />
@@ -415,7 +418,7 @@ function LaborbookEntryForm({ entry, onOpenChange, onSubmit }: LaborbookEntryFor
                 type="button"
                 onClick={() => update("typ", option)}
                 className={cn(
-                  "rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
+                  "rounded-full border px-3.5 py-1.5 text-sm font-medium outline-none transition-[background-color,border-color,color,transform] duration-200 ease-(--ease-out-soft) focus-visible:ring-3 focus-visible:ring-ring/50 motion-safe:active:scale-[0.97]",
                   form.typ === option
                     ? "border-primary bg-primary text-primary-foreground"
                     : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
@@ -460,6 +463,7 @@ function LaborbookEntryForm({ entry, onOpenChange, onSubmit }: LaborbookEntryFor
             <FieldLabel>Probe</FieldLabel>
             <RelationSelect
               label="Probe"
+              showLabel={false}
               value={form.probeId}
               onValueChange={(value) => update("probeId", value)}
               disabled={relationsLoading || Boolean(relationsError)}
@@ -498,6 +502,7 @@ function LaborbookEntryForm({ entry, onOpenChange, onSubmit }: LaborbookEntryFor
             ) : (
               <RelationSelect
                 label="Projekt/Baustelle"
+                showLabel={false}
                 value={form.projectId}
                 onValueChange={(value) => update("projectId", value)}
                 disabled={relationsLoading || Boolean(relationsError)}
@@ -516,6 +521,7 @@ function LaborbookEntryForm({ entry, onOpenChange, onSubmit }: LaborbookEntryFor
             ) : (
               <RelationSelect
                 label="Kunde"
+                showLabel={false}
                 value={form.customerId}
                 onValueChange={(value) => update("customerId", value)}
                 disabled={relationsLoading || Boolean(relationsError)}

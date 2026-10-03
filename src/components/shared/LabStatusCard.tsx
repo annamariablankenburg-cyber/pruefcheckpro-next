@@ -28,7 +28,7 @@ export function LabStatusCard({
   week,
 }: LabStatusCardProps) {
   return (
-    <Card className="h-full">
+    <Card variant="elevated" className="h-full">
       <CardHeader>
         <div className="flex items-center gap-3">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-success/10 text-success">

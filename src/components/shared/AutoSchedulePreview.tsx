@@ -11,7 +11,7 @@ const autoSchedule = [
 
 export function AutoSchedulePreview() {
   return (
-    <Card>
+    <Card variant="flat">
       <CardHeader>
         <div className="flex items-center gap-3">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">

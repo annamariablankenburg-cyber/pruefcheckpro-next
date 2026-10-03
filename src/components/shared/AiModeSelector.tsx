@@ -16,7 +16,7 @@ export function AiModeSelector({ mode, onModeChange }: AiModeSelectorProps) {
           onClick={() => onModeChange(option)}
           aria-pressed={mode === option}
           className={cn(
-            "shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors",
+            "shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium whitespace-nowrap outline-none transition-[background-color,border-color,color,transform] duration-200 ease-(--ease-out-soft) focus-visible:ring-3 focus-visible:ring-ring/50 motion-safe:active:scale-[0.97]",
             mode === option
               ? "border-primary bg-primary text-primary-foreground"
               : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"

@@ -172,7 +172,7 @@ export function ProjectsView() {
     <div className="flex flex-col gap-6 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+          <h1 className="page-title">
             Projekte
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -193,10 +193,10 @@ export function ProjectsView() {
         <div className="flex flex-col gap-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {Array.from({ length: 5 }).map((_, index) => (
-              <Card key={index} className="h-[104px] animate-pulse bg-muted/40" />
+              <Card key={index} className="skeleton h-[104px]" />
             ))}
           </div>
-          <Card className="h-72 animate-pulse bg-muted/40" />
+          <Card className="skeleton skeleton-rows h-72" />
         </div>
       ) : error ? (
         <Card>

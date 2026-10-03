@@ -33,7 +33,7 @@ export function CompanyLocationsList({
         {locations.map((location) => (
           <div
             key={location.id}
-            className="-mx-3 flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-muted/60"
+            className="group/row -mx-3 flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors duration-200 hover:bg-muted/60"
           >
             <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <Building2 className="size-5" />
@@ -48,7 +48,7 @@ export function CompanyLocationsList({
               <span className="text-xs text-muted-foreground">
                 {location.employeeCount} Mitarbeiter
               </span>
-              <ChevronRight className="size-4 text-muted-foreground" />
+              <ChevronRight className="size-4 text-muted-foreground transition-transform duration-200 ease-(--ease-out-soft) motion-safe:group-hover/row:translate-x-0.5" />
             </div>
           </div>
         ))}
@@ -56,10 +56,10 @@ export function CompanyLocationsList({
         <button
           type="button"
           onClick={onViewAll}
-          className="mt-1 flex w-fit items-center gap-1 text-sm font-medium text-primary hover:underline"
+          className="group/all mt-1 flex w-fit items-center gap-1 rounded-sm text-sm font-medium text-primary outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           Alle Standorte anzeigen
-          <ChevronRight className="size-3.5" />
+          <ChevronRight className="size-3.5 transition-transform duration-200 ease-(--ease-out-soft) motion-safe:group-hover/all:translate-x-0.5" />
         </button>
       </CardContent>
     </Card>

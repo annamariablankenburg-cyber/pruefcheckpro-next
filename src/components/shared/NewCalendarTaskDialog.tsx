@@ -112,7 +112,7 @@ function SegmentedControl<T extends string>({
           disabled={disabled}
           onClick={() => onChange(option)}
           className={cn(
-            "rounded-full border px-3.5 py-1.5 text-sm font-medium capitalize transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+            "rounded-full border px-3.5 py-1.5 text-sm font-medium capitalize outline-none transition-[background-color,border-color,color,transform] duration-200 ease-(--ease-out-soft) focus-visible:ring-3 focus-visible:ring-ring/50 motion-safe:active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60",
             value === option
               ? "border-primary bg-primary text-primary-foreground"
               : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"

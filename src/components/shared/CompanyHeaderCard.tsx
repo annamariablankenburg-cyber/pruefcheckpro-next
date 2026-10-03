@@ -24,7 +24,7 @@ function StatBlock({
         <Icon className="size-3.5" />
         {label}
       </div>
-      <p className="text-lg font-semibold text-foreground">{value}</p>
+      <p className="num text-2xl font-semibold text-foreground">{value}</p>
     </div>
   );
 }
@@ -33,11 +33,13 @@ export function CompanyHeaderCard({ profile }: CompanyHeaderCardProps) {
   const storagePercentage = Math.round((profile.storageUsedGb / profile.storageTotalGb) * 100);
 
   return (
-    <Card>
+    <Card variant="elevated" className="relative">
+      <div aria-hidden="true" className="ruler-x pointer-events-none absolute inset-x-0 bottom-0 h-2 opacity-60" />
       <CardContent className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-4">
-          <div className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground sm:size-20">
-            <FlaskConical className="size-8" />
+          <div className="relative flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-primary text-primary-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.2),0_8px_18px_-6px_rgb(37_99_235/0.5)] sm:size-20">
+            <span aria-hidden="true" className="tech-grid-fine pointer-events-none absolute inset-0 opacity-40 [--grid-line:rgb(255_255_255/0.35)]" />
+            <FlaskConical className="relative size-8" />
           </div>
           <div className="flex flex-col gap-1.5">
             <h2 className="text-xl font-semibold text-foreground sm:text-2xl">{profile.name}</h2>

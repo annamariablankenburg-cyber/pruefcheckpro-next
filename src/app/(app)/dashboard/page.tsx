@@ -148,7 +148,7 @@ function CalendarPlaceholder({
   onRetry: () => void;
 }) {
   if (state === "loading") {
-    return <Card className={cn("animate-pulse bg-muted/40", heightClass)} />;
+    return <Card className={cn("skeleton skeleton-rows", heightClass)} />;
   }
   return (
     <Card className={heightClass}>
@@ -228,7 +228,7 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-6 p-4 sm:p-6 lg:p-8">
       <FadeIn>
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+          <h1 className="page-title">
             Willkommen zurück, {firstName}! 👋
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -238,7 +238,7 @@ export default function DashboardPage() {
       </FadeIn>
 
       <FadeIn delay={0.05}>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-[1.45fr_1fr_1fr_1fr]">
           <DashboardStatCard
             icon={AlertTriangle}
             label="Überfällige Aufgaben"
@@ -246,6 +246,8 @@ export default function DashboardPage() {
             meta="Jetzt erledigen"
             tone="danger"
             actionHref="#ueberfaellig"
+            featured
+            className="col-span-2 lg:col-span-1"
           />
           <DashboardStatCard
             icon={FlaskConical}
@@ -267,6 +269,7 @@ export default function DashboardPage() {
             value={activeProjectsCount}
             meta="aktiv"
             tone="success"
+            className="col-span-2 lg:col-span-1"
           />
         </div>
       </FadeIn>
@@ -306,31 +309,18 @@ export default function DashboardPage() {
         </FadeIn>
       </div>
 
+      {/* Kalender und Wochenübersicht stehen nebeneinander: Termine links, die
+          Wochenlast (Balken) direkt daneben. */}
       <div className="grid gap-6 lg:grid-cols-5">
         <FadeIn delay={0.2} className="lg:col-span-3">
-          <SampleStatusCard samples={currentSamples} footerHref="/probekoerper" />
-        </FadeIn>
-
-        <FadeIn delay={0.25} className="lg:col-span-2">
           {calendar ? (
             <CalendarPreviewCard days={calendar.calendarDays} footerHref="/kalender" />
           ) : (
             <CalendarPlaceholder state={placeholderState} heightClass="h-96" onRetry={refreshCalendarEvents} />
           )}
         </FadeIn>
-      </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <FadeIn delay={0.3} className="lg:col-span-2">
-          <AiAssistantCard
-            userName={firstName}
-            categories={aiCategories}
-            recentConversations={aiRecentConversations}
-            ctaHref="/ai"
-          />
-        </FadeIn>
-
-        <FadeIn delay={0.35}>
+        <FadeIn delay={0.25} className="lg:col-span-2">
           {calendar ? (
             <LabStatusCard
               capacity={labCapacity}
@@ -345,10 +335,25 @@ export default function DashboardPage() {
         </FadeIn>
       </div>
 
+      <div className="grid gap-6 lg:grid-cols-5">
+        <FadeIn delay={0.3} className="lg:col-span-3">
+          <SampleStatusCard samples={currentSamples} footerHref="/probekoerper" />
+        </FadeIn>
+
+        <FadeIn delay={0.35} className="lg:col-span-2">
+          <AiAssistantCard
+            userName={firstName}
+            categories={aiCategories}
+            recentConversations={aiRecentConversations}
+            ctaHref="/ai"
+          />
+        </FadeIn>
+      </div>
+
       <FadeIn delay={0.4}>
         <div className="flex flex-col gap-4">
-          <h2 className="text-lg font-semibold tracking-tight text-foreground">Schnellaktionen</h2>
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+          <h2 className="section-title">Schnellaktionen</h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {quickActions.map((action) => (
               <QuickActionCard key={action.label} {...action} />
             ))}

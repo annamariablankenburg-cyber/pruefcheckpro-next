@@ -7,6 +7,8 @@ export interface PricingPlan {
   ctaLabel: string;
   href: string;
   highlighted?: boolean;
+  // Rein visuelle Zuordnung (Icon/Farbwelt der Karte).
+  tier?: "starter" | "pro" | "enterprise";
 }
 
 export const pricingPlans: PricingPlan[] = [
@@ -17,6 +19,7 @@ export const pricingPlans: PricingPlan[] = [
     features: ["Lernkarten", "Quiz", "Rechner", "Normenübersicht", "PDF-Lernmaterial"],
     ctaLabel: "Kostenlos starten",
     href: "/login",
+    tier: "starter",
   },
   {
     name: "Professional",
@@ -35,6 +38,7 @@ export const pricingPlans: PricingPlan[] = [
     ctaLabel: "Professional wählen",
     href: "/login",
     highlighted: true,
+    tier: "pro",
   },
   {
     name: "Enterprise",
@@ -52,5 +56,6 @@ export const pricingPlans: PricingPlan[] = [
     ],
     ctaLabel: "Vertrieb kontaktieren",
     href: "/kontakt",
+    tier: "enterprise",
   },
 ];

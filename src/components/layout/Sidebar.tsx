@@ -14,19 +14,24 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-sidebar md:flex">
-      <div className="flex h-16 items-center border-b border-border px-6">
-        <Link href="/dashboard">
+    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-border bg-sidebar md:flex">
+      <div className="relative flex h-16 items-center border-b border-border px-5">
+        <Link
+          href="/dashboard"
+          className="rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
           <Logo />
         </Link>
+        <div aria-hidden="true" className="ruler-x pointer-events-none absolute inset-x-0 bottom-0 h-2.5 opacity-70" />
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-4 py-6">
+      <nav aria-label="Hauptnavigation" className="flex-1 overflow-y-auto px-3 py-5">
         <div className="flex flex-col gap-6">
           {navGroups.map((group) => (
-            <div key={group.label} className="flex flex-col gap-1">
-              <p className="px-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+            <div key={group.label} className="flex flex-col gap-0.5">
+              <p className="label-caps mb-1 flex items-center gap-2 px-3">
                 {group.label}
+                <span aria-hidden="true" className="h-px flex-1 bg-border" />
               </p>
               {group.items.map((item) => {
                 const isActive = pathname === item.href;
@@ -35,14 +40,30 @@ export function Sidebar() {
                   <Link
                     key={item.href}
                     href={item.href}
+                    aria-current={isActive ? "page" : undefined}
                     className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                      "group/nav relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm outline-none transition-[background-color,color,transform] duration-200 ease-(--ease-out-soft) focus-visible:ring-3 focus-visible:ring-ring/50",
                       isActive
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        ? "bg-primary/[0.09] font-semibold text-primary"
+                        : "font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
                     )}
                   >
-                    <Icon className="size-4 shrink-0" />
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        "absolute top-1.5 bottom-1.5 left-0 w-[3px] rounded-r-full bg-primary transition-[opacity,transform] duration-200 ease-(--ease-out-soft)",
+                        isActive ? "scale-y-100 opacity-100" : "scale-y-50 opacity-0"
+                      )}
+                    />
+                    <Icon
+                      className={cn(
+                        "size-4 shrink-0 transition-[transform,color] duration-200 ease-(--ease-out-soft)",
+                        isActive
+                          ? "text-primary"
+                          : "text-muted-foreground group-hover/nav:text-foreground motion-safe:group-hover/nav:translate-x-0.5"
+                      )}
+                      strokeWidth={isActive ? 2.25 : 2}
+                    />
                     {item.label}
                   </Link>
                 );
@@ -52,16 +73,17 @@ export function Sidebar() {
         </div>
       </nav>
 
-      <div className="border-t border-border p-4">
-        <div className="flex flex-col gap-2 rounded-xl bg-muted/50 p-4">
-          <div className="flex items-center justify-between">
+      <div className="border-t border-border p-3">
+        <div className="surface-flat relative flex flex-col gap-2 overflow-hidden rounded-xl p-4">
+          <div aria-hidden="true" className="tech-grid-fine pointer-events-none absolute inset-0 opacity-60" />
+          <div className="relative flex items-center justify-between">
             <span className="text-sm font-semibold text-foreground">Azubi-Plan</span>
             <Badge variant="secondary">Aktiv</Badge>
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="relative text-xs text-muted-foreground">
             Schalte Prüfverfahren, Probekörperverwaltung und mehr frei.
           </p>
-          <Button size="sm" variant="outline" className="mt-1 w-full" asChild>
+          <Button size="sm" variant="outline" className="relative mt-1 w-full" asChild>
             <Link href="/preise">
               Upgrade ansehen
               <ArrowRight className="size-3.5" />

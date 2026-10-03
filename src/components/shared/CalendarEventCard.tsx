@@ -17,7 +17,7 @@ export function CalendarEventCard({ event, onClick }: CalendarEventCardProps) {
       type="button"
       onClick={() => onClick?.(event)}
       className={cn(
-        "flex w-full flex-col gap-0.5 rounded-lg border px-2.5 py-2 text-left transition-colors",
+        "group/event flex w-full flex-col gap-0.5 rounded-lg border px-2.5 py-2 text-left outline-none transition-[transform,box-shadow,border-color] duration-200 ease-(--ease-out-soft) hover:shadow-(--elev-2) focus-visible:ring-3 focus-visible:ring-ring/50 motion-safe:hover:-translate-y-px",
         fieldCardStyles[event.field],
         event.status === "überfällig" && "ring-1 ring-destructive/40"
       )}

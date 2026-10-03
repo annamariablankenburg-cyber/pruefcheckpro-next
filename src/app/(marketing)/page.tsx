@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import {
   ArrowRight,
   Box,
@@ -31,6 +30,7 @@ import { CtaSection } from "@/components/shared/CtaSection";
 import { SectionHeading } from "@/components/shared/SectionHeading";
 import { FeatureCard } from "@/components/shared/FeatureCard";
 import { DisciplineCard } from "@/components/shared/DisciplineCard";
+import { HeroPreview } from "@/components/shared/HeroPreview";
 import { PricingCard } from "@/components/shared/PricingCard";
 import { pricingPlans } from "@/config/pricing";
 
@@ -122,71 +122,71 @@ export default function Home() {
   return (
     <>
       {/* Hero */}
-      <section className="relative overflow-hidden bg-[#0f172a]">
-        <div className="absolute inset-y-0 right-0 hidden w-[58%] lg:block">
-          <Image
-            src="/images/betonpruefung-hero.png"
-            alt="Betonprüfung im digitalen Labor mit PrüfCheckPro"
-            fill
-            sizes="60vw"
-            preload
-            className="object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0f172a] via-[#0f172a]/50 to-transparent" />
-        </div>
+      <section className="relative isolate overflow-hidden bg-[#0b1220]">
+        {/* Technischer Hintergrund: Raster, Lichtfleck und Messskala am Rand */}
+        <div
+          aria-hidden="true"
+          className="tech-grid tech-fade pointer-events-none absolute inset-0 -z-10 [--grid-line:rgb(148_163_184/0.09)]"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-40 right-0 -z-10 size-[42rem] rounded-full bg-primary/20 blur-3xl"
+        />
+        <div
+          aria-hidden="true"
+          className="ruler-x pointer-events-none absolute inset-x-0 bottom-0 h-3 [color:rgb(148_163_184/0.3)]"
+        />
 
-        <div className="relative mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
-          <div className="flex max-w-2xl flex-col items-start gap-6 text-left lg:max-w-xl">
-            <span className="text-sm font-semibold tracking-wide text-primary uppercase">
+        <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10 lg:px-8">
+          <div className="flex max-w-2xl flex-col items-start gap-6 text-left">
+            <span className="inline-flex items-center gap-2.5 text-xs font-semibold tracking-[0.16em] text-blue-300 uppercase">
+              <span aria-hidden="true" className="flex items-end gap-[3px]">
+                <span className="h-2 w-px bg-current opacity-50" />
+                <span className="h-3 w-px bg-current" />
+                <span className="h-2 w-px bg-current opacity-50" />
+              </span>
               Die All-in-One Plattform
             </span>
 
-            <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
+            <h1 className="text-4xl font-semibold tracking-[-0.035em] text-balance text-white sm:text-5xl lg:text-6xl">
               Digitales Labor.
               <br />
-              Echte <span className="text-primary">Ergebnisse.</span>
+              Echte <span className="text-blue-400">Ergebnisse.</span>
             </h1>
 
-            <p className="max-w-xl text-lg text-slate-300 sm:text-xl">
+            <p className="max-w-xl text-lg text-pretty text-slate-300 sm:text-xl">
               PrüfCheckPro unterstützt Baustoffprüfer, Labore und Unternehmen bei der
               Verwaltung, Prüfung und Analyse von Proben – effizient, sicher und digital.
             </p>
 
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Button size="lg" asChild>
-                <Link href="/login">Kostenlos starten</Link>
+              <Button size="lg" className="h-10 px-4 text-sm" asChild>
+                <Link href="/login">
+                  Kostenlos starten
+                  <ArrowRight className="size-4" />
+                </Link>
               </Button>
               <Button
                 size="lg"
                 variant="outline"
-                className="border-white/20 bg-transparent text-white hover:bg-white/10"
+                className="h-10 border-white/20 bg-transparent px-4 text-sm text-white shadow-none hover:border-white/35 hover:bg-white/10 hover:text-white"
                 asChild
               >
                 <a href="#ai">Live Demo ansehen</a>
               </Button>
             </div>
 
-            <div className="mt-2 w-full overflow-hidden rounded-3xl lg:hidden">
-              <div className="relative h-56 w-full sm:h-72">
-                <Image
-                  src="/images/betonpruefung-hero.png"
-                  alt="Betonprüfung im digitalen Labor mit PrüfCheckPro"
-                  fill
-                  sizes="100vw"
-                  className="object-cover"
-                />
-              </div>
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center gap-x-8 gap-y-4">
+            <ul className="mt-4 flex flex-wrap items-center gap-x-8 gap-y-3 border-t border-white/10 pt-6">
               {heroFeatures.map(({ icon: Icon, label }) => (
-                <div key={label} className="flex items-center gap-2 text-sm text-slate-300">
-                  <Icon className="size-4 text-primary" />
+                <li key={label} className="flex items-center gap-2 text-sm text-slate-300">
+                  <Icon className="size-4 text-blue-400" />
                   {label}
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
+
+          <HeroPreview />
         </div>
       </section>
 
@@ -213,7 +213,11 @@ export default function Home() {
       </section>
 
       {/* Funktionskarten */}
-      <section id="funktionen" className="border-t border-border bg-muted/30">
+      <section id="funktionen" className="relative isolate border-t border-border bg-muted/30">
+        <div
+          aria-hidden="true"
+          className="tech-grid tech-fade pointer-events-none absolute inset-0 -z-10 opacity-60"
+        />
         <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
           <SectionHeading
             eyebrow="Funktionen"
@@ -222,8 +226,8 @@ export default function Home() {
           />
 
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {features.map((feature) => (
-              <FeatureCard key={feature.title} {...feature} />
+            {features.map((feature, index) => (
+              <FeatureCard key={feature.title} index={String(index + 1).padStart(2, "0")} {...feature} />
             ))}
           </div>
 
@@ -277,7 +281,7 @@ export default function Home() {
               </Button>
             </div>
 
-            <Card className="bg-gradient-to-br from-primary/5 to-transparent">
+            <Card variant="highlight">
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <div className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">

@@ -27,7 +27,11 @@ export function DisciplineCard({
   href,
 }: DisciplineCardProps) {
   return (
-    <Card className="group flex h-full flex-col gap-0 rounded-3xl border border-border py-0 shadow-xl shadow-foreground/10 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-foreground/15">
+    <Card
+      interactive
+      variant="elevated"
+      className="group flex h-full flex-col gap-0 rounded-3xl py-0 shadow-xl shadow-foreground/10 duration-300 motion-safe:hover:-translate-y-1.5"
+    >
       <div className="relative px-4 pt-4">
         <div className="relative h-56 w-full overflow-hidden rounded-3xl sm:h-64 lg:h-96">
           <Image

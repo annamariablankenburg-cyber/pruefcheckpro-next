@@ -138,5 +138,279 @@
   }
   html {
     @apply font-sans;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Tabellen: aktivere Zeilen, ohne Layout-Sprung (Linie per inset-Schatten). */
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+  thead th {
+    letter-spacing: 0.06em;
+  }
+  tbody tr {
+    transition: background-color var(--dur-fast) var(--ease-out-soft);
+  }
+  tbody tr > td:first-child {
+    box-shadow: inset 3px 0 0 transparent;
+    transition: box-shadow var(--dur-base) var(--ease-out-soft);
+  }
+  tbody tr:focus-within > td:first-child,
+  tbody tr:has([aria-expanded="true"]) > td:first-child {
+    box-shadow: inset 3px 0 0 var(--primary);
+  }
+  tbody tr:has([aria-expanded="true"]) {
+    background-color: color-mix(in oklab, var(--primary) 6%, transparent);
+  }
+  @media (hover: hover) {
+    tbody tr:hover > td:first-child {
+      box-shadow: inset 3px 0 0 var(--primary);
+    }
+  }
+
+  ::selection {
+    background-color: color-mix(in oklab, var(--primary) 22%, transparent);
+  }
+}
+
+/* ==========================================================================
+   PrüfCheckPro Design-System (Ebenen, Bewegung, technische Details)
+   --------------------------------------------------------------------------
+   Prinzipien:
+   - Vier Oberflächen-Ebenen statt "alles ist eine Card": flat, raised,
+     elevated, highlight (siehe .surface-* und <Card variant>).
+   - Eine Bewegungssprache: 150–250 ms, weiches Ease-out, keine Layout-Sprünge.
+     Hover-Effekte sind nur Zugabe (nie Voraussetzung), Reduced Motion schaltet
+     Bewegung ab.
+   - Technische Identität: feines Raster, Messskala, tabellarische Ziffern.
+   ========================================================================== */
+
+:root {
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 150ms;
+  --dur-base: 200ms;
+  --dur-slow: 250ms;
+
+  /* Elevation: leicht blau getönte Schatten (Slate), nie schwarz */
+  --elev-1: 0 1px 2px rgb(15 23 42 / 0.05), 0 0 0 0 transparent;
+  --elev-2: 0 1px 2px rgb(15 23 42 / 0.05), 0 6px 16px -6px rgb(15 23 42 / 0.1);
+  --elev-3: 0 2px 4px rgb(15 23 42 / 0.05), 0 16px 32px -12px rgb(37 99 235 / 0.25);
+
+  --grid-line: rgb(15 23 42 / 0.05);
+  --grid-line-strong: rgb(15 23 42 / 0.09);
+  --streak: color-mix(in oklab, var(--primary) 11%, transparent);
+}
+
+.dark {
+  --elev-1: 0 1px 2px rgb(0 0 0 / 0.35), 0 0 0 0 transparent;
+  --elev-2: 0 1px 2px rgb(0 0 0 / 0.35), 0 8px 20px -8px rgb(0 0 0 / 0.5);
+  --elev-3: 0 2px 4px rgb(0 0 0 / 0.35), 0 18px 36px -14px rgb(59 130 246 / 0.35);
+
+  --grid-line: rgb(148 163 184 / 0.07);
+  --grid-line-strong: rgb(148 163 184 / 0.13);
+  --streak: rgb(255 255 255 / 0.07);
+}
+
+/* Akzentfarbe als Text auf dunklem Grund: das Standard-Blau (#2563eb) hat dort
+   zu wenig Kontrast (< 4,5:1). Hellere Variante nur für Text-Verwendung;
+   Flächen (bg-primary) bleiben unverändert. */
+@layer utilities {
+  .dark .text-primary {
+    color: #7aa7ff;
+  }
+}
+
+@layer components {
+  /* ---- Typografie ------------------------------------------------------ */
+  .page-title {
+    font-size: clamp(1.625rem, 1.35rem + 0.9vw, 2.125rem);
+    font-weight: 650;
+    line-height: 1.12;
+    letter-spacing: -0.028em;
+    color: var(--foreground);
+    text-wrap: balance;
+  }
+  .display-title {
+    font-size: clamp(2.25rem, 1.6rem + 2.2vw, 3.5rem);
+    font-weight: 650;
+    line-height: 1.06;
+    letter-spacing: -0.035em;
+    color: var(--foreground);
+    text-wrap: balance;
+  }
+  .section-title {
+    font-size: 1.0625rem;
+    font-weight: 620;
+    letter-spacing: -0.015em;
+    color: var(--foreground);
+  }
+  /* Ruhige Beschriftung (Labels, Spaltenköpfe, Eyebrows). */
+  .label-caps {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+  /* Messwerte/KPI: tabellarische Ziffern, enge Laufweite. */
+  .num {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+  }
+
+  /* ---- Oberflächen-Ebenen --------------------------------------------- */
+  .surface-flat {
+    background-color: color-mix(in oklab, var(--muted) 55%, transparent);
+    border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  }
+  .surface-raised {
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    box-shadow: var(--elev-1);
+  }
+  .surface-elevated {
+    background-color: var(--card);
+    border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+    box-shadow: var(--elev-2);
+  }
+  .surface-highlight {
+    background-image: linear-gradient(
+      140deg,
+      color-mix(in oklab, var(--primary) 10%, var(--card)) 0%,
+      var(--card) 62%
+    );
+    border: 1px solid color-mix(in oklab, var(--primary) 28%, var(--border));
+    box-shadow: var(--elev-2);
+  }
+
+  /* ---- Technische Details ---------------------------------------------- */
+  .tech-grid {
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .tech-grid-fine {
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 16px 16px;
+  }
+  /* Raster blendet zu den Rändern aus. */
+  .tech-fade {
+    -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 35%, transparent 100%);
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 35%, transparent 100%);
+  }
+  /* Messskala: kleine Teilstriche alle 8px, große alle 40px. */
+  .ruler-x {
+    color: var(--grid-line-strong);
+    background-image:
+      linear-gradient(90deg, currentColor 1px, transparent 1px),
+      linear-gradient(90deg, currentColor 1px, transparent 1px);
+    background-size: 8px 5px, 40px 10px;
+    background-repeat: repeat-x;
+    background-position: left bottom;
+  }
+
+  /* ---- Swosh: feiner diagonaler Lichtstreifen beim Hover ----------------
+     Elternelement braucht overflow-hidden (Card hat es bereits). */
+  .swoosh {
+    position: relative;
+    isolation: isolate;
+  }
+  .swoosh::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0;
+    background-image: linear-gradient(
+      112deg,
+      transparent 36%,
+      var(--streak) 50%,
+      transparent 64%
+    );
+    transform: translateX(-120%);
+  }
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .swoosh:hover::after,
+    .swoosh:focus-within::after {
+      opacity: 1;
+      transform: translateX(120%);
+      transition:
+        transform 800ms var(--ease-out-soft),
+        opacity var(--dur-base) ease-out;
+    }
+  }
+
+  /* ---- Skeletons mit Struktur ------------------------------------------ */
+  .skeleton {
+    --sk: color-mix(in oklab, var(--foreground) 7%, transparent);
+    position: relative;
+    overflow: hidden;
+    background-image:
+      linear-gradient(var(--sk), var(--sk)),
+      linear-gradient(var(--sk), var(--sk)),
+      linear-gradient(var(--sk), var(--sk));
+    background-size: 38% 10px, 62% 8px, 24% 8px;
+    background-position: 20px 20px, 20px 42px, 20px 62px;
+    background-repeat: no-repeat;
+  }
+  /* Tabellen-/Listen-Variante: Kopfzeile + wiederholte Zeilen. */
+  .skeleton-rows {
+    background-image:
+      linear-gradient(var(--sk), var(--sk)),
+      repeating-linear-gradient(
+        180deg,
+        transparent 0 22px,
+        var(--sk) 22px 24px,
+        transparent 24px 56px
+      );
+    background-size: 100% 36px, calc(100% - 40px) calc(100% - 52px);
+    background-position: 0 0, 20px 52px;
+    background-repeat: no-repeat;
+  }
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(100deg, transparent 30%, var(--streak) 50%, transparent 70%);
+    transform: translateX(-100%);
+    animation: skeleton-shimmer 1.6s var(--ease-out-soft) infinite;
+  }
+}
+
+@keyframes skeleton-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Reduced Motion: keine Übergänge/Animationen, keine Streifen. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .skeleton::after,
+  .swoosh::after {
+    display: none;
   }
 }

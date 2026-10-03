@@ -31,8 +31,8 @@ export function Topbar() {
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-md sm:px-6">
-      <Link href="/dashboard" className="md:hidden">
-        <Logo />
+      <Link href="/dashboard" className="rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50 md:hidden">
+        <Logo showTagline={false} />
       </Link>
 
       <div className="hidden md:block" />

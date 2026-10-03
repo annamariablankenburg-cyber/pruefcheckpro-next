@@ -57,7 +57,7 @@ export function Flashcard({ card, flipped, onFlip, onToggleFavorite }: Flashcard
           </div>
 
           <div className="flex flex-1 items-center justify-center text-center">
-            <h3 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+            <h3 className="page-title">
               {card.term}
             </h3>
           </div>

@@ -27,7 +27,7 @@ function DrawerOverlay({
     <DialogPrimitive.Overlay
       data-slot="drawer-overlay"
       className={cn(
-        "fixed inset-0 isolate z-50 bg-black/20 duration-200 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 isolate z-50 bg-slate-950/30 duration-200 supports-backdrop-filter:backdrop-blur-[3px] data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className
       )}
       {...props}
@@ -49,7 +49,7 @@ function DrawerContent({
       <DialogPrimitive.Content
         data-slot="drawer-content"
         className={cn(
-          "fixed inset-y-0 right-0 z-50 flex h-full w-full flex-col gap-0 bg-popover text-popover-foreground shadow-2xl ring-1 ring-foreground/10 duration-300 outline-none sm:max-w-md data-open:animate-in data-open:slide-in-from-right data-closed:animate-out data-closed:slide-out-to-right",
+          "fixed inset-y-0 right-0 z-50 flex h-full w-full flex-col gap-0 bg-popover text-popover-foreground shadow-2xl shadow-slate-950/25 ring-1 ring-foreground/10 duration-250 ease-(--ease-out-soft) outline-none sm:max-w-md data-open:animate-in data-open:slide-in-from-right data-closed:animate-out data-closed:slide-out-to-right",
           className
         )}
         {...props}
@@ -72,7 +72,7 @@ function DrawerHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="drawer-header"
-      className={cn("flex flex-col gap-1 border-b border-border px-6 py-5", className)}
+      className={cn("flex flex-col gap-1.5 border-b border-border bg-muted/30 px-6 py-5 pr-14", className)}
       {...props}
     />
   )
@@ -95,7 +95,7 @@ function DrawerTitle({
   return (
     <DialogPrimitive.Title
       data-slot="drawer-title"
-      className={cn("font-heading text-lg font-semibold text-foreground", className)}
+      className={cn("relative pl-3 font-heading text-lg leading-tight font-semibold tracking-[-0.015em] text-foreground before:absolute before:inset-y-[0.2em] before:left-0 before:w-[3px] before:rounded-full before:bg-primary", className)}
       {...props}
     />
   )

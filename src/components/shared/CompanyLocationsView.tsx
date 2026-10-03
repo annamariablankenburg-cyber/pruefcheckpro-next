@@ -135,10 +135,10 @@ export function CompanyLocationsView({ locationsData, onNewLocation }: CompanyLo
         <div className="flex flex-col gap-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {Array.from({ length: 5 }).map((_, index) => (
-              <Card key={index} className="h-[104px] animate-pulse bg-muted/40" />
+              <Card key={index} className="skeleton h-[104px]" />
             ))}
           </div>
-          <Card className="h-72 animate-pulse bg-muted/40" />
+          <Card className="skeleton skeleton-rows h-72" />
         </div>
       ) : error ? (
         <Card>

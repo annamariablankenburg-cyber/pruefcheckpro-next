@@ -91,10 +91,10 @@ export function TaskListCard({
 
         <Link
           href={footerHref}
-          className="mt-2 inline-flex w-fit items-center gap-1 text-sm font-medium text-primary hover:underline"
+          className="group/link mt-2 inline-flex w-fit items-center gap-1 text-sm font-medium text-primary hover:underline"
         >
           {footerLabel}
-          <ArrowRight className="size-3.5" />
+          <ArrowRight className="size-3.5 transition-transform duration-200 ease-(--ease-out-soft) motion-safe:group-hover/link:translate-x-0.5" />
         </Link>
       </CardContent>
     </Card>

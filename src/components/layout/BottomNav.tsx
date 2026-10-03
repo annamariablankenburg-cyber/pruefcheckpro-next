@@ -14,7 +14,7 @@ export function BottomNav() {
 
   return (
     <>
-      <nav className="fixed inset-x-0 bottom-0 z-30 flex items-stretch justify-around border-t border-border bg-background/95 backdrop-blur-md md:hidden">
+      <nav aria-label="Hauptnavigation" className="fixed inset-x-0 bottom-0 z-30 flex items-stretch justify-around border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
         {primaryMobileNavItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
@@ -22,12 +22,20 @@ export function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
+              aria-current={isActive ? "page" : undefined}
               className={cn(
-                "flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium",
-                isActive ? "text-primary" : "text-muted-foreground"
+                "relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium outline-none transition-colors duration-200 focus-visible:bg-muted",
+                isActive ? "text-primary" : "text-muted-foreground active:text-foreground"
               )}
             >
-              <Icon className="size-5" />
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "absolute inset-x-5 top-0 h-[3px] rounded-b-full bg-primary transition-[opacity,transform] duration-200 ease-(--ease-out-soft)",
+                  isActive ? "scale-x-100 opacity-100" : "scale-x-50 opacity-0"
+                )}
+              />
+              <Icon className="size-5" strokeWidth={isActive ? 2.4 : 2} />
               {item.label}
             </Link>
           );
@@ -36,7 +44,7 @@ export function BottomNav() {
           type="button"
           onClick={() => setShowMore(true)}
           aria-label="Weitere Bereiche anzeigen"
-          className="flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium text-muted-foreground"
+          className="flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium text-muted-foreground outline-none transition-colors duration-200 focus-visible:bg-muted active:text-foreground"
         >
           <MoreHorizontal className="size-5" />
           Mehr
@@ -51,7 +59,7 @@ export function BottomNav() {
               type="button"
               onClick={() => setShowMore(false)}
               aria-label="Menü schließen"
-              className="flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted"
+              className="flex size-9 items-center justify-center rounded-lg text-muted-foreground outline-none transition-colors duration-200 hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
             >
               <X className="size-5" />
             </button>
@@ -65,7 +73,7 @@ export function BottomNav() {
                     key={item.href}
                     href={item.href}
                     onClick={() => setShowMore(false)}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground outline-none transition-colors duration-200 hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
                   >
                     <Icon className="size-4" />
                     {item.label}

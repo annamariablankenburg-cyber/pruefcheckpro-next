@@ -30,7 +30,7 @@ export function AiAssistantCard({
   ctaHref,
 }: AiAssistantCardProps) {
   return (
-    <Card className="h-full bg-gradient-to-br from-primary/5 to-transparent">
+    <Card variant="highlight" className="h-full">
       <CardHeader>
         <div className="flex items-center gap-3">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
@@ -47,12 +47,12 @@ export function AiAssistantCard({
 
         <Link
           href={ctaHref}
-          className="group flex items-center gap-3 rounded-2xl bg-muted/60 px-5 py-4 transition-colors hover:bg-muted"
+          className="group flex items-center gap-3 rounded-2xl bg-muted/60 px-5 py-4 outline-none transition-[background-color,box-shadow] duration-200 ease-(--ease-out-soft) hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <span className="flex-1 text-base text-muted-foreground transition-colors group-hover:text-foreground">
             Frag die KI …
           </span>
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform group-hover:scale-105">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform duration-200 ease-(--ease-out-soft) motion-safe:group-hover:translate-x-0.5 motion-safe:group-hover:scale-105">
             <Send className="size-4.5" />
           </span>
         </Link>
@@ -62,7 +62,7 @@ export function AiAssistantCard({
             <Link
               key={category.label}
               href={category.href}
-              className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-background/60 px-2 py-3 text-center transition-colors hover:border-primary/40 hover:bg-primary/5"
+              className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-background/60 px-2 py-3 text-center outline-none transition-[transform,background-color,border-color] duration-200 ease-(--ease-out-soft) hover:border-primary/40 hover:bg-primary/5 focus-visible:ring-3 focus-visible:ring-ring/50 motion-safe:hover:-translate-y-0.5"
             >
               <category.icon className="size-4 text-primary" />
               <span className="text-xs font-medium text-foreground">{category.label}</span>

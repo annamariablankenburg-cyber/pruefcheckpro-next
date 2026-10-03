@@ -38,7 +38,7 @@ export default function QuizPage() {
   return (
     <div className="flex flex-col gap-6 p-4 sm:p-6 lg:p-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+        <h1 className="page-title">
           Quiz
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">

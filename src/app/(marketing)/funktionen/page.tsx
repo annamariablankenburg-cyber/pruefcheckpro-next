@@ -121,7 +121,7 @@ export default function FunktionenPage() {
     <>
       <section className="border-b border-border">
         <div className="mx-auto max-w-6xl px-4 py-16 text-center sm:px-6 sm:py-20 lg:px-8">
-          <h1 className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
+          <h1 className="display-title">
             Funktionen
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">

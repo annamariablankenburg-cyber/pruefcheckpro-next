@@ -191,7 +191,7 @@ function LocationForm({
                 type="button"
                 onClick={() => update("type", option)}
                 className={cn(
-                  "rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
+                  "rounded-full border px-3.5 py-1.5 text-sm font-medium outline-none transition-[background-color,border-color,color,transform] duration-200 ease-(--ease-out-soft) focus-visible:ring-3 focus-visible:ring-ring/50 motion-safe:active:scale-[0.97]",
                   form.type === option
                     ? "border-primary bg-primary text-primary-foreground"
                     : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"

@@ -122,7 +122,7 @@ export default function KalenderPage() {
   return (
     <div className="flex flex-col gap-6 p-4 sm:p-6 lg:p-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+        <h1 className="page-title">
           Smart-Kalender
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -142,8 +142,8 @@ export default function KalenderPage() {
 
       {isPreparing ? (
         <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
-          <Card className="h-96 animate-pulse bg-muted/40" />
-          <Card className="h-96 animate-pulse bg-muted/40" />
+          <Card className="skeleton skeleton-rows h-96" />
+          <Card className="skeleton skeleton-rows h-96" />
         </div>
       ) : error ? (
         <Card>

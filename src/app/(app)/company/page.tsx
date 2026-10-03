@@ -100,7 +100,7 @@ export default function CompanyPage() {
   }
 
   const locationsPlaceholder = locationsLoading ? (
-    <Card className="h-64 animate-pulse bg-muted/40" />
+    <Card className="skeleton skeleton-rows h-64" />
   ) : (
     <Card>
       <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
@@ -139,7 +139,7 @@ export default function CompanyPage() {
   return (
     <div className="flex flex-col gap-6 p-4 sm:p-6 lg:p-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+        <h1 className="page-title">
           Unternehmen
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
