@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { employeeRoles, locationNames } from "@/config/employees";
+import type { CompanyLocationDetail } from "@/types/location";
 import type { EmployeeRole } from "@/types/employee";
 
 const expiryOptions = ["3 Tage", "7 Tage", "14 Tage", "30 Tage"];
@@ -32,6 +33,13 @@ interface InviteEmployeeDialogProps {
   onOpenChange: (open: boolean) => void;
   title?: string;
   description?: string;
+  // Echte (aktive) Standorte aus der Standortverwaltung. Ohne Angabe (z. B. im
+  // Einladungs-Bereich, der erst in einem eigenen Slice folgt) gilt die
+  // statische Namensliste.
+  locations?: CompanyLocationDetail[];
+  // Wird beim Klick auf "Einladung senden" aufgerufen. Der Dialog versendet
+  // und speichert nichts – der Aufrufer kann darüber einen Hinweis zeigen.
+  onPlaceholderSubmit?: () => void;
 }
 
 function FieldLabel({ children, required }: { children: string; required?: boolean }) {
@@ -47,10 +55,20 @@ export function InviteEmployeeDialog({
   open,
   onOpenChange,
   title = "Mitarbeiter einladen",
-  description = "Lade eine neue Person zu PrüfCheckPro ein. Noch keine echte Speicherung – reine UI-Vorschau.",
+  description = "Lade eine neue Person zu PrüfCheckPro ein. Noch nicht serverseitig angebunden – es wird nichts gesendet oder gespeichert.",
+  locations,
+  onPlaceholderSubmit,
 }: InviteEmployeeDialogProps) {
   const [role, setRole] = useState<EmployeeRole>(employeeRoles[2]);
-  const [location, setLocation] = useState(locationNames[0]);
+  const locationOptions = locations
+    ? locations.map((entry) => ({ value: entry.id, label: entry.name }))
+    : locationNames.map((name) => ({ value: name, label: name }));
+  const [locationChoice, setLocationChoice] = useState<string>(locationOptions[0]?.value ?? "");
+  // Auswahl fällt auf die erste Option zurück, falls die Standortliste erst nach
+  // dem Öffnen geladen wurde oder sich geändert hat.
+  const location = locationOptions.some((option) => option.value === locationChoice)
+    ? locationChoice
+    : (locationOptions[0]?.value ?? "");
   const [expiry, setExpiry] = useState(expiryOptions[1]);
   const [activateImmediately, setActivateImmediately] = useState(false);
 
@@ -91,14 +109,14 @@ export function InviteEmployeeDialog({
 
             <div className="flex flex-col gap-1.5">
               <FieldLabel required>Standort</FieldLabel>
-              <Select value={location} onValueChange={setLocation}>
+              <Select value={location} onValueChange={setLocationChoice}>
                 <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {locationNames.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
+                  {locationOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -141,7 +159,8 @@ export function InviteEmployeeDialog({
 
           <div className="flex items-start gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-2.5 text-sm text-primary">
             <Info className="mt-0.5 size-4 shrink-0" />
-            Die Einladung wird später per E-Mail verschickt. Heute nur UI-Vorschau.
+            Die Einladung wird später serverseitig per E-Mail verschickt. Heute wird nichts gesendet und
+            kein Mitarbeiter angelegt.
           </div>
         </div>
 
@@ -149,7 +168,13 @@ export function InviteEmployeeDialog({
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Abbrechen
           </Button>
-          <Button type="button" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            onClick={() => {
+              onOpenChange(false);
+              onPlaceholderSubmit?.();
+            }}
+          >
             Einladung senden
           </Button>
         </DialogFooter>

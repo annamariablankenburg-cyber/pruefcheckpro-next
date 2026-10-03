@@ -202,7 +202,12 @@ export default function CompanyPage() {
         />
       )}
       {activeTab === "mitarbeiter" && (
-        <EmployeesView onInvite={() => setIsInviteOpen(true)} />
+        <EmployeesView
+          locations={locations}
+          locationsLoading={locationsLoading}
+          locationsError={locationsError}
+          onInvite={() => setIsInviteOpen(true)}
+        />
       )}
       {activeTab === "einladungen" && <InvitationsView />}
       {activeTab === "rollen" && <RolesView />}
@@ -212,7 +217,14 @@ export default function CompanyPage() {
         onOpenChange={setIsNewLocationOpen}
         onSubmit={handleCreateLocation}
       />
-      <InviteEmployeeDialog open={isInviteOpen} onOpenChange={setIsInviteOpen} />
+      <InviteEmployeeDialog
+        open={isInviteOpen}
+        onOpenChange={setIsInviteOpen}
+        locations={locations.filter((location) => location.status === "Aktiv")}
+        onPlaceholderSubmit={() =>
+          showFeedback("Einladungen werden später serverseitig angebunden. Es wurde nichts gesendet.")
+        }
+      />
 
       <FeedbackToast message={feedback} />
     </div>

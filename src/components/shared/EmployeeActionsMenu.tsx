@@ -77,14 +77,14 @@ export function EmployeeActionsMenu({
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onSelect={onRevokeInvitation}>
               <MailX />
-              Einladung widerrufen
+              Einladung widerrufen (später)
             </DropdownMenuItem>
           </>
         ) : (
           <>
             <DropdownMenuItem onSelect={onResetPassword}>
               <KeyRound />
-              Passwort-Reset senden
+              Passwort-Reset (später)
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             {isLocked ? (

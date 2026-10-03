@@ -1,29 +1,72 @@
 import { employeeRepository } from "@/lib/repositories/employeeRepository";
+import { firestoreEmployeeService } from "@/lib/firebase/services/firestoreEmployeeService";
+import { resolveCompanyId } from "@/lib/firebase/companyContext";
+import { isFirestoreDataSource } from "@/config/dataSource";
 import type { IEmployeeService } from "@/lib/interfaces/IEmployeeService";
+import type { Employee, EmployeeHistoryEntry } from "@/types/employee";
+
+// Facade: branch je Methode anhand von NEXT_PUBLIC_DATA_SOURCE zwischen dem
+// In-Memory-Repository (Mock) und dem Firestore-Service. Beide arbeiten nur
+// auf Mitarbeiter-Metadaten – keine Auth-Verwaltung, kein Löschen.
+async function updateMock(
+  id: string,
+  changes: Partial<Employee>,
+  historyEntry?: EmployeeHistoryEntry
+): Promise<Employee | undefined> {
+  const current = employeeRepository.getById(id);
+  if (!current) return undefined;
+  const history = historyEntry ? [...current.history, historyEntry] : undefined;
+  return employeeRepository.update(id, {
+    ...changes,
+    ...(history ? { history } : {}),
+    updatedAt: new Date().toISOString(),
+  });
+}
 
 export const employeeService: IEmployeeService = {
-  getEmployees() {
+  async getEmployees() {
+    if (isFirestoreDataSource) {
+      return firestoreEmployeeService.getEmployees(resolveCompanyId());
+    }
     return employeeRepository.getAll();
   },
-  getEmployeeById(id) {
+
+  async getEmployeeById(id) {
+    if (isFirestoreDataSource) {
+      return firestoreEmployeeService.getEmployeeById(resolveCompanyId(), id);
+    }
     return employeeRepository.getById(id);
   },
-  updateEmployee(id, changes) {
-    return employeeRepository.update(id, changes);
+
+  async updateEmployee(id, changes, historyEntry) {
+    if (isFirestoreDataSource) {
+      return firestoreEmployeeService.updateEmployee(resolveCompanyId(), id, changes, historyEntry);
+    }
+    return updateMock(id, changes, historyEntry);
   },
-  suspendEmployee(id) {
-    return employeeRepository.suspend(id);
+
+  async suspendEmployee(id, historyEntry) {
+    if (isFirestoreDataSource) {
+      return firestoreEmployeeService.suspendEmployee(resolveCompanyId(), id, historyEntry);
+    }
+    return updateMock(id, { status: "Gesperrt" }, historyEntry);
   },
-  reactivateEmployee(id) {
-    return employeeRepository.reactivate(id);
+
+  async reactivateEmployee(id, historyEntry) {
+    if (isFirestoreDataSource) {
+      return firestoreEmployeeService.reactivateEmployee(resolveCompanyId(), id, historyEntry);
+    }
+    return updateMock(id, { status: "Aktiv" }, historyEntry);
   },
-  removeEmployee(id) {
-    return employeeRepository.remove(id);
+
+  async revokeAccess(id, historyEntry) {
+    if (isFirestoreDataSource) {
+      return firestoreEmployeeService.revokeAccess(resolveCompanyId(), id, historyEntry);
+    }
+    return updateMock(id, { status: "Gesperrt" }, historyEntry);
   },
+
   getEmployeeRoles() {
     return employeeRepository.getEmployeeRoles();
-  },
-  getLocationNames() {
-    return employeeRepository.getLocationNames();
   },
 };

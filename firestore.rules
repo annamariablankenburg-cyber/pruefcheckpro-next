@@ -134,6 +134,14 @@ service cloud.firestore {
       allow read, write: if belongsToCompany(companyId);
     }
 
+    match /companies/{companyId}/employees/{employeeId} {
+      // Gleiches companyId-Muster wie die übrigen Slices: angemeldet + eigene
+      // companyId. Das Feld "role" eines Mitarbeiters steuert hier ausdrücklich
+      // KEINE Firestore-Rechte (keine Rollen-/Claims-Logik; siehe
+      // docs/firebase/employee-firestore-slice.md, "Offene Punkte").
+      allow read, write: if belongsToCompany(companyId);
+    }
+
     // Alles andere ist heute nicht Teil dieser Slices und bleibt gesperrt,
     // bis es explizit angebunden und mit eigenen Regeln versehen wird.
     match /{document=**} {

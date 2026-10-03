@@ -21,10 +21,17 @@ export interface Employee {
   email: string;
   phone?: string;
   role: EmployeeRole;
+  // Lesbarer Standortname (Snapshot/Legacy). Die stabile Beziehung ist locationId.
   location: string;
+  // Verweis auf companies/{companyId}/locations/{locationId}. Fehlt bei
+  // Altdaten; dann gilt nur der Name in `location`.
+  locationId?: string;
   status: EmployeeStatus;
   lastLogin: string;
   invitationStatus: InvitationStatus;
   joinedAt?: string;
   history: EmployeeHistoryEntry[];
+  // Optional: nur bei Firestore-Datensätzen gesetzt (ISO-String).
+  createdAt?: string;
+  updatedAt?: string;
 }

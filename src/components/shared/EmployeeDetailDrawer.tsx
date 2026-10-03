@@ -108,8 +108,8 @@ export function EmployeeDetailDrawer({
                   ))}
                 </div>
                 <p className="text-xs text-muted-foreground/70">
-                  Berechtigungen ergeben sich aus der Rolle. Noch keine echte Zugriffskontrolle –
-                  reine UI-Vorschau.
+                  Berechtigungen ergeben sich aus der Rolle. Die Rolle ist ein Verwaltungsdatum – noch
+                  keine echte Zugriffskontrolle, reine UI-Übersicht.
                 </p>
               </div>
 
@@ -120,9 +120,9 @@ export function EmployeeDetailDrawer({
                 </div>
                 {employee.history.length > 0 ? (
                   <div className="flex flex-col divide-y divide-border rounded-xl border border-border">
-                    {employee.history.map((entry) => (
+                    {employee.history.map((entry, index) => (
                       <div
-                        key={entry.message}
+                        key={`${entry.timestamp}-${index}`}
                         className="flex items-center justify-between gap-3 px-3.5 py-2.5 text-sm"
                       >
                         <span className="text-foreground">{entry.message}</span>
@@ -159,7 +159,7 @@ export function EmployeeDetailDrawer({
                     onClick={() => onRevokeInvitation(employee)}
                   >
                     <MailX className="size-4" />
-                    Einladung widerrufen
+                    Einladung widerrufen (später)
                   </Button>
                 ) : (
                   <>
@@ -169,7 +169,7 @@ export function EmployeeDetailDrawer({
                       onClick={() => onResetPassword(employee)}
                     >
                       <KeyRound className="size-4" />
-                      Passwort-Reset senden
+                      Passwort-Reset (später)
                     </Button>
                     {isLocked ? (
                       <Button type="button" variant="outline" onClick={() => onReactivate(employee)}>
