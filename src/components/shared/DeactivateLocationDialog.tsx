@@ -1,3 +1,5 @@
+import { Loader2 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,17 +13,19 @@ import type { CompanyLocationDetail } from "@/types/location";
 
 interface DeactivateLocationDialogProps {
   location: CompanyLocationDetail | null;
+  isLoading?: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
 }
 
 export function DeactivateLocationDialog({
   location,
+  isLoading = false,
   onOpenChange,
   onConfirm,
 }: DeactivateLocationDialogProps) {
   return (
-    <Dialog open={location !== null} onOpenChange={onOpenChange}>
+    <Dialog open={location !== null} onOpenChange={(next) => !isLoading && onOpenChange(next)}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Standort deaktivieren?</DialogTitle>
@@ -32,10 +36,11 @@ export function DeactivateLocationDialog({
         </DialogHeader>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
             Abbrechen
           </Button>
-          <Button type="button" variant="destructive" onClick={onConfirm}>
+          <Button type="button" variant="destructive" onClick={onConfirm} disabled={isLoading}>
+            {isLoading && <Loader2 className="size-4 animate-spin" />}
             Deaktivieren
           </Button>
         </DialogFooter>

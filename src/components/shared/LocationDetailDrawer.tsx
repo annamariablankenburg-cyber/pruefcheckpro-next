@@ -78,8 +78,8 @@ export function LocationDetailDrawer({
                 <SectionTitle>Ansprechpartner &amp; Kontakt</SectionTitle>
                 <div className="divide-y divide-border">
                   <DetailRow label="Ansprechpartner" value={location.contactPerson} />
-                  <DetailRow label="Telefon" value={location.phone} />
-                  <DetailRow label="E-Mail" value={location.email} />
+                  <DetailRow label="Telefon" value={location.phone || "—"} />
+                  <DetailRow label="E-Mail" value={location.email || "—"} />
                 </div>
               </div>
 
@@ -141,9 +141,9 @@ export function LocationDetailDrawer({
                 </div>
                 {location.history.length > 0 ? (
                   <div className="flex flex-col divide-y divide-border rounded-xl border border-border">
-                    {location.history.map((entry) => (
+                    {location.history.map((entry, index) => (
                       <div
-                        key={entry.message}
+                        key={`${entry.timestamp}-${index}`}
                         className="flex items-center justify-between gap-3 px-3.5 py-2.5 text-sm"
                       >
                         <span className="text-foreground">{entry.message}</span>

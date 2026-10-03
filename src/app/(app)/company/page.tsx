@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { CreditCard, Palette, UserCog, Users } from "lucide-react";
+import { useMemo, useState } from "react";
+import { AlertTriangle, CreditCard, Palette, UserCog, Users } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 import { CompanyActivityFeed } from "@/components/shared/CompanyActivityFeed";
 import { CompanyEmployeesList } from "@/components/shared/CompanyEmployeesList";
@@ -19,16 +22,18 @@ import { InvitationsView } from "@/components/shared/InvitationsView";
 import { InviteEmployeeDialog } from "@/components/shared/InviteEmployeeDialog";
 import { NewLocationDialog } from "@/components/shared/NewLocationDialog";
 import { RolesView } from "@/components/shared/RolesView";
+import { useLocations } from "@/hooks/useLocations";
+import { formatLocationAddress, type LocationFormValues } from "@/lib/locations/locationRules";
 import { companyRepository } from "@/lib/repositories/companyRepository";
-import type { CompanyQuickAction } from "@/types/company";
+import type { CompanyLocation, CompanyQuickAction, PrimaryLocation } from "@/types/company";
 
+// Standortdaten (Übersicht, Primärstandort, Standortzahl) kommen aus
+// useLocations() – nicht mehr aus companyRepository. Alles andere bleibt Mock.
 const companyProfile = companyRepository.getProfile();
-const companyLocations = companyRepository.getOverviewLocations();
 const companyEmployees = companyRepository.getOverviewEmployees();
 const companyActivities = companyRepository.getActivities();
 const licenseOverview = companyRepository.getLicenseOverview();
 const companyInfo = companyRepository.getInfo();
-const primaryLocation = companyRepository.getPrimaryLocation();
 
 const tabs: CompanyTab[] = [
   { value: "uebersicht", label: "Übersicht" },
@@ -52,6 +57,61 @@ export default function CompanyPage() {
   const [isNewLocationOpen, setIsNewLocationOpen] = useState(false);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const { message: feedback, showFeedback } = useFeedbackToast();
+  // Eine Instanz für Übersicht und Standorte-Tab (ein State, eine Quelle).
+  const locationsData = useLocations();
+  const { locations, loading: locationsLoading, error: locationsError, refreshLocations } = locationsData;
+
+  const locationsReady = !locationsLoading && !locationsError;
+
+  const overviewLocations = useMemo<CompanyLocation[]>(
+    () =>
+      locations
+        .filter((location) => location.status === "Aktiv")
+        .map((location) => ({
+          id: location.id,
+          name: location.name,
+          address: formatLocationAddress(location),
+          employeeCount: location.employeeCount,
+        })),
+    [locations]
+  );
+
+  // Primärstandort = aktiver Standort vom Typ "Hauptstandort" (höchstens einer,
+  // siehe locationRules). Ohne ihn zeigt die Karte einen Hinweis.
+  const primaryLocation = useMemo<PrimaryLocation | null>(() => {
+    const primary = locations.find((l) => l.type === "Hauptstandort" && l.status === "Aktiv");
+    return primary
+      ? {
+          address: formatLocationAddress(primary),
+          contactPerson: primary.contactPerson,
+          timezone: primary.timezone,
+        }
+      : null;
+  }, [locations]);
+
+  // Standortzahl im Kopf: aktive Standorte aus derselben Quelle, sobald geladen.
+  const headerProfile = locationsReady
+    ? { ...companyProfile, locationsCount: overviewLocations.length }
+    : companyProfile;
+
+  async function handleCreateLocation(values: LocationFormValues) {
+    const created = await locationsData.createLocation(values);
+    showFeedback(`Standort „${created.name}“ angelegt.`);
+  }
+
+  const locationsPlaceholder = locationsLoading ? (
+    <Card className="h-64 animate-pulse bg-muted/40" />
+  ) : (
+    <Card>
+      <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
+        <AlertTriangle className="size-6 text-destructive" />
+        <p className="text-sm text-muted-foreground">{locationsError}</p>
+        <Button type="button" variant="outline" size="sm" onClick={refreshLocations}>
+          Erneut versuchen
+        </Button>
+      </CardContent>
+    </Card>
+  );
 
   const quickActions: CompanyQuickAction[] = [
     {
@@ -87,18 +147,22 @@ export default function CompanyPage() {
         </p>
       </div>
 
-      <CompanyHeaderCard profile={companyProfile} />
+      <CompanyHeaderCard profile={headerProfile} />
 
       <CompanyTabs tabs={tabs} value={activeTab} onChange={setActiveTab} />
 
       {activeTab === "uebersicht" && (
         <div className="flex flex-col gap-6">
           <div className="grid gap-6 lg:grid-cols-3">
-            <CompanyLocationsList
-              locations={companyLocations}
-              onViewAll={() => setActiveTab("standorte")}
-              onNewLocation={() => setIsNewLocationOpen(true)}
-            />
+            {locationsReady ? (
+              <CompanyLocationsList
+                locations={overviewLocations}
+                onViewAll={() => setActiveTab("standorte")}
+                onNewLocation={() => setIsNewLocationOpen(true)}
+              />
+            ) : (
+              locationsPlaceholder
+            )}
             <CompanyEmployeesList
               employees={companyEmployees}
               onViewAll={() => setActiveTab("mitarbeiter")}
@@ -123,12 +187,19 @@ export default function CompanyPage() {
       {activeTab === "einstellungen" && (
         <div className="flex flex-col gap-6">
           <CompanyInfoCard info={companyInfo} />
-          <CompanyPrimaryLocationCard location={primaryLocation} />
+          {locationsReady ? (
+            <CompanyPrimaryLocationCard location={primaryLocation} />
+          ) : (
+            locationsPlaceholder
+          )}
         </div>
       )}
 
       {activeTab === "standorte" && (
-        <CompanyLocationsView onNewLocation={() => setIsNewLocationOpen(true)} />
+        <CompanyLocationsView
+          locationsData={locationsData}
+          onNewLocation={() => setIsNewLocationOpen(true)}
+        />
       )}
       {activeTab === "mitarbeiter" && (
         <EmployeesView onInvite={() => setIsInviteOpen(true)} />
@@ -136,7 +207,11 @@ export default function CompanyPage() {
       {activeTab === "einladungen" && <InvitationsView />}
       {activeTab === "rollen" && <RolesView />}
 
-      <NewLocationDialog open={isNewLocationOpen} onOpenChange={setIsNewLocationOpen} />
+      <NewLocationDialog
+        open={isNewLocationOpen}
+        onOpenChange={setIsNewLocationOpen}
+        onSubmit={handleCreateLocation}
+      />
       <InviteEmployeeDialog open={isInviteOpen} onOpenChange={setIsInviteOpen} />
 
       <FeedbackToast message={feedback} />

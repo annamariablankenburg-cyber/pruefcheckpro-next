@@ -24,4 +24,8 @@ export interface CompanyLocationDetail {
   projectCount: number;
   status: LocationStatus;
   history: LocationHistoryEntry[];
+  // Optional: nur bei Firestore-Datensätzen gesetzt (ISO-String). Mock-Daten
+  // führen diese Felder nicht – rein additiv.
+  createdAt?: string;
+  updatedAt?: string;
 }

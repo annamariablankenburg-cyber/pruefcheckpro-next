@@ -1,23 +1,97 @@
 import { locationRepository } from "@/lib/repositories/locationRepository";
+import { firestoreLocationService } from "@/lib/firebase/services/firestoreLocationService";
+import { resolveCompanyId } from "@/lib/firebase/companyContext";
+import { isFirestoreDataSource } from "@/config/dataSource";
+import { assertSingleActivePrimary } from "@/lib/locations/locationRules";
 import type { ILocationService } from "@/lib/interfaces/ILocationService";
+import type { CompanyLocationDetail, LocationHistoryEntry } from "@/types/location";
+
+// Facade: branch je Methode anhand von NEXT_PUBLIC_DATA_SOURCE zwischen dem
+// In-Memory-Repository (Mock) und dem Firestore-Service. Die
+// Hauptstandort-Regel gilt für beide Quellen gleich.
+function generateMockLocationId(): string {
+  return `loc-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+async function loadAll(): Promise<CompanyLocationDetail[]> {
+  if (isFirestoreDataSource) {
+    return firestoreLocationService.getLocations(resolveCompanyId());
+  }
+  return locationRepository.getAll();
+}
+
+// Prüft die Regel gegen den aktuellen Bestand der aktiven Quelle. Bei
+// Firestore ist die Prüfung nicht atomar mit dem Schreiben (siehe Doku).
+async function assertPrimaryRuleForChange(
+  id: string,
+  changes: Partial<CompanyLocationDetail>
+): Promise<CompanyLocationDetail | undefined> {
+  const all = await loadAll();
+  const current = all.find((location) => location.id === id);
+  if (!current) return undefined;
+  assertSingleActivePrimary(all, { id, type: changes.type ?? current.type, status: changes.status ?? current.status });
+  return current;
+}
+
+async function updateMock(
+  id: string,
+  changes: Partial<CompanyLocationDetail>,
+  historyEntry?: LocationHistoryEntry
+): Promise<CompanyLocationDetail | undefined> {
+  const current = locationRepository.getById(id);
+  if (!current) return undefined;
+  const history = historyEntry ? [...current.history, historyEntry] : undefined;
+  return locationRepository.update(id, {
+    ...changes,
+    ...(history ? { history } : {}),
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+async function applyUpdate(
+  id: string,
+  changes: Partial<CompanyLocationDetail>,
+  historyEntry?: LocationHistoryEntry
+): Promise<CompanyLocationDetail | undefined> {
+  const current = await assertPrimaryRuleForChange(id, changes);
+  if (!current) return undefined;
+  if (isFirestoreDataSource) {
+    return firestoreLocationService.updateLocation(resolveCompanyId(), id, changes, historyEntry);
+  }
+  return updateMock(id, changes, historyEntry);
+}
 
 export const locationService: ILocationService = {
-  getLocations() {
-    return locationRepository.getAll();
+  async getLocations() {
+    return loadAll();
   },
-  getLocationById(id) {
+
+  async getLocationById(id) {
+    if (isFirestoreDataSource) {
+      return firestoreLocationService.getLocationById(resolveCompanyId(), id);
+    }
     return locationRepository.getById(id);
   },
-  createLocation(location) {
+
+  async createLocation(input) {
+    assertSingleActivePrimary(await loadAll(), { type: input.type, status: input.status });
+    if (isFirestoreDataSource) {
+      return firestoreLocationService.createLocation(resolveCompanyId(), input);
+    }
+    const now = new Date().toISOString();
+    const location: CompanyLocationDetail = { ...input, id: generateMockLocationId(), createdAt: now, updatedAt: now };
     return locationRepository.create(location);
   },
-  updateLocation(id, changes) {
-    return locationRepository.update(id, changes);
+
+  async updateLocation(id, changes, historyEntry) {
+    return applyUpdate(id, changes, historyEntry);
   },
-  deactivateLocation(id) {
-    return locationRepository.deactivate(id);
+
+  async deactivateLocation(id, historyEntry) {
+    return applyUpdate(id, { status: "Inaktiv" }, historyEntry);
   },
-  reactivateLocation(id) {
-    return locationRepository.reactivate(id);
+
+  async reactivateLocation(id, historyEntry) {
+    return applyUpdate(id, { status: "Aktiv" }, historyEntry);
   },
 };

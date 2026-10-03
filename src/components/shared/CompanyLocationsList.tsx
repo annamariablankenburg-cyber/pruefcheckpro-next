@@ -27,6 +27,9 @@ export function CompanyLocationsList({
       </CardHeader>
 
       <CardContent className="flex flex-col gap-1">
+        {locations.length === 0 && (
+          <p className="text-sm text-muted-foreground">Noch keine aktiven Standorte angelegt.</p>
+        )}
         {locations.map((location) => (
           <div
             key={location.id}
