@@ -117,9 +117,9 @@ export function LaborbookDetailDrawer({
                 </div>
                 {entry.historie.length > 0 ? (
                   <div className="flex flex-col divide-y divide-border rounded-xl border border-border">
-                    {entry.historie.map((h) => (
+                    {entry.historie.map((h, index) => (
                       <div
-                        key={h.message}
+                        key={`${h.timestamp}-${index}`}
                         className="flex items-center justify-between gap-3 px-3.5 py-2.5 text-sm"
                       >
                         <span className="text-foreground">{h.message}</span>

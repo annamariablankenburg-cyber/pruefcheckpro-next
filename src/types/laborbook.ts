@@ -34,4 +34,8 @@ export interface LaborbookEntry {
   fotos: RecordListItem[];
   dokumente: RecordListItem[];
   historie: LaborbookHistoryEntry[];
+  // Optional: nur bei Firestore-Datensätzen gesetzt (ISO-String). Mock-Daten
+  // führen diese Felder nicht – rein additiv.
+  createdAt?: string;
+  updatedAt?: string;
 }

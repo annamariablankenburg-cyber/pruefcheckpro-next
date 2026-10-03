@@ -35,7 +35,9 @@ export function isoInputToDateDE(value: string): string {
   return `${day}.${month}.${year}`;
 }
 
-function sortableDate(ddmmyyyy: string): string {
+// Sortierbares Format "YYYY-MM-DD" für ein DD.MM.YYYY-Datum (lexikografisch
+// vergleichbar).
+export function sortableDate(ddmmyyyy: string): string {
   const [day, month, year] = ddmmyyyy.split(".");
   return `${year}-${month}-${day}`;
 }

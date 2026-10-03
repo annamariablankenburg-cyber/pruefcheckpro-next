@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { HEUTE } from "@/config/calendarEvents";
-import { isFirestoreDataSource } from "@/config/dataSource";
-import { formatDateDE, parseDateDE, sortCalendarEvents } from "@/lib/calendar/calendarDates";
+import { formatDateDE, sortCalendarEvents } from "@/lib/calendar/calendarDates";
 import { withoutIdField } from "@/lib/firebase/firestoreSanitize";
 import type { NewCalendarEventInput } from "@/lib/interfaces/ICalendarService";
 import { calendarService } from "@/lib/services/calendarService";
+import { useReferenceDate } from "@/hooks/shared/useReferenceDate";
 import type { CalendarEvent } from "@/types/calendarEvent";
 
 // Lädt Kalendertermine über calendarService (Mock oder Firestore) und hält sie
@@ -18,20 +18,8 @@ export function useCalendar() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // Bezugsdatum ("heute"). Mock-Modus: die bestehende feste Demo-Konstante, damit
-  // das Verhalten der Mockdaten erhalten bleibt. Firestore-Modus: das echte
-  // lokale Datum – bewusst erst nach dem Mount gesetzt, damit die statisch
-  // prerenderte Seite nicht mit dem Build-Datum hydratisiert wird.
-  const [referenceDate, setReferenceDate] = useState<Date | null>(() =>
-    isFirestoreDataSource ? null : parseDateDE(HEUTE)
-  );
-
-  useEffect(() => {
-    if (isFirestoreDataSource) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setReferenceDate(new Date());
-    }
-  }, []);
+  // Bezugsdatum ("heute"): Mock-Demo-Datum bzw. echtes Datum (siehe useReferenceDate).
+  const referenceDate = useReferenceDate(HEUTE);
 
   const refreshCalendarEvents = useCallback(async () => {
     setLoading(true);

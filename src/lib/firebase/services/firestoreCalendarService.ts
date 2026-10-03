@@ -2,7 +2,6 @@ import {
   addDoc,
   collection,
   deleteDoc,
-  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -14,6 +13,7 @@ import { db } from "@/lib/firebase/firebase";
 import { companyCollectionPaths } from "@/lib/firebase/collections";
 import { calendarEventConverter } from "@/lib/firebase/converters/calendarEventConverter";
 import { sanitizeForFirestore, withoutIdField } from "@/lib/firebase/firestoreSanitize";
+import { buildUpdatePayload } from "@/lib/firebase/firestoreUpdatePayload";
 import type { NewCalendarEventInput } from "@/lib/interfaces/ICalendarService";
 import type { CalendarEvent } from "@/types/calendarEvent";
 
@@ -39,19 +39,6 @@ function calendarEventsCollectionRef(companyId: string) {
 // Parameter, niemals aus einem Datenfeld.
 function rawCalendarEventDocRef(companyId: string, eventId: string) {
   return doc(db, companyCollectionPaths.calendarEvents(companyId), eventId);
-}
-
-// Update-Semantik: Ein Feld mit dem Wert `undefined` bedeutet bei einem Update
-// "Feld entfernen" (z. B. Probe-Verknüpfung lösen). sanitizeForFirestore()
-// verwirft `undefined` nur – bei updateDoc würde das den alten Wert stehen
-// lassen. Deshalb wird jedes undefined-Feld vorher auf deleteField() gesetzt;
-// sanitizeForFirestore() lässt diesen Sentinel unverändert (kein Plain Object).
-function toUpdatePayload(changes: Partial<CalendarEvent>): DocumentData {
-  const withRemovals: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(withoutIdField(changes))) {
-    withRemovals[key] = value === undefined ? deleteField() : value;
-  }
-  return sanitizeForFirestore(withRemovals);
 }
 
 export const firestoreCalendarService = {
@@ -97,7 +84,7 @@ export const firestoreCalendarService = {
   ): Promise<CalendarEvent | undefined> {
     try {
       const ref = rawCalendarEventDocRef(companyId, eventId);
-      const payload = toUpdatePayload(changes);
+      const payload = buildUpdatePayload(changes);
       // createdAt gehört dem Anlegen; ein Update darf es nicht überschreiben.
       delete payload.createdAt;
       payload.updatedAt = new Date().toISOString();

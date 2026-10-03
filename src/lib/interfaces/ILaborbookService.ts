@@ -1,12 +1,22 @@
-import type { Create, GetAll, GetById, Remove, StatusTransition, Update } from "@/lib/interfaces/base";
-import type { LaborbookEntry } from "@/types/laborbook";
+import type { LaborbookEntry, LaborbookHistoryEntry } from "@/types/laborbook";
 
+// Eingabeform für Neuanlagen: die id vergibt die jeweilige Implementierung
+// (Firestore: Dokument-ID via addDoc, Mock: generierte ID).
+export type NewLaborbookEntryInput = Omit<LaborbookEntry, "id">;
+
+// Promise-basiert (analog zu ICalendarService). Mutationen liefern das vom
+// Service bestätigte Ergebnis zurück. `historyEntry` wird im Service
+// atomar an die bestehende Historie angehängt (Firestore: Transaktion).
 export interface ILaborbookService {
-  getLaborbookEntries: GetAll<LaborbookEntry>;
-  getLaborbookEntryById: GetById<LaborbookEntry>;
-  createLaborbookEntry: Create<LaborbookEntry>;
-  updateLaborbookEntry: Update<LaborbookEntry>;
-  archiveLaborbookEntry: StatusTransition<LaborbookEntry>;
-  restoreLaborbookEntry: StatusTransition<LaborbookEntry>;
-  removeLaborbookEntry: Remove;
+  getLaborbookEntries(): Promise<LaborbookEntry[]>;
+  getLaborbookEntryById(id: string): Promise<LaborbookEntry | undefined>;
+  createLaborbookEntry(input: NewLaborbookEntryInput): Promise<LaborbookEntry>;
+  updateLaborbookEntry(
+    id: string,
+    changes: Partial<LaborbookEntry>,
+    historyEntry?: LaborbookHistoryEntry
+  ): Promise<LaborbookEntry | undefined>;
+  archiveLaborbookEntry(id: string, historyEntry: LaborbookHistoryEntry): Promise<LaborbookEntry | undefined>;
+  restoreLaborbookEntry(id: string, historyEntry: LaborbookHistoryEntry): Promise<LaborbookEntry | undefined>;
+  removeLaborbookEntry(id: string): Promise<boolean>;
 }

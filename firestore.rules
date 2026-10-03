@@ -120,6 +120,13 @@ service cloud.firestore {
       allow read, write: if belongsToCompany(companyId);
     }
 
+    match /companies/{companyId}/laborbook/{entryId} {
+      // Gleiches companyId-Muster wie die übrigen Slices: angemeldet + eigene
+      // companyId. Keine Rollen- oder Claims-Logik (siehe
+      // docs/firebase/laborbook-firestore-slice.md, "Offene Punkte").
+      allow read, write: if belongsToCompany(companyId);
+    }
+
     // Alles andere ist heute nicht Teil dieser Slices und bleibt gesperrt,
     // bis es explizit angebunden und mit eigenen Regeln versehen wird.
     match /{document=**} {

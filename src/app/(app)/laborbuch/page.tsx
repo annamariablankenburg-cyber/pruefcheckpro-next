@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Archive, BookOpen, CalendarClock, CalendarDays, Plus, Timer } from "lucide-react";
+import { AlertTriangle, Archive, BookOpen, CalendarClock, CalendarDays, Plus, Timer } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { LaborbookDetailDrawer } from "@/components/shared/LaborbookDetailDrawer";
@@ -13,27 +14,30 @@ import { LaborbookTimeline } from "@/components/shared/LaborbookTimeline";
 import { LaborbookViewSwitcher, type LaborbookView } from "@/components/shared/LaborbookViewSwitcher";
 import { NewLaborbookEntryDialog } from "@/components/shared/NewLaborbookEntryDialog";
 import { StatCard } from "@/components/shared/StatCard";
-import { DIESE_WOCHE, HEUTE } from "@/config/laborbook";
 import { useLaborbook } from "@/hooks/useLaborbook";
-import type { LaborbookEntry, LaborbookStatus } from "@/types/laborbook";
+import { formatDateDE, getWeekDates } from "@/lib/calendar/calendarDates";
+import type { LaborbookFormValues } from "@/lib/laborbook/laborbookEntries";
+import type { LaborbookEntry } from "@/types/laborbook";
 
 type ConfirmActionType = "archive" | "reactivate";
 
 const confirmCopy: Record<
   ConfirmActionType,
-  { title: string; description: string; confirmLabel: string; nextStatus: LaborbookStatus }
+  { title: string; description: string; confirmLabel: string; successMessage: string; failureMessage: string }
 > = {
   archive: {
     title: "Eintrag archivieren?",
     description: "Der Eintrag wird aus der aktiven Übersicht ausgeblendet, bleibt aber erhalten.",
     confirmLabel: "Archivieren",
-    nextStatus: "Archiviert",
+    successMessage: "Eintrag archiviert.",
+    failureMessage: "Eintrag konnte nicht archiviert werden.",
   },
   reactivate: {
     title: "Eintrag reaktivieren?",
     description: "Der Eintrag wird wieder als „Aktiv“ in die aktive Übersicht aufgenommen.",
     confirmLabel: "Reaktivieren",
-    nextStatus: "Aktiv",
+    successMessage: "Eintrag reaktiviert.",
+    failureMessage: "Eintrag konnte nicht reaktiviert werden.",
   },
 };
 
@@ -41,61 +45,122 @@ export default function LaborbuchPage() {
   const {
     entries,
     filteredEntries,
+    loading,
+    error,
+    referenceDate,
+    refreshLaborbookEntries,
     search,
     setSearch,
     filter,
     setFilter,
     resetFilters,
-    updateEntry: updateEntryData,
+    createEntry,
+    updateEntry,
+    archiveEntry,
+    restoreEntry,
     removeEntry,
   } = useLaborbook();
   const [view, setView] = useState<LaborbookView>("Tabelle");
 
   const [isNewEntryOpen, setIsNewEntryOpen] = useState(false);
-  const [detailEntry, setDetailEntry] = useState<LaborbookEntry | null>(null);
-  const [editEntry, setEditEntry] = useState<LaborbookEntry | null>(null);
+  // Auswahl als ID: Drawer/Dialog zeigen immer den aktuellen Stand aus der Liste.
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
   const [deleteEntry, setDeleteEntry] = useState<LaborbookEntry | null>(null);
+  const [deletePending, setDeletePending] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{
     entry: LaborbookEntry;
     type: ConfirmActionType;
   } | null>(null);
+  const [actionPending, setActionPending] = useState(false);
   const { message: feedback, showFeedback } = useFeedbackToast();
 
-  function updateEntry(id: string, changes: Partial<LaborbookEntry>) {
-    updateEntryData(id, changes);
-    setDetailEntry((current) => (current && current.id === id ? { ...current, ...changes } : current));
-  }
+  const detailEntry = entries.find((entry) => entry.id === detailId) ?? null;
+  const editEntry = entries.find((entry) => entry.id === editId) ?? null;
+  const isBlocking = loading || Boolean(error);
 
-  const kpis = useMemo(
-    () => ({
+  // KPIs hängen am Bezugsdatum. Solange es fehlt, bleiben die Werte "—" statt
+  // falscher Zahlen.
+  const kpis = useMemo(() => {
+    const base = {
       total: entries.length,
-      heute: entries.filter((entry) => entry.datum === HEUTE).length,
-      dieseWoche: entries.filter((entry) => DIESE_WOCHE.includes(entry.datum)).length,
       offen: entries.filter((entry) => entry.status === "Aktiv").length,
       archiviert: entries.filter((entry) => entry.status === "Archiviert").length,
-    }),
-    [entries]
-  );
+    };
+    if (!referenceDate) return { ...base, heute: null, dieseWoche: null };
+    const todayDE = formatDateDE(referenceDate);
+    const weekDE = new Set(getWeekDates(referenceDate).map(formatDateDE));
+    return {
+      ...base,
+      heute: entries.filter((entry) => entry.datum === todayDE).length,
+      dieseWoche: entries.filter((entry) => weekDE.has(entry.datum)).length,
+    };
+  }, [entries, referenceDate]);
 
   function requestAction(type: ConfirmActionType) {
     return (entry: LaborbookEntry) => setConfirmAction({ entry, type });
   }
 
-  function handleConfirmAction(subject: LaborbookEntry) {
-    if (!confirmAction) return;
-    updateEntry(subject.id, { status: confirmCopy[confirmAction.type].nextStatus });
-    setConfirmAction(null);
+  async function handleConfirmAction(subject: LaborbookEntry) {
+    if (!confirmAction || actionPending) return;
+    const copy = confirmCopy[confirmAction.type];
+    setActionPending(true);
+    try {
+      const updated =
+        confirmAction.type === "archive" ? await archiveEntry(subject.id) : await restoreEntry(subject.id);
+      if (!updated) {
+        showFeedback(copy.failureMessage);
+        return;
+      }
+      setConfirmAction(null);
+      showFeedback(copy.successMessage);
+    } catch {
+      showFeedback(copy.failureMessage);
+    } finally {
+      setActionPending(false);
+    }
   }
 
-  function handleConfirmDelete(subject: LaborbookEntry) {
-    removeEntry(subject.id);
-    setDetailEntry((current) => (current && current.id === subject.id ? null : current));
-    setDeleteEntry(null);
+  async function handleConfirmDelete(subject: LaborbookEntry) {
+    if (deletePending) return;
+    setDeletePending(true);
+    try {
+      const removed = await removeEntry(subject.id);
+      if (!removed) {
+        showFeedback("Eintrag konnte nicht gelöscht werden.");
+        return;
+      }
+      // Drawer schließt sich automatisch, weil der Eintrag aus der Liste fällt.
+      setDetailId((current) => (current === subject.id ? null : current));
+      setDeleteEntry(null);
+      showFeedback("Eintrag gelöscht.");
+    } catch {
+      showFeedback("Eintrag konnte nicht gelöscht werden.");
+    } finally {
+      setDeletePending(false);
+    }
   }
 
-  function handleSaveEntry(id: string, changes: Partial<LaborbookEntry>) {
-    updateEntry(id, changes);
-    setEditEntry(null);
+  // Liefern true nur bei bestätigtem Service-Ergebnis; sonst bleibt der Dialog offen.
+  async function handleCreate(values: LaborbookFormValues): Promise<boolean> {
+    try {
+      await createEntry(values);
+      showFeedback("Eintrag angelegt.");
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function handleUpdate(id: string, values: LaborbookFormValues): Promise<boolean> {
+    try {
+      const updated = await updateEntry(id, values);
+      if (!updated) return false;
+      showFeedback("Änderungen gespeichert.");
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   return (
@@ -109,52 +174,75 @@ export default function LaborbuchPage() {
             Dokumentiere alle Laboraktivitäten, Prüfungen und Ereignisse chronologisch.
           </p>
         </div>
-        <Button onClick={() => setIsNewEntryOpen(true)} className="w-fit">
+        <Button onClick={() => setIsNewEntryOpen(true)} className="w-fit" disabled={isBlocking}>
           <Plus className="size-4" />
           Neuer Eintrag
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <StatCard icon={BookOpen} label="Einträge gesamt" value={kpis.total} />
-        <StatCard icon={CalendarDays} label="Heute" value={kpis.heute} />
-        <StatCard icon={CalendarClock} label="Diese Woche" value={kpis.dieseWoche} />
-        <StatCard icon={Timer} label="Offene Einträge" value={kpis.offen} tone="warning" />
-        <StatCard icon={Archive} label="Archiviert" value={kpis.archiviert} />
-      </div>
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <LaborbookFilters
-          search={search}
-          onSearchChange={setSearch}
-          filter={filter}
-          onFilterChange={setFilter}
-        />
-        <LaborbookViewSwitcher view={view} onViewChange={setView} />
-      </div>
-
-      {view === "Tabelle" ? (
-        <LaborbookTable
-          entries={filteredEntries}
-          onResetFilters={resetFilters}
-          onViewDetails={setDetailEntry}
-          onEdit={setEditEntry}
-          onArchive={requestAction("archive")}
-          onReactivate={requestAction("reactivate")}
-          onDelete={setDeleteEntry}
-        />
+      {loading ? (
+        <div className="flex flex-col gap-6">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <Card key={index} className="h-[104px] animate-pulse bg-muted/40" />
+            ))}
+          </div>
+          <Card className="h-72 animate-pulse bg-muted/40" />
+        </div>
+      ) : error ? (
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+            <AlertTriangle className="size-8 text-destructive" />
+            <p className="text-sm text-muted-foreground">{error}</p>
+            <Button type="button" variant="outline" size="sm" onClick={refreshLaborbookEntries}>
+              Erneut versuchen
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
-        <LaborbookTimeline
-          entries={filteredEntries}
-          onViewDetails={setDetailEntry}
-          onResetFilters={resetFilters}
-        />
+        <>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            <StatCard icon={BookOpen} label="Einträge gesamt" value={kpis.total} />
+            <StatCard icon={CalendarDays} label="Heute" value={kpis.heute ?? "—"} />
+            <StatCard icon={CalendarClock} label="Diese Woche" value={kpis.dieseWoche ?? "—"} />
+            <StatCard icon={Timer} label="Offene Einträge" value={kpis.offen} tone="warning" />
+            <StatCard icon={Archive} label="Archiviert" value={kpis.archiviert} />
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <LaborbookFilters
+              search={search}
+              onSearchChange={setSearch}
+              filter={filter}
+              onFilterChange={setFilter}
+            />
+            <LaborbookViewSwitcher view={view} onViewChange={setView} />
+          </div>
+
+          {view === "Tabelle" ? (
+            <LaborbookTable
+              entries={filteredEntries}
+              onResetFilters={resetFilters}
+              onViewDetails={(entry) => setDetailId(entry.id)}
+              onEdit={(entry) => setEditId(entry.id)}
+              onArchive={requestAction("archive")}
+              onReactivate={requestAction("reactivate")}
+              onDelete={setDeleteEntry}
+            />
+          ) : (
+            <LaborbookTimeline
+              entries={filteredEntries}
+              onViewDetails={(entry) => setDetailId(entry.id)}
+              onResetFilters={resetFilters}
+            />
+          )}
+        </>
       )}
 
       <LaborbookDetailDrawer
         entry={detailEntry}
-        onOpenChange={(open) => !open && setDetailEntry(null)}
-        onEdit={setEditEntry}
+        onOpenChange={(open) => !open && setDetailId(null)}
+        onEdit={(entry) => setEditId(entry.id)}
         onArchive={requestAction("archive")}
         onReactivate={requestAction("reactivate")}
         onDelete={setDeleteEntry}
@@ -162,13 +250,13 @@ export default function LaborbuchPage() {
         onAddDocument={() => showFeedback("Diese Funktion wird später angebunden.")}
       />
 
-      <NewLaborbookEntryDialog open={isNewEntryOpen} onOpenChange={setIsNewEntryOpen} />
+      <NewLaborbookEntryDialog open={isNewEntryOpen} onOpenChange={setIsNewEntryOpen} onSubmit={handleCreate} />
 
       <NewLaborbookEntryDialog
         open={editEntry !== null}
-        onOpenChange={(open) => !open && setEditEntry(null)}
+        onOpenChange={(open) => !open && setEditId(null)}
         entry={editEntry}
-        onSave={handleSaveEntry}
+        onSubmit={(values) => (editEntry ? handleUpdate(editEntry.id, values) : Promise.resolve(false))}
       />
 
       <ConfirmActionDialog<LaborbookEntry>
@@ -176,6 +264,7 @@ export default function LaborbuchPage() {
         title={confirmAction ? confirmCopy[confirmAction.type].title : ""}
         description={confirmAction ? confirmCopy[confirmAction.type].description : ""}
         confirmLabel={confirmAction ? confirmCopy[confirmAction.type].confirmLabel : ""}
+        isLoading={actionPending}
         onOpenChange={(open) => !open && setConfirmAction(null)}
         onConfirm={handleConfirmAction}
       />
@@ -183,9 +272,10 @@ export default function LaborbuchPage() {
       <ConfirmActionDialog<LaborbookEntry>
         subject={deleteEntry}
         title="Eintrag wirklich löschen?"
-        description="Diese Aktion kann später im Audit-Log dokumentiert werden. Der Eintrag wird dauerhaft entfernt."
+        description="Der Eintrag wird dauerhaft entfernt. Verknüpfte Probe, Projekt, Kunde und Gerät bleiben unverändert."
         confirmLabel="Löschen"
         confirmVariant="destructive"
+        isLoading={deletePending}
         onOpenChange={(open) => !open && setDeleteEntry(null)}
         onConfirm={handleConfirmDelete}
       />
