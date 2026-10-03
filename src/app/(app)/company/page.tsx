@@ -22,6 +22,7 @@ import { InvitationsView } from "@/components/shared/InvitationsView";
 import { InviteEmployeeDialog } from "@/components/shared/InviteEmployeeDialog";
 import { NewLocationDialog } from "@/components/shared/NewLocationDialog";
 import { RolesView } from "@/components/shared/RolesView";
+import { useInvitations } from "@/hooks/useInvitations";
 import { useLocations } from "@/hooks/useLocations";
 import { formatLocationAddress, type LocationFormValues } from "@/lib/locations/locationRules";
 import { companyRepository } from "@/lib/repositories/companyRepository";
@@ -60,6 +61,8 @@ export default function CompanyPage() {
   // Eine Instanz für Übersicht und Standorte-Tab (ein State, eine Quelle).
   const locationsData = useLocations();
   const { locations, loading: locationsLoading, error: locationsError, refreshLocations } = locationsData;
+  // Eine Einladungs-Instanz für Einladungen-Tab, Mitarbeiter-Tab und Dialog.
+  const invitationsData = useInvitations();
 
   const locationsReady = !locationsLoading && !locationsError;
 
@@ -209,7 +212,9 @@ export default function CompanyPage() {
           onInvite={() => setIsInviteOpen(true)}
         />
       )}
-      {activeTab === "einladungen" && <InvitationsView />}
+      {activeTab === "einladungen" && (
+        <InvitationsView invitationsData={invitationsData} onInvite={() => setIsInviteOpen(true)} />
+      )}
       {activeTab === "rollen" && <RolesView />}
 
       <NewLocationDialog
@@ -221,8 +226,11 @@ export default function CompanyPage() {
         open={isInviteOpen}
         onOpenChange={setIsInviteOpen}
         locations={locations.filter((location) => location.status === "Aktiv")}
-        onPlaceholderSubmit={() =>
-          showFeedback("Einladungen werden später serverseitig angebunden. Es wurde nichts gesendet.")
+        locationsLoading={locationsLoading}
+        locationsError={locationsError}
+        onCreate={invitationsData.createInvitation}
+        onCreated={() =>
+          showFeedback("Einladung gespeichert. Der E-Mail-Versand wird später serverseitig angebunden.")
         }
       />
 

@@ -1,4 +1,4 @@
-import { Ban, BellRing, Copy, Eye, MoreHorizontal, Send, Trash2 } from "lucide-react";
+import { Ban, BellRing, Eye, MoreHorizontal, Send } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -8,30 +8,28 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { Invitation } from "@/types/invitation";
+import type { InvitationRow } from "@/types/invitation";
 
 interface InvitationActionsMenuProps {
-  invitation: Invitation;
+  invitation: InvitationRow;
   onViewDetails: () => void;
-  onCopyLink: () => void;
   onSendReminder: () => void;
   onResend: () => void;
   onRevoke: () => void;
-  onDelete: () => void;
 }
 
+// Widerrufen ist echt (Firestore-Metadatum). Erinnerung und erneut senden
+// brauchen E-Mail-Versand und sind noch nicht angebunden ("später").
+// Es gibt weder Einladungslink noch Löschen.
 export function InvitationActionsMenu({
   invitation,
   onViewDetails,
-  onCopyLink,
   onSendReminder,
   onResend,
   onRevoke,
-  onDelete,
 }: InvitationActionsMenuProps) {
-  const canRemind = invitation.status === "Offen";
-  const canResend = invitation.status !== "Angenommen";
-  const canRevoke = invitation.status === "Offen";
+  const isPending = invitation.displayStatus === "Ausstehend";
+  const canResend = invitation.displayStatus !== "Angenommen";
 
   return (
     <DropdownMenu>
@@ -50,37 +48,27 @@ export function InvitationActionsMenu({
           <Eye />
           Details öffnen
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onCopyLink}>
-          <Copy />
-          Link kopieren
-        </DropdownMenuItem>
 
-        {(canRemind || canResend || canRevoke) && <DropdownMenuSeparator />}
+        {(isPending || canResend) && <DropdownMenuSeparator />}
 
-        {canRemind && (
+        {isPending && (
           <DropdownMenuItem onSelect={onSendReminder}>
             <BellRing />
-            Erinnerung senden
+            Erinnerung (später)
           </DropdownMenuItem>
         )}
         {canResend && (
           <DropdownMenuItem onSelect={onResend}>
             <Send />
-            Erneut senden
+            Erneut senden (später)
           </DropdownMenuItem>
         )}
-        {canRevoke && (
+        {isPending && (
           <DropdownMenuItem variant="destructive" onSelect={onRevoke}>
             <Ban />
             Widerrufen
           </DropdownMenuItem>
         )}
-
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onSelect={onDelete}>
-          <Trash2 />
-          Löschen
-        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

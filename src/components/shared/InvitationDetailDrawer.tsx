@@ -1,4 +1,4 @@
-import { Ban, BellRing, Copy, History, Send, Trash2 } from "lucide-react";
+import { Ban, BellRing, History, Info, Send } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -8,20 +8,22 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { Input } from "@/components/ui/input";
 import { EmployeeAvatar } from "@/components/shared/EmployeeAvatar";
 import { EmployeeRoleBadge } from "@/components/shared/EmployeeRoleBadge";
 import { InvitationStatusBadge } from "@/components/shared/InvitationStatusBadge";
-import type { Invitation } from "@/types/invitation";
+import {
+  buildInvitationTimeline,
+  formatIsoDateDE,
+  initialsOf,
+} from "@/lib/invitations/invitationRules";
+import type { InvitationRow } from "@/types/invitation";
 
 interface InvitationDetailDrawerProps {
-  invitation: Invitation | null;
+  invitation: InvitationRow | null;
   onOpenChange: (open: boolean) => void;
-  onCopyLink: (invitation: Invitation) => void;
-  onSendReminder: (invitation: Invitation) => void;
-  onResend: (invitation: Invitation) => void;
-  onRevoke: (invitation: Invitation) => void;
-  onDelete: (invitation: Invitation) => void;
+  onSendReminder: (invitation: InvitationRow) => void;
+  onResend: (invitation: InvitationRow) => void;
+  onRevoke: (invitation: InvitationRow) => void;
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {
@@ -44,15 +46,13 @@ function SectionTitle({ children }: { children: string }) {
 export function InvitationDetailDrawer({
   invitation,
   onOpenChange,
-  onCopyLink,
   onSendReminder,
   onResend,
   onRevoke,
-  onDelete,
 }: InvitationDetailDrawerProps) {
-  const canRemind = invitation?.status === "Offen";
-  const canResend = invitation?.status !== "Angenommen";
-  const canRevoke = invitation?.status === "Offen";
+  const isPending = invitation?.displayStatus === "Ausstehend";
+  const canResend = invitation !== null && invitation.displayStatus !== "Angenommen";
+  const timeline = invitation ? buildInvitationTimeline(invitation) : [];
 
   return (
     <Drawer open={invitation !== null} onOpenChange={onOpenChange}>
@@ -61,7 +61,7 @@ export function InvitationDetailDrawer({
           <>
             <DrawerHeader>
               <div className="flex items-center gap-3">
-                <EmployeeAvatar initials={invitation.initials} size="lg" />
+                <EmployeeAvatar initials={initialsOf(invitation.name)} size="lg" />
                 <div>
                   <DrawerTitle>{invitation.name}</DrawerTitle>
                   <p className="text-sm text-muted-foreground">{invitation.email}</p>
@@ -69,7 +69,7 @@ export function InvitationDetailDrawer({
               </div>
               <div className="flex items-center gap-2">
                 <EmployeeRoleBadge role={invitation.role} />
-                <InvitationStatusBadge status={invitation.status} />
+                <InvitationStatusBadge status={invitation.displayStatus} />
               </div>
             </DrawerHeader>
 
@@ -81,46 +81,53 @@ export function InvitationDetailDrawer({
                   <DetailRow label="E-Mail" value={invitation.email} />
                   <DetailRow label="Rolle" value={invitation.role} />
                   <DetailRow label="Standort" value={invitation.location} />
-                  <DetailRow label="Status" value={invitation.status} />
+                  <DetailRow label="Status" value={invitation.displayStatus} />
                 </div>
               </div>
 
               <div className="flex flex-col gap-1">
                 <SectionTitle>Einladungsdetails</SectionTitle>
                 <div className="divide-y divide-border">
-                  <DetailRow label="Eingeladen von" value={invitation.invitedBy} />
-                  <DetailRow label="Erstellt am" value={invitation.createdAt} />
-                  <DetailRow label="Ablaufdatum" value={invitation.expiresAt} />
-                  <DetailRow label="Letzte Erinnerung" value={invitation.lastReminder ?? "—"} />
+                  <DetailRow label="Erstellt am" value={formatIsoDateDE(invitation.createdAt)} />
+                  <DetailRow label="Läuft ab am" value={formatIsoDateDE(invitation.expiresAt)} />
+                  {invitation.acceptedAt && (
+                    <DetailRow label="Angenommen am" value={formatIsoDateDE(invitation.acceptedAt)} />
+                  )}
+                  {invitation.revokedAt && (
+                    <DetailRow label="Widerrufen am" value={formatIsoDateDE(invitation.revokedAt)} />
+                  )}
+                  <DetailRow
+                    label="Direkt aktivieren nach Annahme"
+                    value={invitation.activateImmediately ? "Ja" : "Nein"}
+                  />
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2">
-                <SectionTitle>Einladungslink</SectionTitle>
-                <div className="flex items-center gap-2">
-                  <Input readOnly value={invitation.link} className="h-9 flex-1 text-xs" />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon-sm"
-                    onClick={() => onCopyLink(invitation)}
-                    aria-label="Link kopieren"
-                  >
-                    <Copy className="size-4" />
-                  </Button>
+              {invitation.message && (
+                <div className="flex flex-col gap-2">
+                  <SectionTitle>Nachricht</SectionTitle>
+                  <p className="rounded-xl border border-border p-3.5 text-sm text-foreground">
+                    {invitation.message}
+                  </p>
                 </div>
+              )}
+
+              <div className="flex items-start gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-2.5 text-sm text-primary">
+                <Info className="mt-0.5 size-4 shrink-0" />
+                Die Einladung ist ein gespeicherter Datensatz. E-Mail-Versand, Einladungslink und Annahme
+                werden später serverseitig angebunden.
               </div>
 
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
                   <History className="size-4 text-muted-foreground" />
-                  <SectionTitle>Verlauf / Historie</SectionTitle>
+                  <SectionTitle>Verlauf</SectionTitle>
                 </div>
-                {invitation.history.length > 0 ? (
+                {timeline.length > 0 ? (
                   <div className="flex flex-col divide-y divide-border rounded-xl border border-border">
-                    {invitation.history.map((entry) => (
+                    {timeline.map((entry, index) => (
                       <div
-                        key={entry.message}
+                        key={`${entry.timestamp}-${index}`}
                         className="flex items-center justify-between gap-3 px-3.5 py-2.5 text-sm"
                       >
                         <span className="text-foreground">{entry.message}</span>
@@ -132,7 +139,7 @@ export function InvitationDetailDrawer({
                   </div>
                 ) : (
                   <div className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
-                    Noch keine Historie vorhanden.
+                    Noch kein Verlauf vorhanden.
                   </div>
                 )}
               </div>
@@ -140,34 +147,35 @@ export function InvitationDetailDrawer({
 
             <div className="flex flex-col gap-2 border-t border-border px-6 py-4">
               <div className="grid grid-cols-2 gap-2">
-                {canRemind && (
+                {isPending && (
                   <Button type="button" variant="outline" onClick={() => onSendReminder(invitation)}>
                     <BellRing className="size-4" />
-                    Erinnerung senden
+                    Erinnerung (später)
                   </Button>
                 )}
                 {canResend && (
                   <Button type="button" variant="outline" onClick={() => onResend(invitation)}>
                     <Send className="size-4" />
-                    Erneut senden
+                    Erneut senden (später)
                   </Button>
                 )}
-                {canRevoke && (
-                  <Button type="button" variant="outline" onClick={() => onRevoke(invitation)}>
+                {isPending && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    className="col-span-2"
+                    onClick={() => onRevoke(invitation)}
+                  >
                     <Ban className="size-4" />
-                    Widerrufen
+                    Einladung widerrufen
                   </Button>
                 )}
-                <Button
-                  type="button"
-                  variant="destructive"
-                  className="col-span-2"
-                  onClick={() => onDelete(invitation)}
-                >
-                  <Trash2 className="size-4" />
-                  Einladung löschen
-                </Button>
               </div>
+              {!isPending && (
+                <p className="text-xs text-muted-foreground">
+                  Widerrufen ist nur für ausstehende, nicht abgelaufene Einladungen möglich.
+                </p>
+              )}
             </div>
           </>
         )}

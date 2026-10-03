@@ -4,38 +4,26 @@ import { EmployeeRoleBadge } from "@/components/shared/EmployeeRoleBadge";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { InvitationActionsMenu } from "@/components/shared/InvitationActionsMenu";
 import { InvitationStatusBadge } from "@/components/shared/InvitationStatusBadge";
-import type { Invitation } from "@/types/invitation";
+import { formatIsoDateDE, initialsOf } from "@/lib/invitations/invitationRules";
+import type { InvitationRow } from "@/types/invitation";
 
 interface InvitationTableProps {
-  invitations: Invitation[];
-  onViewDetails: (invitation: Invitation) => void;
-  onCopyLink: (invitation: Invitation) => void;
-  onSendReminder: (invitation: Invitation) => void;
-  onResend: (invitation: Invitation) => void;
-  onRevoke: (invitation: Invitation) => void;
-  onDelete: (invitation: Invitation) => void;
+  invitations: InvitationRow[];
+  onViewDetails: (invitation: InvitationRow) => void;
+  onSendReminder: (invitation: InvitationRow) => void;
+  onResend: (invitation: InvitationRow) => void;
+  onRevoke: (invitation: InvitationRow) => void;
   onResetFilters?: () => void;
 }
 
-const columns = [
-  "Name / E-Mail",
-  "Rolle",
-  "Standort",
-  "Status",
-  "Eingeladen von",
-  "Erstellt am",
-  "Läuft ab am",
-  "",
-];
+const columns = ["Name / E-Mail", "Rolle", "Standort", "Status", "Erstellt am", "Läuft ab am", ""];
 
 export function InvitationTable({
   invitations,
   onViewDetails,
-  onCopyLink,
   onSendReminder,
   onResend,
   onRevoke,
-  onDelete,
   onResetFilters,
 }: InvitationTableProps) {
   if (invitations.length === 0) {
@@ -52,7 +40,7 @@ export function InvitationTable({
       {/* Desktop/Tablet: Tabelle */}
       <Card className="hidden overflow-hidden py-0 md:block">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1020px] text-sm">
+          <table className="w-full min-w-[900px] text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/40 text-left text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 {columns.map((column) => (
@@ -74,7 +62,7 @@ export function InvitationTable({
                       onClick={() => onViewDetails(invitation)}
                       className="flex items-center gap-3 text-left"
                     >
-                      <EmployeeAvatar initials={invitation.initials} />
+                      <EmployeeAvatar initials={initialsOf(invitation.name)} />
                       <span>
                         <span className="block font-medium text-foreground hover:underline">
                           {invitation.name}
@@ -92,26 +80,21 @@ export function InvitationTable({
                     {invitation.location}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <InvitationStatusBadge status={invitation.status} />
+                    <InvitationStatusBadge status={invitation.displayStatus} />
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
-                    {invitation.invitedBy}
+                    {formatIsoDateDE(invitation.createdAt)}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
-                    {invitation.createdAt}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
-                    {invitation.expiresAt}
+                    {formatIsoDateDE(invitation.expiresAt)}
                   </td>
                   <td className="px-4 py-3 text-right whitespace-nowrap">
                     <InvitationActionsMenu
                       invitation={invitation}
                       onViewDetails={() => onViewDetails(invitation)}
-                      onCopyLink={() => onCopyLink(invitation)}
                       onSendReminder={() => onSendReminder(invitation)}
                       onResend={() => onResend(invitation)}
                       onRevoke={() => onRevoke(invitation)}
-                      onDelete={() => onDelete(invitation)}
                     />
                   </td>
                 </tr>
@@ -132,7 +115,7 @@ export function InvitationTable({
                   onClick={() => onViewDetails(invitation)}
                   className="flex min-w-0 items-center gap-3 text-left"
                 >
-                  <EmployeeAvatar initials={invitation.initials} />
+                  <EmployeeAvatar initials={initialsOf(invitation.name)} />
                   <span className="min-w-0">
                     <span
                       className="block truncate font-semibold text-foreground"
@@ -149,15 +132,13 @@ export function InvitationTable({
                   </span>
                 </button>
                 <div className="flex shrink-0 items-center gap-1">
-                  <InvitationStatusBadge status={invitation.status} />
+                  <InvitationStatusBadge status={invitation.displayStatus} />
                   <InvitationActionsMenu
                     invitation={invitation}
                     onViewDetails={() => onViewDetails(invitation)}
-                    onCopyLink={() => onCopyLink(invitation)}
                     onSendReminder={() => onSendReminder(invitation)}
                     onResend={() => onResend(invitation)}
                     onRevoke={() => onRevoke(invitation)}
-                    onDelete={() => onDelete(invitation)}
                   />
                 </div>
               </div>
@@ -172,16 +153,12 @@ export function InvitationTable({
                   <p className="font-medium text-foreground">{invitation.location}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Eingeladen von</p>
-                  <p className="font-medium text-foreground">{invitation.invitedBy}</p>
-                </div>
-                <div>
                   <p className="text-muted-foreground">Erstellt am</p>
-                  <p className="font-medium text-foreground">{invitation.createdAt}</p>
+                  <p className="font-medium text-foreground">{formatIsoDateDE(invitation.createdAt)}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Läuft ab am</p>
-                  <p className="font-medium text-foreground">{invitation.expiresAt}</p>
+                  <p className="font-medium text-foreground">{formatIsoDateDE(invitation.expiresAt)}</p>
                 </div>
               </div>
             </CardContent>

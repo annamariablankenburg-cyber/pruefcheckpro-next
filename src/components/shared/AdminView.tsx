@@ -51,7 +51,9 @@ import {
 } from "@/config/admin";
 import { companyActivities, companyProfile, licenseOverview } from "@/config/company";
 import { employees } from "@/config/employees";
-import { invitations } from "@/config/invitations";
+import { INVITATION_DEMO_TODAY, invitations } from "@/config/invitations";
+import { parseDateDE } from "@/lib/calendar/calendarDates";
+import { getInvitationDisplayStatus } from "@/lib/invitations/invitationRules";
 import { companyLocationDetails } from "@/config/locations";
 import { roles } from "@/config/roles";
 import { billingInfo, invoices } from "@/config/settings";
@@ -115,7 +117,10 @@ export function AdminView() {
       lockedUsers: employeeList.filter((employee) => employee.status === "Gesperrt").length,
       locations: companyLocationDetails.length,
       roles: roles.length,
-      openInvitations: invitations.filter((invitation) => invitation.status === "Offen").length,
+      openInvitations: invitations.filter(
+        (invitation) =>
+          getInvitationDisplayStatus(invitation, parseDateDE(INVITATION_DEMO_TODAY)) === "Ausstehend"
+      ).length,
       storage: `${companyProfile.storageUsedGb} / ${companyProfile.storageTotalGb} GB`,
       auditEventsToday: auditLogEntries.filter((entry) => entry.timestamp.startsWith("11.07.2026")).length,
     }),

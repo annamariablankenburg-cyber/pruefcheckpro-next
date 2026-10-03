@@ -2,7 +2,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import type { InvitationStatus } from "@/types/invitation";
 
 const statusStyles: Record<InvitationStatus, string> = {
-  Offen: "bg-warning/10 text-warning",
+  Ausstehend: "bg-warning/10 text-warning",
   Angenommen: "bg-success/10 text-success",
   Abgelaufen: "bg-muted text-muted-foreground",
   Widerrufen: "bg-destructive/10 text-destructive",

@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 export const invitationFilterOptions = [
   "Alle",
-  "Offen",
+  "Ausstehend",
   "Angenommen",
   "Abgelaufen",
   "Widerrufen",

@@ -4,4 +4,10 @@ import { createArrayRepository } from "@/lib/repositories/base/createArrayReposi
 
 const base = createArrayRepository<Invitation>(invitations, (invitation) => invitation.id);
 
-export const invitationRepository = base;
+// Bewusst ohne remove(): Einladungen werden nie gelöscht (nur widerrufen).
+export const invitationRepository = {
+  getAll: base.getAll,
+  getById: base.getById,
+  create: base.create,
+  update: base.update,
+};

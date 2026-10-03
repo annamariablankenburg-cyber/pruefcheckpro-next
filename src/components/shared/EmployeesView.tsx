@@ -23,7 +23,6 @@ import {
 } from "@/components/shared/EmployeeSelectFieldDialog";
 import { EmployeeTable } from "@/components/shared/EmployeeTable";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
-import { InviteEmployeeDialog } from "@/components/shared/InviteEmployeeDialog";
 import { StatCard } from "@/components/shared/StatCard";
 import { useEmployees } from "@/hooks/useEmployees";
 import { CURRENT_LOCATION_VALUE } from "@/lib/employees/employeeRules";
@@ -79,7 +78,8 @@ interface EmployeesViewProps {
   locations: CompanyLocationDetail[];
   locationsLoading: boolean;
   locationsError: string | null;
-  onInvite?: () => void;
+  // Öffnet den Einladungsdialog der Company-Seite (gemeinsamer Einladungs-State).
+  onInvite: () => void;
 }
 
 export function EmployeesView({ locations, locationsLoading, locationsError, onInvite }: EmployeesViewProps) {
@@ -107,7 +107,6 @@ export function EmployeesView({ locations, locationsLoading, locationsError, onI
   const [locationId, setLocationId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ id: string; type: ConfirmActionType } | null>(null);
   const [actionPending, setActionPending] = useState(false);
-  const [isInviteOpen, setIsInviteOpen] = useState(false);
   const { message: feedback, showFeedback } = useFeedbackToast();
 
   const findEmployee = (id: string | null) => employees.find((employee) => employee.id === id) ?? null;
@@ -219,7 +218,7 @@ export function EmployeesView({ locations, locationsLoading, locationsError, onI
             Verwalte Benutzer, Rollen, Standorte und Zugriffe.
           </p>
         </div>
-        <Button type="button" onClick={() => (onInvite ? onInvite() : setIsInviteOpen(true))}>
+        <Button type="button" onClick={onInvite}>
           <Plus className="size-4" />
           Mitarbeiter einladen
         </Button>
@@ -293,17 +292,6 @@ export function EmployeesView({ locations, locationsLoading, locationsError, onI
         onRevokeAccess={requestConfirm("revokeAccess")}
         onRevokeInvitation={handleRevokeInvitation}
       />
-
-      {!onInvite && (
-        <InviteEmployeeDialog
-          open={isInviteOpen}
-          onOpenChange={setIsInviteOpen}
-          locations={activeLocations}
-          onPlaceholderSubmit={() =>
-            showFeedback("Einladungen werden später serverseitig angebunden. Es wurde nichts gesendet.")
-          }
-        />
-      )}
 
       <EmployeeConfirmDialog
         employee={confirmEmployee}
