@@ -1,4 +1,4 @@
-import { ShieldAlert } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -13,34 +13,31 @@ import type { CalendarEvent } from "@/types/calendarEvent";
 
 interface CalendarDeleteDialogProps {
   event: CalendarEvent | null;
+  isLoading?: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
 }
 
-// Heute nur UI. Keine Löschlogik – Löschungen sollen später im Audit-Log
-// nachvollziehbar dokumentiert werden.
-export function CalendarDeleteDialog({ event, onOpenChange, onConfirm }: CalendarDeleteDialogProps) {
+// Löscht den Termin über onConfirm (Service-Aufruf liegt beim Aufrufer). Kein
+// Cascade: Probe, Prüfwert und Gerät bleiben unberührt.
+export function CalendarDeleteDialog({ event, isLoading = false, onOpenChange, onConfirm }: CalendarDeleteDialogProps) {
   return (
-    <Dialog open={event !== null} onOpenChange={onOpenChange}>
+    <Dialog open={event !== null} onOpenChange={(next) => !isLoading && onOpenChange(next)}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Kalendereintrag wirklich löschen?</DialogTitle>
           <DialogDescription>
-            {event && <>„{event.title}“ wird entfernt. </>}
-            Diese Aktion kann später im Audit-Log dokumentiert werden.
+            {event && <>„{event.title}“ wird dauerhaft entfernt. </>}
+            Verknüpfte Probe, Prüfung und Gerät bleiben unverändert.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex items-start gap-2 rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-2.5 text-sm text-warning">
-          <ShieldAlert className="mt-0.5 size-4 shrink-0" />
-          Heute nur UI – es wird noch keine echte Löschlogik ausgeführt.
-        </div>
-
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
             Abbrechen
           </Button>
-          <Button type="button" variant="destructive" onClick={onConfirm}>
+          <Button type="button" variant="destructive" onClick={() => onConfirm()} disabled={isLoading}>
+            {isLoading && <Loader2 className="size-4 animate-spin" />}
             Löschen
           </Button>
         </DialogFooter>

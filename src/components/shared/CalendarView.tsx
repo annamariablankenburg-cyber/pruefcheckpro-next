@@ -11,6 +11,7 @@ interface CalendarDay {
   date: string;
   label: string;
   dayNumber: string;
+  monthName: string;
   isToday: boolean;
 }
 
@@ -84,7 +85,7 @@ export function CalendarView({ days, events, onEventClick }: CalendarViewProps) 
                   day.isToday ? "text-primary" : "text-foreground"
                 )}
               >
-                {day.label}, {day.dayNumber}. März
+                {day.label}, {day.dayNumber}. {day.monthName}
               </span>
               {day.isToday && (
                 <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">

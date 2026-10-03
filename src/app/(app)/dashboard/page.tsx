@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import {
   AlertTriangle,
   BookOpen,
@@ -21,11 +22,17 @@ import { CalendarPreviewCard, type CalendarPreviewDay } from "@/components/share
 import { AiAssistantCard, type AiAssistantCategory, type AiRecentConversation } from "@/components/shared/AiAssistantCard";
 import { QuickActionCard } from "@/components/shared/QuickActionCard";
 import { LabStatusCard, type WeekOverviewDay } from "@/components/shared/LabStatusCard";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { aiChats } from "@/config/ai";
-import { calendarEvents, HEUTE, weekDates, weekDayLabels } from "@/config/calendarEvents";
+import { weekDayLabels } from "@/config/calendarEvents";
 import { projects } from "@/config/projects";
 import { samples } from "@/config/samples";
+import { buildWeekDays, formatDateDE } from "@/lib/calendar/calendarDates";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/AuthProvider";
+import { useCalendar } from "@/hooks/useCalendar";
+import type { CalendarEvent } from "@/types/calendarEvent";
 
 function parseGermanDate(ddmmyyyy: string): Date {
   const [day, month, year] = ddmmyyyy.split(".").map(Number);
@@ -40,9 +47,9 @@ function formatDayHeading(ddmmyyyy: string): string {
   });
 }
 
-function overdueLabel(ddmmyyyy: string): string {
+function overdueLabel(ddmmyyyy: string, todayDE: string): string {
   const days = Math.round(
-    (parseGermanDate(HEUTE).getTime() - parseGermanDate(ddmmyyyy).getTime()) / (1000 * 60 * 60 * 24)
+    (parseGermanDate(todayDE).getTime() - parseGermanDate(ddmmyyyy).getTime()) / (1000 * 60 * 60 * 24)
   );
   if (days <= 0) return "Heute fällig";
   return days === 1 ? "1 Tag überfällig" : `${days} Tage überfällig`;
@@ -54,28 +61,110 @@ const activeSamples = samples.filter(
   (sample) => sample.status !== "Abgeschlossen" && sample.status !== "Archiviert"
 );
 
-const overdueEvents = calendarEvents.filter((event) => event.status === "überfällig");
+const weekHeightSteps = ["h-1", "h-2", "h-4", "h-6", "h-8", "h-10", "h-12"];
 
-const todayTestEvents = calendarEvents.filter(
-  (event) => event.sampleId && event.date === HEUTE && event.status !== "abgeschlossen"
-);
+interface CalendarDashboardData {
+  todayTasks: TaskListItem[];
+  overdueTasks: TaskListItem[];
+  calendarDays: CalendarPreviewDay[];
+  weekOverview: WeekOverviewDay[];
+  completedThisWeek: number;
+  scheduledThisWeek: number;
+}
 
-const todayTasks: TaskListItem[] = todayTestEvents.map((event) => ({
-  id: event.sampleId ?? event.id,
-  title: event.title,
-  tag: `${event.field}${event.projekt ? ` · ${event.projekt}` : ""}`,
-  meta: `${event.time} Uhr`,
-}));
+// Alle kalenderbezogenen Dashboard-Werte werden ausschließlich aus den Terminen
+// von useCalendar() abgeleitet (im Firestore-Modus also nur echte Termine). Die
+// Woche folgt dem Bezugsdatum (heute) und nicht einer festen Demo-Woche.
+function buildCalendarDashboardData(events: CalendarEvent[], referenceDate: Date): CalendarDashboardData {
+  const todayDE = formatDateDE(referenceDate);
+  const week = buildWeekDays(referenceDate, weekDayLabels);
+  const weekDateSet = new Set(week.map((day) => day.date));
+  const countOn = (date: string) => events.filter((event) => event.date === date).length;
 
-const overdueTasks: TaskListItem[] = overdueEvents.map((event) => ({
-  id: event.sampleId ?? event.id,
-  title: event.title,
-  tag: `${event.field}${event.projekt ? ` · ${event.projekt}` : ""}`,
-  meta: overdueLabel(event.date),
-}));
+  const todayTasks: TaskListItem[] = events
+    .filter((event) => event.sampleId && event.date === todayDE && event.status !== "abgeschlossen")
+    .map((event) => ({
+      id: event.sampleId ?? event.id,
+      title: event.title,
+      tag: `${event.field}${event.projekt ? ` · ${event.projekt}` : ""}`,
+      meta: `${event.time} Uhr`,
+    }));
 
-// Die vier zuletzt entnommenen, noch nicht archivierten Proben – reale
-// Datensätze aus config/samples.ts statt eigenständiger Mock-Liste.
+  const overdueTasks: TaskListItem[] = events
+    .filter((event) => event.status === "überfällig")
+    .map((event) => ({
+      id: event.sampleId ?? event.id,
+      title: event.title,
+      tag: `${event.field}${event.projekt ? ` · ${event.projekt}` : ""}`,
+      meta: overdueLabel(event.date, todayDE),
+    }));
+
+  // Wochenvorschau (Mo–Fr) aus den Terminen der aktuellen Woche.
+  const calendarDays: CalendarPreviewDay[] = week.slice(0, 5).map((day) => ({
+    heading: formatDayHeading(day.date),
+    isToday: day.isToday,
+    events: events
+      .filter((event) => event.date === day.date)
+      .map((event) => ({
+        title: event.title,
+        time: event.time,
+        tone: event.status === "überfällig" ? "warning" : event.status === "abgeschlossen" ? "success" : "primary",
+        priority: event.priority ?? "normal",
+      })),
+  }));
+
+  const weekCounts = week.map((day) => countOn(day.date));
+  const maxWeekCount = Math.max(1, ...weekCounts);
+  const weekOverview: WeekOverviewDay[] = week.map((day, index) => {
+    const count = weekCounts[index];
+    const step = Math.round((count / maxWeekCount) * (weekHeightSteps.length - 1));
+    return {
+      label: day.label,
+      count,
+      heightClass: weekHeightSteps[step],
+      isToday: day.isToday,
+    };
+  });
+
+  const completedThisWeek = events.filter(
+    (event) => event.status === "abgeschlossen" && weekDateSet.has(event.date)
+  ).length;
+
+  // Prüfungen, die diese Woche laut Kalender an einer echten Probe anstehen.
+  const scheduledThisWeek = events.filter((event) => event.sampleId && weekDateSet.has(event.date)).length;
+
+  return { todayTasks, overdueTasks, calendarDays, weekOverview, completedThisWeek, scheduledThisWeek };
+}
+
+// Platzhalter für kalenderabhängige Karten, solange Termine laden oder nicht
+// verfügbar sind. Zeigt bewusst keine leeren Listen oder Nullen.
+function CalendarPlaceholder({
+  state,
+  heightClass,
+  onRetry,
+}: {
+  state: "loading" | "error";
+  heightClass: string;
+  onRetry: () => void;
+}) {
+  if (state === "loading") {
+    return <Card className={cn("animate-pulse bg-muted/40", heightClass)} />;
+  }
+  return (
+    <Card className={heightClass}>
+      <CardContent className="flex h-full flex-col items-center justify-center gap-3 text-center">
+        <AlertTriangle className="size-6 text-destructive" />
+        <p className="text-sm text-muted-foreground">Kalenderdaten konnten nicht geladen werden.</p>
+        <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+          Erneut versuchen
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Aktive Proben: die vier zuletzt entnommenen, noch nicht archivierten Proben –
+// reale Datensätze aus config/samples.ts statt eigenständiger Mock-Liste.
 const currentSamples: SampleListItem[] = [...samples]
   .filter((sample) => sample.status !== "Archiviert")
   .sort((a, b) => parseGermanDate(b.entnahmedatum).getTime() - parseGermanDate(a.entnahmedatum).getTime())
@@ -86,40 +175,6 @@ const currentSamples: SampleListItem[] = [...samples]
     date: sample.entnahmedatum,
     status: sample.status as SampleListItem["status"],
   }));
-
-// Wochenvorschau (Mo–Fr) direkt aus den echten Kalendereinträgen abgeleitet
-// (config/calendarEvents.ts), die ihrerseits aus den Proben generiert werden.
-const calendarDays: CalendarPreviewDay[] = weekDates.slice(0, 5).map((date) => ({
-  heading: formatDayHeading(date),
-  isToday: date === HEUTE,
-  events: calendarEvents
-    .filter((event) => event.date === date)
-    .map((event) => ({
-      title: event.title,
-      time: event.time,
-      tone: event.status === "überfällig" ? "warning" : event.status === "abgeschlossen" ? "success" : "primary",
-      priority: event.priority ?? "normal",
-    })),
-}));
-
-const weekCounts = weekDates.map((date) => calendarEvents.filter((event) => event.date === date).length);
-const maxWeekCount = Math.max(1, ...weekCounts);
-const weekHeightSteps = ["h-1", "h-2", "h-4", "h-6", "h-8", "h-10", "h-12"];
-
-const weekOverview: WeekOverviewDay[] = weekDates.map((date, index) => {
-  const count = weekCounts[index];
-  const step = Math.round((count / maxWeekCount) * (weekHeightSteps.length - 1));
-  return {
-    label: weekDayLabels[index],
-    count,
-    heightClass: weekHeightSteps[step],
-    isToday: date === HEUTE,
-  };
-});
-
-const completedThisWeek = calendarEvents.filter(
-  (event) => event.status === "abgeschlossen" && weekDates.includes(event.date)
-).length;
 
 // Auslastung als Anteil der aktiven (nicht abgeschlossenen/archivierten)
 // Proben an allen erfassten Proben – ein echter, aus den Mockdaten
@@ -147,16 +202,19 @@ const quickActions = [
   { icon: CheckCircle2, label: "Statistiken", href: "/statistiken" },
 ];
 
-// Prüfungen, die diese Woche laut Kalender (config/calendarEvents.ts) an
-// einer echten Probe anstehen.
-const scheduledThisWeek = calendarEvents.filter(
-  (event) => event.sampleId && weekDates.includes(event.date)
-).length;
-
 const activeProjectsCount = projects.filter((project) => project.status === "Aktiv").length;
 
 export default function DashboardPage() {
   const { appUser } = useAuth();
+  const { events, referenceDate, loading, error, refreshCalendarEvents } = useCalendar();
+
+  // Kalenderwerte erst, wenn Termine und Bezugsdatum vorliegen. Solange (oder bei
+  // Fehler) bleibt calendar null und die Karten zeigen Platzhalter.
+  const calendar = useMemo(
+    () => (!error && !loading && referenceDate ? buildCalendarDashboardData(events, referenceDate) : null),
+    [events, referenceDate, loading, error]
+  );
+  const placeholderState: "loading" | "error" = error ? "error" : "loading";
 
   const today = new Date().toLocaleDateString("de-DE", {
     weekday: "long",
@@ -184,7 +242,7 @@ export default function DashboardPage() {
           <DashboardStatCard
             icon={AlertTriangle}
             label="Überfällige Aufgaben"
-            value={overdueTasks.length}
+            value={calendar ? calendar.overdueTasks.length : "—"}
             meta="Jetzt erledigen"
             tone="danger"
             actionHref="#ueberfaellig"
@@ -192,7 +250,7 @@ export default function DashboardPage() {
           <DashboardStatCard
             icon={FlaskConical}
             label="Geplante Prüfungen"
-            value={scheduledThisWeek}
+            value={calendar ? calendar.scheduledThisWeek : "—"}
             meta="diese Woche"
             tone="default"
           />
@@ -215,27 +273,35 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <FadeIn delay={0.1}>
-          <TaskListCard
-            icon={FlaskConical}
-            title="Heutige Prüfungen"
-            description="Deine Termine für heute"
-            tasks={todayTasks}
-            footerLabel="Alle Prüfungen ansehen"
-            footerHref="/pruefungen"
-          />
+          {calendar ? (
+            <TaskListCard
+              icon={FlaskConical}
+              title="Heutige Prüfungen"
+              description="Deine Termine für heute"
+              tasks={calendar.todayTasks}
+              footerLabel="Alle Prüfungen ansehen"
+              footerHref="/pruefungen"
+            />
+          ) : (
+            <CalendarPlaceholder state={placeholderState} heightClass="h-64" onRetry={refreshCalendarEvents} />
+          )}
         </FadeIn>
 
         <FadeIn delay={0.15}>
           <div id="ueberfaellig">
-            <TaskListCard
-              icon={AlertTriangle}
-              title="Überfällige Prüfungen"
-              description="Benötigen sofortige Aufmerksamkeit"
-              tasks={overdueTasks}
-              tone="danger"
-              footerLabel="Rückstand bearbeiten"
-              footerHref="/pruefungen"
-            />
+            {calendar ? (
+              <TaskListCard
+                icon={AlertTriangle}
+                title="Überfällige Prüfungen"
+                description="Benötigen sofortige Aufmerksamkeit"
+                tasks={calendar.overdueTasks}
+                tone="danger"
+                footerLabel="Rückstand bearbeiten"
+                footerHref="/pruefungen"
+              />
+            ) : (
+              <CalendarPlaceholder state={placeholderState} heightClass="h-64" onRetry={refreshCalendarEvents} />
+            )}
           </div>
         </FadeIn>
       </div>
@@ -246,7 +312,11 @@ export default function DashboardPage() {
         </FadeIn>
 
         <FadeIn delay={0.25} className="lg:col-span-2">
-          <CalendarPreviewCard days={calendarDays} footerHref="/kalender" />
+          {calendar ? (
+            <CalendarPreviewCard days={calendar.calendarDays} footerHref="/kalender" />
+          ) : (
+            <CalendarPlaceholder state={placeholderState} heightClass="h-96" onRetry={refreshCalendarEvents} />
+          )}
         </FadeIn>
       </div>
 
@@ -261,13 +331,17 @@ export default function DashboardPage() {
         </FadeIn>
 
         <FadeIn delay={0.35}>
-          <LabStatusCard
-            capacity={labCapacity}
-            activeSamples={activeSamples.length}
-            completedThisWeek={completedThisWeek}
-            trend={`${completedThisWeek} Prüfungen diese Woche`}
-            week={weekOverview}
-          />
+          {calendar ? (
+            <LabStatusCard
+              capacity={labCapacity}
+              activeSamples={activeSamples.length}
+              completedThisWeek={calendar.completedThisWeek}
+              trend={`${calendar.completedThisWeek} Prüfungen diese Woche`}
+              week={calendar.weekOverview}
+            />
+          ) : (
+            <CalendarPlaceholder state={placeholderState} heightClass="h-96" onRetry={refreshCalendarEvents} />
+          )}
         </FadeIn>
       </div>
 

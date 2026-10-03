@@ -27,6 +27,9 @@ interface CalendarEventDrawerProps {
   onEdit: (event: CalendarEvent) => void;
   onMove: (event: CalendarEvent) => void;
   onDuplicate: (event: CalendarEvent) => void;
+  // Gibt true zurück, wenn der Termin tatsächlich gelöscht wurde; nur dann
+  // schließt sich der Drawer.
+  onDelete: (event: CalendarEvent) => Promise<boolean>;
 }
 
 export function CalendarEventDrawer({
@@ -37,8 +40,23 @@ export function CalendarEventDrawer({
   onEdit,
   onMove,
   onDuplicate,
+  onDelete,
 }: CalendarEventDrawerProps) {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  async function handleDelete(current: CalendarEvent) {
+    setIsDeleting(true);
+    try {
+      const deleted = await onDelete(current);
+      if (deleted) {
+        setIsDeleteOpen(false);
+        onOpenChange(false);
+      }
+    } finally {
+      setIsDeleting(false);
+    }
+  }
 
   return (
     <Drawer open={event !== null} onOpenChange={onOpenChange}>
@@ -136,11 +154,9 @@ export function CalendarEventDrawer({
 
             <CalendarDeleteDialog
               event={isDeleteOpen ? event : null}
-              onOpenChange={(open) => setIsDeleteOpen(open)}
-              onConfirm={() => {
-                setIsDeleteOpen(false);
-                onOpenChange(false);
-              }}
+              isLoading={isDeleting}
+              onOpenChange={(open) => !isDeleting && setIsDeleteOpen(open)}
+              onConfirm={() => handleDelete(event)}
             />
           </>
         )}

@@ -112,6 +112,14 @@ service cloud.firestore {
       allow read, write: if belongsToCompany(companyId);
     }
 
+    match /companies/{companyId}/calendarEvents/{eventId} {
+      // Gleiches companyId-Muster wie customers/projects/devices/samples/
+      // testValues/reports: angemeldet + eigene companyId. Keine Rollen- oder
+      // Claims-Logik (siehe docs/firebase/calendar-firestore-slice.md,
+      // "Offene Punkte").
+      allow read, write: if belongsToCompany(companyId);
+    }
+
     // Alles andere ist heute nicht Teil dieser Slices und bleibt gesperrt,
     // bis es explizit angebunden und mit eigenen Regeln versehen wird.
     match /{document=**} {

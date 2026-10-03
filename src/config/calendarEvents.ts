@@ -106,9 +106,13 @@ function eventFromSample(sample: Sample): CalendarEvent | null {
     priority: priorityFromSample(sample),
     sampleId: sample.id,
     bezeichnung: sample.bezeichnung,
+    projectId: sample.projectId,
     projekt: sample.projekt,
     kunde: sample.kunde,
     pruefer: sample.pruefer,
+    // Prüfwert-Datensatz ist 1:1 über sampleId adressiert (testEntries unten,
+    // Dokument-ID = sampleId) – für jede nicht archivierte Probe vorhanden.
+    testValueId: sample.id,
     description: `${sample.pruefverfahren} für ${sample.bezeichnung} (${sample.id}).`,
   };
 }
