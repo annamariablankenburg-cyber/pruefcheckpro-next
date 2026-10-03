@@ -88,6 +88,14 @@ export const firestoreTestValueService = {
   // vorab per getDoc, ob für die Probe bereits eine Prüfung existiert, damit
   // setDoc kein bestehendes Dokument still überschreibt (gleiches Muster wie
   // firestoreSampleService.createSample).
+  //
+  // Wichtig: sampleId wird bewusst NICHT aus den gespeicherten Feldern
+  // entfernt, obwohl es zugleich die Dokument-ID ist. getTestEntriesBySampleId()
+  // fragt where("sampleId", "==", …) ab – Firestore-Queries filtern über
+  // Felddaten, nicht über die Dokument-ID, ohne das Feld würde die Query also
+  // nie etwas finden. `id` spiegelt sampleId zusätzlich (siehe
+  // ITestValueService.ts, Vorbereitung für eine spätere 1:n-Beziehung) –
+  // beide Felder tragen bewusst denselben Wert.
   async createTestEntry(companyId: string, entry: TestEntry): Promise<TestEntry> {
     const ref = rawTestEntryDocRef(companyId, entry.sampleId);
     try {
@@ -98,16 +106,14 @@ export const firestoreTestValueService = {
         );
       }
       const now = new Date().toISOString();
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars -- sampleId wird bewusst aus den Firestore-Feldern entfernt (liegt bereits als Dokument-ID vor)
-      const { sampleId, ...rest } = entry;
       const payload: DocumentData = {
-        ...rest,
+        ...entry,
         id: entry.sampleId,
         createdAt: entry.createdAt ?? now,
         updatedAt: now,
       };
       await setDoc(ref, payload);
-      return { ...(payload as Omit<TestEntry, "sampleId">), sampleId: entry.sampleId };
+      return payload as TestEntry;
     } catch (error) {
       if (error instanceof FirestoreTestValueServiceError) throw error;
       throw new FirestoreTestValueServiceError("Prüfung konnte nicht angelegt werden.", error);

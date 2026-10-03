@@ -17,9 +17,10 @@
 // Kein blindes Überschreiben: bereits vorhandene Dokumente (gleiche
 // sampleId/Dokument-ID) werden übersprungen, nicht überschrieben – siehe
 // --force, um das für einzelne Läufe bewusst zu übersteuern. sampleId bleibt
-// als Referenz zur Probe (companies/{companyId}/samples/{sampleId}) in
-// jedem geseedeten Dokument erhalten (siehe testValueConverter.ts – sampleId
-// ist der Primärschlüssel dieser Domäne, kein separates "id"-Feld als Key).
+// als echtes Feld (nicht nur als Dokument-ID) erhalten, da
+// getTestEntriesBySampleId() in firestoreTestValueService.ts danach per
+// where("sampleId", "==", …) abfragt – ohne das Feld in den Dokumentdaten
+// würde diese Query nie Treffer liefern.
 import { initializeApp } from "firebase/app";
 import { connectFirestoreEmulator, doc, getDoc, getFirestore, setDoc } from "firebase/firestore";
 
@@ -58,15 +59,14 @@ async function seed() {
       continue;
     }
 
-    const { sampleId, ...data } = entry;
     const now = new Date().toISOString();
-    await setDoc(ref, { ...data, id: sampleId, createdAt: now, updatedAt: now });
+    await setDoc(ref, { ...entry, id: entry.sampleId, createdAt: now, updatedAt: now });
     if (existing.exists()) {
       overwritten += 1;
-      console.log(`[seedTestValues] Überschrieben (--force): ${sampleId}`);
+      console.log(`[seedTestValues] Überschrieben (--force): ${entry.sampleId}`);
     } else {
       created += 1;
-      console.log(`[seedTestValues] Angelegt: ${sampleId} (${entry.titel})`);
+      console.log(`[seedTestValues] Angelegt: ${entry.sampleId} (${entry.titel})`);
     }
   }
 
