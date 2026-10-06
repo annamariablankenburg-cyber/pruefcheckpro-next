@@ -3,6 +3,9 @@
 // vollständige Datenmodell (Multi-Tenant unter companies/{companyId}).
 export const COLLECTIONS = {
   USERS: "users",
+  // Sicherheitsrelevante Zuordnung Auth-User -> Firma/Mitarbeiter/Rolle. Getrennt
+  // von users/{uid} (Login-Profil, clientseitig verwaltet).
+  USER_MEMBERSHIPS: "userMemberships",
   COMPANIES: "companies",
   LOCATIONS: "locations",
   EMPLOYEES: "employees",
@@ -53,6 +56,12 @@ export const companyCollectionPaths = {
   webhooks: (companyId: string) => companySubcollectionPath(companyId, COLLECTIONS.WEBHOOKS),
   auditLog: (companyId: string) => companySubcollectionPath(companyId, COLLECTIONS.AUDIT_LOG),
 };
+
+// userMemberships/{uid} – Membership-Dokument des Auth-Users (nur lesbar für den
+// eigenen User, kein Client-Write; siehe docs/firebase/security-foundations.md).
+export function userMembershipDocPath(uid: string): string {
+  return `${COLLECTIONS.USER_MEMBERSHIPS}/${uid}`;
+}
 
 // users/{uid}/aiChats/{chatId} – persönlich, nicht firmengebunden (siehe
 // firestore-model.md Abschnitt 4).

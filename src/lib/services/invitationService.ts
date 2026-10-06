@@ -1,7 +1,7 @@
 import { INVITATION_DEMO_TODAY } from "@/config/invitations";
 import { isFirestoreDataSource } from "@/config/dataSource";
 import { parseDateDE } from "@/lib/calendar/calendarDates";
-import { resolveCompanyId } from "@/lib/firebase/companyContext";
+import { resolveActiveCompanyId } from "@/lib/firebase/activeCompany";
 import { firestoreInvitationService } from "@/lib/firebase/services/firestoreInvitationService";
 import {
   assertInvitationAllowed,
@@ -34,14 +34,14 @@ function currentNow(): Date {
 
 async function loadAll(): Promise<Invitation[]> {
   if (isFirestoreDataSource) {
-    return firestoreInvitationService.getInvitations(resolveCompanyId());
+    return firestoreInvitationService.getInvitations(await resolveActiveCompanyId());
   }
   return invitationRepository.getAll();
 }
 
 async function loadById(id: string): Promise<Invitation | undefined> {
   if (isFirestoreDataSource) {
-    return firestoreInvitationService.getInvitationById(resolveCompanyId(), id);
+    return firestoreInvitationService.getInvitationById(await resolveActiveCompanyId(), id);
   }
   return invitationRepository.getById(id);
 }
@@ -78,7 +78,7 @@ export const invitationService: IInvitationService = {
     });
 
     if (isFirestoreDataSource) {
-      return firestoreInvitationService.createInvitation(resolveCompanyId(), input);
+      return firestoreInvitationService.createInvitation(await resolveActiveCompanyId(), input);
     }
     const now = currentNow().toISOString();
     const invitation: Invitation = {
@@ -101,7 +101,7 @@ export const invitationService: IInvitationService = {
     }
 
     if (isFirestoreDataSource) {
-      return firestoreInvitationService.revokeInvitation(resolveCompanyId(), id);
+      return firestoreInvitationService.revokeInvitation(await resolveActiveCompanyId(), id);
     }
     const now = currentNow().toISOString();
     return invitationRepository.update(id, { status: "Widerrufen", revokedAt: now, updatedAt: now });

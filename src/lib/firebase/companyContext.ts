@@ -1,14 +1,14 @@
-// Zentrale, dokumentierte Auflösung der aktiven companyId für Firestore-Pfade
-// (companies/{companyId}/...). Es gibt heute noch keinen React-Context, der
-// die eingeloggte AppUser (inkl. companyId, siehe src/types/user.ts) global
-// bereitstellt – ein solcher Context aufzubauen ist kein Teil dieses Sprints
-// (keine neue Auth-Logik, kein Umbau des Login-Flows).
+// NUR für Emulator-Seed-Skripte (scripts/seed*.ts) und die Dokumentation.
 //
-// Bis dieser Context existiert, wird eine fest dokumentierte Dev-Fallback-ID
-// verwendet. Sobald ein echter User-/Auth-Context verfügbar ist, muss NUR
-// resolveCompanyId() angepasst werden (z. B. um die companyId des
-// eingeloggten AppUser zu übergeben) – alle Aufrufer (Services) bleiben
-// unverändert.
+// Die App selbst (Service-Facades) nutzt diese Datei NICHT mehr: im
+// Firestore-Modus kommt die companyId ausschließlich aus dem Membership-
+// Dokument des eingeloggten Users (userMemberships/{uid}, siehe
+// src/lib/firebase/activeCompany.ts und docs/firebase/security-foundations.md);
+// im Mock-Modus gibt es keine Firestore-Zugriffe und damit keine companyId.
+//
+// Die Seed-Skripte laufen ohne Login gegen den lokalen Emulator und brauchen
+// eine feste Demo-Firma. Bewusst ohne Auth-/Firebase-Imports, damit sie in
+// Skripten ohne App-Initialisierung nutzbar bleibt.
 export const DEMO_COMPANY_ID = "demo-company";
 
 export function resolveCompanyId(explicitCompanyId?: string | null): string {

@@ -1,6 +1,6 @@
 import { laborbookRepository } from "@/lib/repositories/laborbookRepository";
 import { firestoreLaborbookService } from "@/lib/firebase/services/firestoreLaborbookService";
-import { resolveCompanyId } from "@/lib/firebase/companyContext";
+import { resolveActiveCompanyId } from "@/lib/firebase/activeCompany";
 import { isFirestoreDataSource } from "@/config/dataSource";
 import type { ILaborbookService } from "@/lib/interfaces/ILaborbookService";
 import type { LaborbookEntry, LaborbookHistoryEntry } from "@/types/laborbook";
@@ -29,21 +29,21 @@ async function updateMockEntry(
 export const laborbookService: ILaborbookService = {
   async getLaborbookEntries() {
     if (isFirestoreDataSource) {
-      return firestoreLaborbookService.getLaborbookEntries(resolveCompanyId());
+      return firestoreLaborbookService.getLaborbookEntries(await resolveActiveCompanyId());
     }
     return laborbookRepository.getAll();
   },
 
   async getLaborbookEntryById(id) {
     if (isFirestoreDataSource) {
-      return firestoreLaborbookService.getLaborbookEntryById(resolveCompanyId(), id);
+      return firestoreLaborbookService.getLaborbookEntryById(await resolveActiveCompanyId(), id);
     }
     return laborbookRepository.getById(id);
   },
 
   async createLaborbookEntry(input) {
     if (isFirestoreDataSource) {
-      return firestoreLaborbookService.createLaborbookEntry(resolveCompanyId(), input);
+      return firestoreLaborbookService.createLaborbookEntry(await resolveActiveCompanyId(), input);
     }
     const now = new Date().toISOString();
     const entry: LaborbookEntry = { ...input, id: generateMockLaborbookId(), createdAt: now, updatedAt: now };
@@ -52,28 +52,28 @@ export const laborbookService: ILaborbookService = {
 
   async updateLaborbookEntry(id, changes, historyEntry) {
     if (isFirestoreDataSource) {
-      return firestoreLaborbookService.updateLaborbookEntry(resolveCompanyId(), id, changes, historyEntry);
+      return firestoreLaborbookService.updateLaborbookEntry(await resolveActiveCompanyId(), id, changes, historyEntry);
     }
     return updateMockEntry(id, changes, historyEntry);
   },
 
   async archiveLaborbookEntry(id, historyEntry) {
     if (isFirestoreDataSource) {
-      return firestoreLaborbookService.archiveLaborbookEntry(resolveCompanyId(), id, historyEntry);
+      return firestoreLaborbookService.archiveLaborbookEntry(await resolveActiveCompanyId(), id, historyEntry);
     }
     return updateMockEntry(id, { status: "Archiviert" }, historyEntry);
   },
 
   async restoreLaborbookEntry(id, historyEntry) {
     if (isFirestoreDataSource) {
-      return firestoreLaborbookService.restoreLaborbookEntry(resolveCompanyId(), id, historyEntry);
+      return firestoreLaborbookService.restoreLaborbookEntry(await resolveActiveCompanyId(), id, historyEntry);
     }
     return updateMockEntry(id, { status: "Aktiv" }, historyEntry);
   },
 
   async removeLaborbookEntry(id) {
     if (isFirestoreDataSource) {
-      return firestoreLaborbookService.removeLaborbookEntry(resolveCompanyId(), id);
+      return firestoreLaborbookService.removeLaborbookEntry(await resolveActiveCompanyId(), id);
     }
     return laborbookRepository.remove(id);
   },

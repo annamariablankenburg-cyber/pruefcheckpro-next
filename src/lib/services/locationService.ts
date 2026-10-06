@@ -1,6 +1,6 @@
 import { locationRepository } from "@/lib/repositories/locationRepository";
 import { firestoreLocationService } from "@/lib/firebase/services/firestoreLocationService";
-import { resolveCompanyId } from "@/lib/firebase/companyContext";
+import { resolveActiveCompanyId } from "@/lib/firebase/activeCompany";
 import { isFirestoreDataSource } from "@/config/dataSource";
 import { assertSingleActivePrimary } from "@/lib/locations/locationRules";
 import type { ILocationService } from "@/lib/interfaces/ILocationService";
@@ -15,7 +15,7 @@ function generateMockLocationId(): string {
 
 async function loadAll(): Promise<CompanyLocationDetail[]> {
   if (isFirestoreDataSource) {
-    return firestoreLocationService.getLocations(resolveCompanyId());
+    return firestoreLocationService.getLocations(await resolveActiveCompanyId());
   }
   return locationRepository.getAll();
 }
@@ -56,7 +56,7 @@ async function applyUpdate(
   const current = await assertPrimaryRuleForChange(id, changes);
   if (!current) return undefined;
   if (isFirestoreDataSource) {
-    return firestoreLocationService.updateLocation(resolveCompanyId(), id, changes, historyEntry);
+    return firestoreLocationService.updateLocation(await resolveActiveCompanyId(), id, changes, historyEntry);
   }
   return updateMock(id, changes, historyEntry);
 }
@@ -68,7 +68,7 @@ export const locationService: ILocationService = {
 
   async getLocationById(id) {
     if (isFirestoreDataSource) {
-      return firestoreLocationService.getLocationById(resolveCompanyId(), id);
+      return firestoreLocationService.getLocationById(await resolveActiveCompanyId(), id);
     }
     return locationRepository.getById(id);
   },
@@ -76,7 +76,7 @@ export const locationService: ILocationService = {
   async createLocation(input) {
     assertSingleActivePrimary(await loadAll(), { type: input.type, status: input.status });
     if (isFirestoreDataSource) {
-      return firestoreLocationService.createLocation(resolveCompanyId(), input);
+      return firestoreLocationService.createLocation(await resolveActiveCompanyId(), input);
     }
     const now = new Date().toISOString();
     const location: CompanyLocationDetail = { ...input, id: generateMockLocationId(), createdAt: now, updatedAt: now };

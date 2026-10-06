@@ -3,7 +3,7 @@ import {
   deriveUniqueSampleId,
   firestoreSampleService,
 } from "@/lib/firebase/services/firestoreSampleService";
-import { resolveCompanyId } from "@/lib/firebase/companyContext";
+import { resolveActiveCompanyId } from "@/lib/firebase/activeCompany";
 import { isFirestoreDataSource } from "@/config/dataSource";
 import type { BulkResult, ISampleService } from "@/lib/interfaces/ISampleService";
 import type { Sample } from "@/types/sample";
@@ -16,21 +16,21 @@ import type { Sample } from "@/types/sample";
 export const sampleService: ISampleService = {
   async getSamples() {
     if (isFirestoreDataSource) {
-      return firestoreSampleService.getSamples(resolveCompanyId());
+      return firestoreSampleService.getSamples(await resolveActiveCompanyId());
     }
     return sampleRepository.getAll();
   },
 
   async getSampleById(id) {
     if (isFirestoreDataSource) {
-      return firestoreSampleService.getSampleById(resolveCompanyId(), id);
+      return firestoreSampleService.getSampleById(await resolveActiveCompanyId(), id);
     }
     return sampleRepository.getById(id);
   },
 
   async createSample(sample) {
     if (isFirestoreDataSource) {
-      return firestoreSampleService.createSample(resolveCompanyId(), sample);
+      return firestoreSampleService.createSample(await resolveActiveCompanyId(), sample);
     }
     const existing = sampleRepository.getById(sample.id);
     if (existing) {
@@ -41,49 +41,49 @@ export const sampleService: ISampleService = {
 
   async updateSample(id, changes) {
     if (isFirestoreDataSource) {
-      return firestoreSampleService.updateSample(resolveCompanyId(), id, changes);
+      return firestoreSampleService.updateSample(await resolveActiveCompanyId(), id, changes);
     }
     return sampleRepository.update(id, changes);
   },
 
   async startSample(id) {
     if (isFirestoreDataSource) {
-      return firestoreSampleService.startSample(resolveCompanyId(), id);
+      return firestoreSampleService.startSample(await resolveActiveCompanyId(), id);
     }
     return sampleRepository.update(id, { status: "In Prüfung" });
   },
 
   async completeSample(id) {
     if (isFirestoreDataSource) {
-      return firestoreSampleService.completeSample(resolveCompanyId(), id);
+      return firestoreSampleService.completeSample(await resolveActiveCompanyId(), id);
     }
     return sampleRepository.update(id, { status: "Abgeschlossen" });
   },
 
   async reopenSample(id) {
     if (isFirestoreDataSource) {
-      return firestoreSampleService.reopenSample(resolveCompanyId(), id);
+      return firestoreSampleService.reopenSample(await resolveActiveCompanyId(), id);
     }
     return sampleRepository.update(id, { status: "In Prüfung" });
   },
 
   async archiveSample(id) {
     if (isFirestoreDataSource) {
-      return firestoreSampleService.archiveSample(resolveCompanyId(), id);
+      return firestoreSampleService.archiveSample(await resolveActiveCompanyId(), id);
     }
     return sampleRepository.archive(id);
   },
 
   async reactivateSample(id) {
     if (isFirestoreDataSource) {
-      return firestoreSampleService.reactivateSample(resolveCompanyId(), id);
+      return firestoreSampleService.reactivateSample(await resolveActiveCompanyId(), id);
     }
     return sampleRepository.restore(id);
   },
 
   async duplicateSample(id) {
     if (isFirestoreDataSource) {
-      return firestoreSampleService.duplicateSample(resolveCompanyId(), id);
+      return firestoreSampleService.duplicateSample(await resolveActiveCompanyId(), id);
     }
     const original = sampleRepository.getById(id);
     if (!original) {
@@ -111,14 +111,14 @@ export const sampleService: ISampleService = {
 
   async removeSample(id) {
     if (isFirestoreDataSource) {
-      return firestoreSampleService.removeSample(resolveCompanyId(), id);
+      return firestoreSampleService.removeSample(await resolveActiveCompanyId(), id);
     }
     return sampleRepository.remove(id);
   },
 
   async bulkUpdateSamples(ids, changes) {
     if (isFirestoreDataSource) {
-      return firestoreSampleService.bulkUpdateSamples(resolveCompanyId(), ids, changes);
+      return firestoreSampleService.bulkUpdateSamples(await resolveActiveCompanyId(), ids, changes);
     }
     const result: BulkResult = { succeededIds: [], failedIds: [] };
     ids.forEach((id) => {
@@ -135,7 +135,7 @@ export const sampleService: ISampleService = {
 
   async bulkRemoveSamples(ids) {
     if (isFirestoreDataSource) {
-      return firestoreSampleService.bulkRemoveSamples(resolveCompanyId(), ids);
+      return firestoreSampleService.bulkRemoveSamples(await resolveActiveCompanyId(), ids);
     }
     const result: BulkResult = { succeededIds: [], failedIds: [] };
     ids.forEach((id) => {

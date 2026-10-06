@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/AppShell";
+import { MembershipGate } from "@/components/layout/MembershipGate";
 import { AuthProvider, useAuth } from "@/providers/AuthProvider";
 
 function ProtectedContent({ children }: { children: ReactNode }) {
@@ -25,7 +26,12 @@ function ProtectedContent({ children }: { children: ReactNode }) {
     );
   }
 
-  return <AppShell>{children}</AppShell>;
+  // Im Firestore-Modus ohne gültige Unternehmenszuordnung bleibt die App gesperrt.
+  return (
+    <MembershipGate>
+      <AppShell>{children}</AppShell>
+    </MembershipGate>
+  );
 }
 
 export default function AppLayout({ children }: { children: ReactNode }) {

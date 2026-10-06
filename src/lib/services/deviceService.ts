@@ -1,6 +1,6 @@
 import { deviceRepository } from "@/lib/repositories/deviceRepository";
 import { firestoreDeviceService } from "@/lib/firebase/services/firestoreDeviceService";
-import { resolveCompanyId } from "@/lib/firebase/companyContext";
+import { resolveActiveCompanyId } from "@/lib/firebase/activeCompany";
 import { isFirestoreDataSource } from "@/config/dataSource";
 import type { IDeviceService } from "@/lib/interfaces/IDeviceService";
 import type { Device } from "@/types/device";
@@ -17,21 +17,21 @@ function generateMockDeviceId(): string {
 export const deviceService: IDeviceService = {
   async getDevices() {
     if (isFirestoreDataSource) {
-      return firestoreDeviceService.getDevices(resolveCompanyId());
+      return firestoreDeviceService.getDevices(await resolveActiveCompanyId());
     }
     return deviceRepository.getAll();
   },
 
   async getDeviceById(id) {
     if (isFirestoreDataSource) {
-      return firestoreDeviceService.getDeviceById(resolveCompanyId(), id);
+      return firestoreDeviceService.getDeviceById(await resolveActiveCompanyId(), id);
     }
     return deviceRepository.getById(id);
   },
 
   async createDevice(input) {
     if (isFirestoreDataSource) {
-      return firestoreDeviceService.createDevice(resolveCompanyId(), input);
+      return firestoreDeviceService.createDevice(await resolveActiveCompanyId(), input);
     }
     const device: Device = { ...input, id: generateMockDeviceId() };
     return deviceRepository.create(device);
@@ -39,28 +39,28 @@ export const deviceService: IDeviceService = {
 
   async updateDevice(id, changes) {
     if (isFirestoreDataSource) {
-      return firestoreDeviceService.updateDevice(resolveCompanyId(), id, changes);
+      return firestoreDeviceService.updateDevice(await resolveActiveCompanyId(), id, changes);
     }
     return deviceRepository.update(id, changes);
   },
 
   async archiveDevice(id) {
     if (isFirestoreDataSource) {
-      return firestoreDeviceService.archiveDevice(resolveCompanyId(), id);
+      return firestoreDeviceService.archiveDevice(await resolveActiveCompanyId(), id);
     }
     return deviceRepository.archive(id);
   },
 
   async reactivateDevice(id) {
     if (isFirestoreDataSource) {
-      return firestoreDeviceService.reactivateDevice(resolveCompanyId(), id);
+      return firestoreDeviceService.reactivateDevice(await resolveActiveCompanyId(), id);
     }
     return deviceRepository.restore(id);
   },
 
   async removeDevice(id) {
     if (isFirestoreDataSource) {
-      return firestoreDeviceService.removeDevice(resolveCompanyId(), id);
+      return firestoreDeviceService.removeDevice(await resolveActiveCompanyId(), id);
     }
     return deviceRepository.remove(id);
   },

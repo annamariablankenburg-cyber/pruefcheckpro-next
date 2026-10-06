@@ -1,6 +1,6 @@
 import { projectRepository } from "@/lib/repositories/projectRepository";
 import { firestoreProjectService } from "@/lib/firebase/services/firestoreProjectService";
-import { resolveCompanyId } from "@/lib/firebase/companyContext";
+import { resolveActiveCompanyId } from "@/lib/firebase/activeCompany";
 import { isFirestoreDataSource } from "@/config/dataSource";
 import type { IProjectService } from "@/lib/interfaces/IProjectService";
 import type { Project } from "@/types/project";
@@ -17,21 +17,21 @@ function generateMockProjectId(): string {
 export const projectService: IProjectService = {
   async getProjects() {
     if (isFirestoreDataSource) {
-      return firestoreProjectService.getProjects(resolveCompanyId());
+      return firestoreProjectService.getProjects(await resolveActiveCompanyId());
     }
     return projectRepository.getAll();
   },
 
   async getProjectById(id) {
     if (isFirestoreDataSource) {
-      return firestoreProjectService.getProjectById(resolveCompanyId(), id);
+      return firestoreProjectService.getProjectById(await resolveActiveCompanyId(), id);
     }
     return projectRepository.getById(id);
   },
 
   async createProject(input) {
     if (isFirestoreDataSource) {
-      return firestoreProjectService.createProject(resolveCompanyId(), input);
+      return firestoreProjectService.createProject(await resolveActiveCompanyId(), input);
     }
     const project: Project = { ...input, id: generateMockProjectId() };
     return projectRepository.create(project);
@@ -39,56 +39,56 @@ export const projectService: IProjectService = {
 
   async updateProject(id, changes) {
     if (isFirestoreDataSource) {
-      return firestoreProjectService.updateProject(resolveCompanyId(), id, changes);
+      return firestoreProjectService.updateProject(await resolveActiveCompanyId(), id, changes);
     }
     return projectRepository.update(id, changes);
   },
 
   async pauseProject(id) {
     if (isFirestoreDataSource) {
-      return firestoreProjectService.pauseProject(resolveCompanyId(), id);
+      return firestoreProjectService.pauseProject(await resolveActiveCompanyId(), id);
     }
     return projectRepository.update(id, { status: "Pausiert" });
   },
 
   async continueProject(id) {
     if (isFirestoreDataSource) {
-      return firestoreProjectService.continueProject(resolveCompanyId(), id);
+      return firestoreProjectService.continueProject(await resolveActiveCompanyId(), id);
     }
     return projectRepository.update(id, { status: "Aktiv" });
   },
 
   async completeProject(id) {
     if (isFirestoreDataSource) {
-      return firestoreProjectService.completeProject(resolveCompanyId(), id);
+      return firestoreProjectService.completeProject(await resolveActiveCompanyId(), id);
     }
     return projectRepository.update(id, { status: "Abgeschlossen" });
   },
 
   async reopenProject(id) {
     if (isFirestoreDataSource) {
-      return firestoreProjectService.reopenProject(resolveCompanyId(), id);
+      return firestoreProjectService.reopenProject(await resolveActiveCompanyId(), id);
     }
     return projectRepository.update(id, { status: "Aktiv" });
   },
 
   async archiveProject(id) {
     if (isFirestoreDataSource) {
-      return firestoreProjectService.archiveProject(resolveCompanyId(), id);
+      return firestoreProjectService.archiveProject(await resolveActiveCompanyId(), id);
     }
     return projectRepository.archive(id);
   },
 
   async reactivateProject(id) {
     if (isFirestoreDataSource) {
-      return firestoreProjectService.reactivateProject(resolveCompanyId(), id);
+      return firestoreProjectService.reactivateProject(await resolveActiveCompanyId(), id);
     }
     return projectRepository.restore(id);
   },
 
   async removeProject(id) {
     if (isFirestoreDataSource) {
-      return firestoreProjectService.removeProject(resolveCompanyId(), id);
+      return firestoreProjectService.removeProject(await resolveActiveCompanyId(), id);
     }
     return projectRepository.remove(id);
   },

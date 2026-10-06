@@ -1,5 +1,5 @@
 import { isFirestoreDataSource } from "@/config/dataSource";
-import { resolveCompanyId } from "@/lib/firebase/companyContext";
+import { resolveActiveCompanyId } from "@/lib/firebase/activeCompany";
 import { firestoreRoleService } from "@/lib/firebase/services/firestoreRoleService";
 import type { IRoleService } from "@/lib/interfaces/IRoleService";
 import { roleRepository } from "@/lib/repositories/roleRepository";
@@ -24,14 +24,14 @@ function generateMockRoleId(): string {
 
 async function loadAll(): Promise<Role[]> {
   const roles = isFirestoreDataSource
-    ? await firestoreRoleService.getRoles(resolveCompanyId())
+    ? await firestoreRoleService.getRoles(await resolveActiveCompanyId())
     : roleRepository.getAll();
   return sortRoles(roles.map(normalizeRole));
 }
 
 async function loadById(id: string): Promise<Role | undefined> {
   const role = isFirestoreDataSource
-    ? await firestoreRoleService.getRoleById(resolveCompanyId(), id)
+    ? await firestoreRoleService.getRoleById(await resolveActiveCompanyId(), id)
     : roleRepository.getById(id);
   return role ? normalizeRole(role) : undefined;
 }
@@ -60,7 +60,7 @@ export const roleService: IRoleService = {
     };
 
     if (isFirestoreDataSource) {
-      return normalizeRole(await firestoreRoleService.createRole(resolveCompanyId(), values));
+      return normalizeRole(await firestoreRoleService.createRole(await resolveActiveCompanyId(), values));
     }
     const now = new Date().toISOString();
     return normalizeRole(
@@ -91,7 +91,7 @@ export const roleService: IRoleService = {
     if (changes.permissions !== undefined) clean.permissions = normalizePermissions(changes.permissions);
 
     if (isFirestoreDataSource) {
-      return finish(await firestoreRoleService.updateRole(resolveCompanyId(), id, clean));
+      return finish(await firestoreRoleService.updateRole(await resolveActiveCompanyId(), id, clean));
     }
     return finish(roleRepository.update(id, { ...clean, updatedAt: new Date().toISOString() }));
   },
@@ -101,7 +101,7 @@ export const roleService: IRoleService = {
     if (!current) return undefined;
     assertRoleArchivable(current);
     if (isFirestoreDataSource) {
-      return finish(await firestoreRoleService.setRoleStatus(resolveCompanyId(), id, "Archiviert"));
+      return finish(await firestoreRoleService.setRoleStatus(await resolveActiveCompanyId(), id, "Archiviert"));
     }
     return finish(roleRepository.update(id, { status: "Archiviert", updatedAt: new Date().toISOString() }));
   },
@@ -110,7 +110,7 @@ export const roleService: IRoleService = {
     const current = await loadById(id);
     if (!current) return undefined;
     if (isFirestoreDataSource) {
-      return finish(await firestoreRoleService.setRoleStatus(resolveCompanyId(), id, "Aktiv"));
+      return finish(await firestoreRoleService.setRoleStatus(await resolveActiveCompanyId(), id, "Aktiv"));
     }
     return finish(roleRepository.update(id, { status: "Aktiv", updatedAt: new Date().toISOString() }));
   },

@@ -1,6 +1,6 @@
 import { reportRepository } from "@/lib/repositories/reportRepository";
 import { firestoreReportService } from "@/lib/firebase/services/firestoreReportService";
-import { resolveCompanyId } from "@/lib/firebase/companyContext";
+import { resolveActiveCompanyId } from "@/lib/firebase/activeCompany";
 import { isFirestoreDataSource } from "@/config/dataSource";
 import type { IReportService } from "@/lib/interfaces/IReportService";
 import type { Report } from "@/types/report";
@@ -17,21 +17,21 @@ function generateMockReportId(): string {
 export const reportService: IReportService = {
   async getReports() {
     if (isFirestoreDataSource) {
-      return firestoreReportService.getReports(resolveCompanyId());
+      return firestoreReportService.getReports(await resolveActiveCompanyId());
     }
     return reportRepository.getAll();
   },
 
   async getReportById(id) {
     if (isFirestoreDataSource) {
-      return firestoreReportService.getReportById(resolveCompanyId(), id);
+      return firestoreReportService.getReportById(await resolveActiveCompanyId(), id);
     }
     return reportRepository.getById(id);
   },
 
   async createReport(input) {
     if (isFirestoreDataSource) {
-      return firestoreReportService.createReport(resolveCompanyId(), input);
+      return firestoreReportService.createReport(await resolveActiveCompanyId(), input);
     }
     const report: Report = { ...input, id: generateMockReportId() };
     return reportRepository.create(report);
@@ -39,28 +39,28 @@ export const reportService: IReportService = {
 
   async updateReport(id, changes) {
     if (isFirestoreDataSource) {
-      return firestoreReportService.updateReport(resolveCompanyId(), id, changes);
+      return firestoreReportService.updateReport(await resolveActiveCompanyId(), id, changes);
     }
     return reportRepository.update(id, changes);
   },
 
   async archiveReport(id) {
     if (isFirestoreDataSource) {
-      return firestoreReportService.archiveReport(resolveCompanyId(), id);
+      return firestoreReportService.archiveReport(await resolveActiveCompanyId(), id);
     }
     return reportRepository.archive(id);
   },
 
   async restoreReport(id) {
     if (isFirestoreDataSource) {
-      return firestoreReportService.restoreReport(resolveCompanyId(), id);
+      return firestoreReportService.restoreReport(await resolveActiveCompanyId(), id);
     }
     return reportRepository.restore(id);
   },
 
   async removeReport(id) {
     if (isFirestoreDataSource) {
-      return firestoreReportService.removeReport(resolveCompanyId(), id);
+      return firestoreReportService.removeReport(await resolveActiveCompanyId(), id);
     }
     return reportRepository.remove(id);
   },

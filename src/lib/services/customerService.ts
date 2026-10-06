@@ -1,6 +1,6 @@
 import { customerRepository } from "@/lib/repositories/customerRepository";
 import { firestoreCustomerService } from "@/lib/firebase/services/firestoreCustomerService";
-import { resolveCompanyId } from "@/lib/firebase/companyContext";
+import { resolveActiveCompanyId } from "@/lib/firebase/activeCompany";
 import { isFirestoreDataSource } from "@/config/dataSource";
 import type { ICustomerService } from "@/lib/interfaces/ICustomerService";
 import type { Customer } from "@/types/customer";
@@ -17,21 +17,21 @@ function generateMockCustomerId(): string {
 export const customerService: ICustomerService = {
   async getCustomers() {
     if (isFirestoreDataSource) {
-      return firestoreCustomerService.getCustomers(resolveCompanyId());
+      return firestoreCustomerService.getCustomers(await resolveActiveCompanyId());
     }
     return customerRepository.getAll();
   },
 
   async getCustomerById(id) {
     if (isFirestoreDataSource) {
-      return firestoreCustomerService.getCustomerById(resolveCompanyId(), id);
+      return firestoreCustomerService.getCustomerById(await resolveActiveCompanyId(), id);
     }
     return customerRepository.getById(id);
   },
 
   async createCustomer(input) {
     if (isFirestoreDataSource) {
-      return firestoreCustomerService.createCustomer(resolveCompanyId(), input);
+      return firestoreCustomerService.createCustomer(await resolveActiveCompanyId(), input);
     }
     const customer: Customer = { ...input, id: generateMockCustomerId() };
     return customerRepository.create(customer);
@@ -39,42 +39,42 @@ export const customerService: ICustomerService = {
 
   async updateCustomer(id, changes) {
     if (isFirestoreDataSource) {
-      return firestoreCustomerService.updateCustomer(resolveCompanyId(), id, changes);
+      return firestoreCustomerService.updateCustomer(await resolveActiveCompanyId(), id, changes);
     }
     return customerRepository.update(id, changes);
   },
 
   async archiveCustomer(id) {
     if (isFirestoreDataSource) {
-      return firestoreCustomerService.archiveCustomer(resolveCompanyId(), id);
+      return firestoreCustomerService.archiveCustomer(await resolveActiveCompanyId(), id);
     }
     return customerRepository.archive(id);
   },
 
   async restoreCustomer(id) {
     if (isFirestoreDataSource) {
-      return firestoreCustomerService.restoreCustomer(resolveCompanyId(), id);
+      return firestoreCustomerService.restoreCustomer(await resolveActiveCompanyId(), id);
     }
     return customerRepository.restore(id);
   },
 
   async deactivateCustomer(id) {
     if (isFirestoreDataSource) {
-      return firestoreCustomerService.deactivateCustomer(resolveCompanyId(), id);
+      return firestoreCustomerService.deactivateCustomer(await resolveActiveCompanyId(), id);
     }
     return customerRepository.update(id, { status: "Inaktiv" });
   },
 
   async reactivateCustomer(id) {
     if (isFirestoreDataSource) {
-      return firestoreCustomerService.reactivateCustomer(resolveCompanyId(), id);
+      return firestoreCustomerService.reactivateCustomer(await resolveActiveCompanyId(), id);
     }
     return customerRepository.update(id, { status: "Aktiv" });
   },
 
   async removeCustomer(id) {
     if (isFirestoreDataSource) {
-      return firestoreCustomerService.removeCustomer(resolveCompanyId(), id);
+      return firestoreCustomerService.removeCustomer(await resolveActiveCompanyId(), id);
     }
     return customerRepository.remove(id);
   },

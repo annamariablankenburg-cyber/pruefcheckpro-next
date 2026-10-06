@@ -38,7 +38,8 @@ function AuthGate({ children }: { children: ReactNode }) {
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <AuthProvider>
+    // Login/Registrierung brauchen keine Unternehmenszuordnung.
+    <AuthProvider withMembership={false}>
       <AuthGate>{children}</AuthGate>
     </AuthProvider>
   );

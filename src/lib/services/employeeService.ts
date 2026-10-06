@@ -1,6 +1,6 @@
 import { employeeRepository } from "@/lib/repositories/employeeRepository";
 import { firestoreEmployeeService } from "@/lib/firebase/services/firestoreEmployeeService";
-import { resolveCompanyId } from "@/lib/firebase/companyContext";
+import { resolveActiveCompanyId } from "@/lib/firebase/activeCompany";
 import { isFirestoreDataSource } from "@/config/dataSource";
 import type { IEmployeeService } from "@/lib/interfaces/IEmployeeService";
 import type { Employee, EmployeeHistoryEntry } from "@/types/employee";
@@ -26,42 +26,42 @@ async function updateMock(
 export const employeeService: IEmployeeService = {
   async getEmployees() {
     if (isFirestoreDataSource) {
-      return firestoreEmployeeService.getEmployees(resolveCompanyId());
+      return firestoreEmployeeService.getEmployees(await resolveActiveCompanyId());
     }
     return employeeRepository.getAll();
   },
 
   async getEmployeeById(id) {
     if (isFirestoreDataSource) {
-      return firestoreEmployeeService.getEmployeeById(resolveCompanyId(), id);
+      return firestoreEmployeeService.getEmployeeById(await resolveActiveCompanyId(), id);
     }
     return employeeRepository.getById(id);
   },
 
   async updateEmployee(id, changes, historyEntry) {
     if (isFirestoreDataSource) {
-      return firestoreEmployeeService.updateEmployee(resolveCompanyId(), id, changes, historyEntry);
+      return firestoreEmployeeService.updateEmployee(await resolveActiveCompanyId(), id, changes, historyEntry);
     }
     return updateMock(id, changes, historyEntry);
   },
 
   async suspendEmployee(id, historyEntry) {
     if (isFirestoreDataSource) {
-      return firestoreEmployeeService.suspendEmployee(resolveCompanyId(), id, historyEntry);
+      return firestoreEmployeeService.suspendEmployee(await resolveActiveCompanyId(), id, historyEntry);
     }
     return updateMock(id, { status: "Gesperrt" }, historyEntry);
   },
 
   async reactivateEmployee(id, historyEntry) {
     if (isFirestoreDataSource) {
-      return firestoreEmployeeService.reactivateEmployee(resolveCompanyId(), id, historyEntry);
+      return firestoreEmployeeService.reactivateEmployee(await resolveActiveCompanyId(), id, historyEntry);
     }
     return updateMock(id, { status: "Aktiv" }, historyEntry);
   },
 
   async revokeAccess(id, historyEntry) {
     if (isFirestoreDataSource) {
-      return firestoreEmployeeService.revokeAccess(resolveCompanyId(), id, historyEntry);
+      return firestoreEmployeeService.revokeAccess(await resolveActiveCompanyId(), id, historyEntry);
     }
     return updateMock(id, { status: "Gesperrt" }, historyEntry);
   },

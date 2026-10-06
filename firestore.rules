@@ -12,20 +12,94 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // --- Security Foundations (siehe docs/firebase/security-foundations.md) ---
+    //
+    // Die Firmenzugehörigkeit kommt AUSSCHLIESSLICH aus
+    // userMemberships/{request.auth.uid}. users/{uid} ist das clientseitig
+    // verwaltete Login-Profil; dessen Felder (role, companyId, plan …) werden
+    // hier NIE für die Autorisierung ausgewertet.
+    //
+    // Zugriff auf companies/{companyId}/... nur, wenn
+    //   - der Nutzer angemeldet ist,
+    //   - ein Membership-Dokument existiert,
+    //   - membership.companyId == companyId UND
+    //   - membership.status == "Aktiv".
+    // Fehlende Felder führen über .get(key, default) zu "kein Zugriff", nie zu
+    // einem Fehler mit Fallback. Das Membership-Dokument wird pro Request nur
+    // einmal gelesen (wiederholte get() auf dasselbe Dokument zählen einmal).
+    //
+    // BEWUSST NOCH KEINE rollenbasierte Durchsetzung: roleId/role der
+    // Membership werden hier nicht ausgewertet (kein "roleId == admin", keine
+    // Permission-Dokumente). Das folgt in einem eigenen Security-Slice.
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // companyId liegt heute als Feld auf users/{uid} (AppUser.companyId, siehe
-    // src/types/user.ts), nicht als Firebase-Auth-Custom-Claim – deshalb ein
-    // get()-Lookup statt request.auth.token.companyId. Sobald Custom Claims
-    // für companyId/Rolle eingeführt werden (siehe docs/database/permissions.md,
-    // Abschnitt 5 "Durchsetzung: UI vs. Firestore Security Rules"), kann das
-    // hier ohne zusätzliche Leseoperation aus request.auth.token.companyId
-    // gelesen werden.
+    function membershipPath() {
+      return /databases/$(database)/documents/userMemberships/$(request.auth.uid);
+    }
+
     function belongsToCompany(companyId) {
       return isSignedIn() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId == companyId;
+        exists(membershipPath()) &&
+        get(membershipPath()).data.get("companyId", "") == companyId &&
+        get(membershipPath()).data.get("status", "") == "Aktiv";
+    }
+
+    // Membership-Dokument: der eigene Nutzer darf es LESEN (einzelnes Dokument,
+    // kein Auflisten). Es gibt KEINEN Client-Write (create/update/delete): die
+    // Zuordnung zu Firma/Mitarbeiter/Rolle/Status wird nicht von der App
+    // gesetzt. Provisionierung braucht eine Server-Komponente (Admin SDK), die
+    // die Rules umgeht – hier nicht implementiert. Im lokalen Emulator seeden
+    // siehe scripts/seedUserMemberships.ts.
+    match /userMemberships/{uid} {
+      allow get: if isSignedIn() && request.auth.uid == uid;
+      allow list, create, update, delete: if false;
+    }
+
+    // Login-Profil (AppUser, siehe src/lib/firebase/users.ts). KEINE
+    // Sicherheitsquelle: Felder wie role/plan/companyId werden nirgends für die
+    // Autorisierung ausgewertet (siehe oben). Trotzdem sind role/plan
+    // Produkt-/Profilmetadaten und daher für den Client nicht frei änderbar.
+    //
+    // Der Client braucht genau zwei Schreibvorgänge (users.ts):
+    //   1. createUserProfile(): einmalig bei der Registrierung ein festes
+    //      Basisprofil (role "azubi", plan "azubi", serverTimestamp für
+    //      createdAt/lastLogin),
+    //   2. updateLastLogin(): beim Login NUR lastLogin.
+    // Deshalb: Einzeldokument-Lesen nur für den eigenen User (kein list), Create
+    // nur mit exakt diesem Basismodell, Update nur lastLogin, kein Löschen.
+    // firstName/lastName/language/theme werden heute clientseitig nirgends
+    // geändert und sind deshalb nicht änderbar; email ebenso (kein Profil-Sync).
+    function isValidNewProfile(uid) {
+      let fields = ["id", "firstName", "lastName", "email", "role", "plan",
+                    "language", "theme", "createdAt", "lastLogin"];
+      let data = request.resource.data;
+      return data.keys().hasOnly(fields) &&
+        data.keys().hasAll(fields) &&
+        data.id == uid &&
+        data.firstName is string &&
+        data.lastName is string &&
+        data.email is string &&
+        data.role == "azubi" &&
+        data.plan == "azubi" &&
+        data.language in ["de", "en"] &&
+        data.theme in ["light", "dark", "system"] &&
+        data.createdAt == request.time &&
+        data.lastLogin == request.time;
+    }
+
+    match /users/{uid} {
+      allow get: if isSignedIn() && request.auth.uid == uid;
+      allow list: if false;
+      allow create: if isSignedIn() && request.auth.uid == uid && isValidNewProfile(uid);
+      // Nur lastLogin darf sich ändern (und nur auf die Serverzeit). id, email,
+      // role, plan, companyId, laboratoryId, createdAt, firstName, lastName,
+      // language, theme bleiben unveränderlich.
+      allow update: if isSignedIn() && request.auth.uid == uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["lastLogin"]) &&
+        request.resource.data.lastLogin == request.time;
+      allow delete: if false;
     }
 
     match /companies/{companyId}/customers/{customerId} {

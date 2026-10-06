@@ -1,6 +1,6 @@
 import { testValueRepository } from "@/lib/repositories/testValueRepository";
 import { firestoreTestValueService } from "@/lib/firebase/services/firestoreTestValueService";
-import { resolveCompanyId } from "@/lib/firebase/companyContext";
+import { resolveActiveCompanyId } from "@/lib/firebase/activeCompany";
 import { isFirestoreDataSource } from "@/config/dataSource";
 import type { ITestValueService } from "@/lib/interfaces/ITestValueService";
 
@@ -12,21 +12,21 @@ import type { ITestValueService } from "@/lib/interfaces/ITestValueService";
 export const testValueService: ITestValueService = {
   async getTestEntries() {
     if (isFirestoreDataSource) {
-      return firestoreTestValueService.getTestEntries(resolveCompanyId());
+      return firestoreTestValueService.getTestEntries(await resolveActiveCompanyId());
     }
     return testValueRepository.getAll();
   },
 
   async getTestEntryById(sampleId) {
     if (isFirestoreDataSource) {
-      return firestoreTestValueService.getTestEntryById(resolveCompanyId(), sampleId);
+      return firestoreTestValueService.getTestEntryById(await resolveActiveCompanyId(), sampleId);
     }
     return testValueRepository.getById(sampleId);
   },
 
   async getTestEntriesBySampleId(sampleId) {
     if (isFirestoreDataSource) {
-      return firestoreTestValueService.getTestEntriesBySampleId(resolveCompanyId(), sampleId);
+      return firestoreTestValueService.getTestEntriesBySampleId(await resolveActiveCompanyId(), sampleId);
     }
     const entry = testValueRepository.getById(sampleId);
     return entry ? [entry] : [];
@@ -34,7 +34,7 @@ export const testValueService: ITestValueService = {
 
   async createTestEntry(entry) {
     if (isFirestoreDataSource) {
-      return firestoreTestValueService.createTestEntry(resolveCompanyId(), entry);
+      return firestoreTestValueService.createTestEntry(await resolveActiveCompanyId(), entry);
     }
     const existing = testValueRepository.getById(entry.sampleId);
     if (existing) {
@@ -45,35 +45,35 @@ export const testValueService: ITestValueService = {
 
   async updateTestEntry(sampleId, changes) {
     if (isFirestoreDataSource) {
-      return firestoreTestValueService.updateTestEntry(resolveCompanyId(), sampleId, changes);
+      return firestoreTestValueService.updateTestEntry(await resolveActiveCompanyId(), sampleId, changes);
     }
     return testValueRepository.update(sampleId, changes);
   },
 
   async saveDraft(sampleId, changes) {
     if (isFirestoreDataSource) {
-      return firestoreTestValueService.saveDraft(resolveCompanyId(), sampleId, changes);
+      return firestoreTestValueService.saveDraft(await resolveActiveCompanyId(), sampleId, changes);
     }
     return testValueRepository.update(sampleId, { ...changes, draftSavedAt: new Date().toISOString() });
   },
 
   async saveResult(sampleId, changes) {
     if (isFirestoreDataSource) {
-      return firestoreTestValueService.saveResult(resolveCompanyId(), sampleId, changes);
+      return firestoreTestValueService.saveResult(await resolveActiveCompanyId(), sampleId, changes);
     }
     return testValueRepository.update(sampleId, changes);
   },
 
   async startTest(sampleId) {
     if (isFirestoreDataSource) {
-      return firestoreTestValueService.startTest(resolveCompanyId(), sampleId);
+      return firestoreTestValueService.startTest(await resolveActiveCompanyId(), sampleId);
     }
     return testValueRepository.update(sampleId, { status: "In Bearbeitung" });
   },
 
   async completeTest(sampleId) {
     if (isFirestoreDataSource) {
-      return firestoreTestValueService.completeTest(resolveCompanyId(), sampleId);
+      return firestoreTestValueService.completeTest(await resolveActiveCompanyId(), sampleId);
     }
     return testValueRepository.update(sampleId, {
       status: "Abgeschlossen",
@@ -83,14 +83,14 @@ export const testValueService: ITestValueService = {
 
   async reopenTest(sampleId) {
     if (isFirestoreDataSource) {
-      return firestoreTestValueService.reopenTest(resolveCompanyId(), sampleId);
+      return firestoreTestValueService.reopenTest(await resolveActiveCompanyId(), sampleId);
     }
     return testValueRepository.update(sampleId, { status: "In Bearbeitung", completedAt: undefined });
   },
 
   async removeTestEntry(sampleId) {
     if (isFirestoreDataSource) {
-      return firestoreTestValueService.removeTestEntry(resolveCompanyId(), sampleId);
+      return firestoreTestValueService.removeTestEntry(await resolveActiveCompanyId(), sampleId);
     }
     return testValueRepository.remove(sampleId);
   },
