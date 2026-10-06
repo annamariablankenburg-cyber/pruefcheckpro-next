@@ -53,6 +53,8 @@ Ein einzelner Befehl: startet den Firestore-Emulator (`firebase emulators:exec -
 
 `firebase.json` enthält bewusst **keinen** `firestore.rules`-Eintrag: Ein normal gestarteter Entwicklungs-Emulator lädt damit keine Rules (so laufen die Seed-Skripte wie bisher); die Tests setzen die Rules selbst (`initializeTestEnvironment({ firestore: { rules } })`).
 
+> **Permission-Konfig-Tests:** `npm run test:permissions` (ohne Emulator, ohne Java) prüft Taxonomie und Systemrollen-Matrix (`tests/config/permissions.test.ts`); die CI führt sie vor den Rules-Tests aus.
+
 ## 4. Testprojekt und Produktions-Sicherheit
 
 - Test-Projekt-ID: **`demo-pruefcheckpro-rules-test`**. Das Präfix `demo-` ist die offizielle Firebase-Konvention für Projekte, die nur im Emulator existieren: Es gibt weder Credentials noch eine Verbindung zu echten Diensten.

@@ -57,6 +57,7 @@ export function PermissionCategory({
             <PermissionSwitch
               key={permission.key}
               label={permission.label}
+              risk={permission.risk}
               checked={values[permission.key] ?? false}
               onCheckedChange={(checked) => onToggle(permission.key, checked)}
               disabled={disabled}

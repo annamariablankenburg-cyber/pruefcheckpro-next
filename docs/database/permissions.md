@@ -1,129 +1,237 @@
-# Rollen & Rechte (Planung)
+# Rollen & Rechte (Policy)
 
-Status: **Planungsdokument – keine echte Firebase-Anbindung.** Heute existiert im UI keine echte Rechteprüfung; jede Aktion ist für jeden sichtbaren Nutzer klickbar (Mock-Daten). Dieses Dokument beschreibt, wie die bereits im Rollen-Modul (`types/role.ts`, `config/roles.ts`) angelegte Berechtigungs-Taxonomie später serverseitig (Firestore Security Rules + UI-Guards) durchgesetzt werden soll.
+Status: **Policy ist in `src/config/roles.ts` umgesetzt (Taxonomie + Systemrollen-Matrix) – eine serverseitige Durchsetzung gibt es noch nicht.** Rollen und Berechtigungen steuern heute Verwaltungslogik und Darstellung; die Firestore Rules erlauben jedem aktiven Mitglied der Firma noch alles (siehe `docs/firebase/security-foundations.md`, `docs/firebase/role-security-audit.md`). Dieses Dokument ist die gemeinsame Policy für Config, Rules (später) und UI.
+
+Konfiguration und Tests: `src/config/roles.ts`, `tests/config/permissions.test.ts` (`npm run test:permissions`).
 
 ---
 
-## 1. Die 5 Kernrollen (Systemrollen)
+## 1. Systemrollen
 
-Aus dem Sprint-Brief und bereits 1:1 als Mock-Daten in `config/roles.ts` angelegt:
-
-| Rolle | `EmployeeRole`-Wert | Zweck |
+| ID | Rolle | Zweck |
 |---|---|---|
-| **Admin** (Administrator) | `Admin` | Uneingeschränkter Zugriff auf alle Bereiche und Einstellungen |
-| **Laborleiter** | `Laborleiter` | Vollzugriff auf Laborfunktionen, Prüfungen, Ergebnisse, Berichte |
-| **Prüfer** | `Prüfer` | Durchführung von Prüfungen, Eingabe von Ergebnissen |
-| **Azubi** | `Azubi` | Eingeschränkter Zugriff für Auszubildende |
-| **Gast** | `Gast` | Nur Leserechte |
+| `admin` | **Administrator** | Uneingeschränkter Zugriff, einzige Rolle mit Superuser-Rechten. Berechtigungen sind festgeschrieben. |
+| `laborleiter` | **Laborleiter** | Operative Leitung: Labor-, Prüf-, Projekt-, Berichtsbereiche, Mitarbeiter und Standorte – **ohne Administratorrechte**. |
+| `pruefer` | **Prüfer** | Durchführung von Prüfungen, Proben, Prüfwerten, Laborbuch, Kalender, Berichten. |
+| `azubi` | **Azubi** | Operative Erfassung (Proben) und Ansicht; keine Administration, kein Löschen. |
+| `gast` | **Gast** | Nur Lesen der fachlichen Bereiche. |
 
-Zusätzlich unterstützt das Rollen-Modul bereits **benutzerdefinierte Rollen** (`type: "Benutzerdefiniert"`, z. B. „Qualitätsmanager“, „Baustellenleiter“ als Beispiele in den Mock-Daten) – die 5 Kernrollen sind der Startpunkt, keine feste Obergrenze.
-
----
-
-## 2. Berechtigungs-Taxonomie (bereits im Code vorbereitet)
-
-`config/roles.ts` definiert 11 Kategorien mit insgesamt ~27 Einzelrechten (`permissionCategories`). Diese Taxonomie ist bereits produktionsnah modelliert und sollte bei echter Anbindung **unverändert übernommen** werden:
-
-| Kategorie | Rechte-Keys (Auszug) |
-|---|---|
-| `dashboard` | `dashboard.anzeigen` |
-| `proben` | `proben.ansehen`, `proben.erstellen`, `proben.bearbeiten`, `proben.loeschen` |
-| `pruefungen` | `pruefungen.ansehen`, `pruefungen.erstellen`, `pruefungen.bearbeiten`, `pruefungen.loeschen` |
-| `kunden` | `kunden.ansehen`, `kunden.erstellen`, `kunden.bearbeiten`, `kunden.loeschen` |
-| `projekte` | `projekte.ansehen`, `projekte.erstellen`, `projekte.bearbeiten`, `projekte.loeschen` |
-| `geraete` | `geraete.ansehen`, `geraete.bearbeiten` |
-| `laborbuch` | `laborbuch.ansehen`, `laborbuch.bearbeiten` |
-| `kalender` | `kalender.ansehen`, `kalender.termine_erstellen` |
-| `pdf` | `pdf.exportieren` |
-| `ki` | `ki.verwenden` |
-| `administration` | `administration.mitarbeiter_verwalten`, `administration.rollen_verwalten`, `administration.standorte_verwalten`, `administration.branding_aendern`, `administration.abrechnung_verwalten`, `administration.systemeinstellungen_aendern` |
-
-**Empfehlung für Firestore:** Die Taxonomie (Kategorien + welche Keys es gibt) bleibt **Code** (`config/roles.ts`), nicht Firestore-Daten – sie ändert sich mit App-Releases, nicht pro Firma. Nur die **Zuordnung** „welche Rolle hat welchen Key gewährt" (`Role.permissions: Record<string, boolean>`) wird pro Firma in `companies/{companyId}/roles/{roleId}` gespeichert.
+Zusätzlich gibt es **benutzerdefinierte Rollen** (Beispiele: Qualitätsmanager, Baustellenleiter). Sie können beliebige Kombinationen der unten stehenden Rechte haben – **außer** den Superuser-Rechten (Abschnitt 4), die nur Inhaber von `rollen.admin_verwalten` vergeben dürfen.
 
 ---
 
-## 3. Rechte-Matrix der 5 Kernrollen
+## 2. Berechtigungs-Taxonomie (45 Schlüssel)
 
-Abgeleitet aus den bereits gepflegten `permissions`-Listen in `config/roles.ts`:
+Gespeichert wird je Rolle nur `permissions: Record<key, boolean>` in `companies/{companyId}/roles/{roleId}`; die Taxonomie selbst (welche Schlüssel es gibt, Gruppierung) ist Code. Fehlende Schlüssel gelten als `false`, unbekannte werden verworfen (`normalizePermissions`).
+
+**Systematik:** `<bereich>.ansehen` · `.erstellen` · `.bearbeiten` · `.loeschen`. **Legacy-Ausnahmen** (bleiben unverändert, damit gespeicherte Rollen nicht brechen): `dashboard.anzeigen`, `kalender.termine_erstellen` (= „erstellen“ im Kalender), `pdf.exportieren`, `ki.verwenden` und alle `administration.*`-Schlüssel. **Kein bestehender Schlüssel wurde entfernt oder umbenannt.**
+
+| Modul (Kategorie) | Schlüssel | Neu |
+|---|---|---|
+| Dashboard | `dashboard.anzeigen` | |
+| Proben | `proben.ansehen` · `.erstellen` · `.bearbeiten` · `.loeschen` ¹ | |
+| Prüfungen | `pruefungen.ansehen` · `.erstellen` · `.bearbeiten` · `.loeschen` ¹ | |
+| Kunden | `kunden.ansehen` · `.erstellen` · `.bearbeiten` · `.loeschen` ¹ | |
+| Projekte | `projekte.ansehen` · `.erstellen` · `.bearbeiten` · `.loeschen` ¹ | |
+| Geräte | `geraete.ansehen` · `geraete.bearbeiten` | – |
+| | `geraete.erstellen` · `geraete.loeschen` ¹ | **neu** |
+| Laborbuch | `laborbuch.ansehen` · `laborbuch.bearbeiten` | – |
+| | `laborbuch.erstellen` · `laborbuch.loeschen` ¹ | **neu** |
+| Kalender | `kalender.ansehen` · `kalender.termine_erstellen` | – |
+| | `kalender.bearbeiten` · `kalender.loeschen` ¹ | **neu** |
+| Berichte | `berichte.ansehen` · `.erstellen` · `.bearbeiten` · `.loeschen` ¹ | **neu (4)** |
+| PDF | `pdf.exportieren` | |
+| KI | `ki.verwenden` | |
+| Unternehmen (Ansicht) | `standorte.ansehen` · `mitarbeiter.ansehen` · `rollen.ansehen` | **neu (3)** |
+| Administration | `administration.mitarbeiter_verwalten` · `.rollen_verwalten` · `.standorte_verwalten` | – |
+| | `administration.branding_aendern` ² · `.abrechnung_verwalten` ² · `.systemeinstellungen_aendern` ² | – |
+| | `rollen.admin_verwalten` ² | **neu** |
+
+¹ **destructive** (endgültiges Löschen, Abschnitt 6) · ² **restricted** (Superuser-/Administratorrecht, Abschnitt 4).
+
+**Vorher 31 Schlüssel → jetzt 45 (14 neu).** Neu: `geraete.erstellen`, `geraete.loeschen`, `kalender.bearbeiten`, `kalender.loeschen`, `laborbuch.erstellen`, `laborbuch.loeschen`, `berichte.ansehen`, `berichte.erstellen`, `berichte.bearbeiten`, `berichte.loeschen`, `standorte.ansehen`, `mitarbeiter.ansehen`, `rollen.ansehen`, `rollen.admin_verwalten`.
+
+### 2.1 Begründung der Lücken-Entscheidungen
+
+| Lücke aus dem Audit | Entscheidung | Warum |
+|---|---|---|
+| `geraete.erstellen`, `geraete.loeschen` | **eigene Schlüssel** | Anlegen (Kalibrier-Stammdaten) und endgültiges Löschen sind verschieden riskant wie Bearbeiten. |
+| `kalender.bearbeiten`, `kalender.loeschen` | **eigene Schlüssel** | Termine haben nur den Status geplant/in Arbeit/überfällig/abgeschlossen – das einzige „Stornieren“ ist Löschen; es soll getrennt vergebbar sein. `kalender.termine_erstellen` bleibt als Legacy-Name. |
+| `laborbuch.erstellen`, `laborbuch.loeschen` | **eigene Schlüssel** | Das Laborbuch ist ein Nachweisdokument: Rollen sollen Einträge **anlegen** dürfen, ohne bestehende zu **ändern** (append-only), und Löschen ist getrennt. |
+| `berichte.*` (4) | **eigene Schlüssel** | Berichte sind eine eigene Domäne mit Status und Export; sie an `pruefungen.*`/`pdf.exportieren` zu hängen vermischt Lesen, Schreiben und Export. `pdf.exportieren` bleibt die **Aktion** „exportieren“. |
+| Lesen von Standorten, Mitarbeitern, Rollen | **eigene Schlüssel** `standorte.ansehen`, `mitarbeiter.ansehen`, `rollen.ansehen` | Rules sollen später Lesen und Schreiben getrennt entscheiden. |
+| Einladungen | **kein eigener Schlüssel** | Einladungen sind Teil der Mitarbeiterverwaltung (`administration.mitarbeiter_verwalten`, Lesen und Schreiben). Einladungen enthalten E-Mail-Adressen Dritter, deshalb gilt für sie **nicht** das offenere `mitarbeiter.ansehen`. |
+| `kalender.termine_erstellen` → `kalender.erstellen` umbenennen | **nein** | Würde gespeicherte Rollen brechen. |
+| Superuser-Recht für Rollen | **neu: `rollen.admin_verwalten`** | Sonst würde `rollen_verwalten` implizit „Administrator“ bedeuten (Abschnitt 4). |
+
+---
+
+## 3. Rollenmatrix (Systemrollen)
+
+✅ = gewährt. Anzahl gewährter Rechte: **Administrator 45 · Laborleiter 38 · Prüfer 22 · Azubi 13 · Gast 9**.
 
 | Recht | Admin | Laborleiter | Prüfer | Azubi | Gast |
-|---|:---:|:---:|:---:|:---:|:---:|
-| Dashboard ansehen | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Proben ansehen | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Proben erstellen | ✅ | ✅ | ✅ | ✅ | ❌ |
-| Proben bearbeiten | ✅ | ✅ | ✅ | ✅ | ❌ |
-| **Proben löschen** | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Prüfungen ansehen/erstellen/bearbeiten | ✅ | ✅ | ✅ | nur ansehen | nur ansehen |
-| Prüfungen löschen | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Kunden ansehen | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Kunden erstellen/bearbeiten/löschen | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Projekte ansehen | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Projekte erstellen/bearbeiten/löschen | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Geräte ansehen | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Geräte bearbeiten | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Laborbuch ansehen | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Laborbuch bearbeiten | ✅ | ✅ | ✅ | ❌ | ❌ |
-| Kalender ansehen | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Kalender: Termine erstellen | ✅ | ✅ | ✅ | ❌ | ❌ |
-| PDF exportieren | ✅ | ✅ | ✅ | ❌ | ❌ |
-| PrüfCheck AI verwenden | ✅ | ✅ | ✅ | ✅ | ❌ |
-| **Mitarbeiter verwalten** | ✅ | ✅ | ❌ | ❌ | ❌ |
-| **Rollen verwalten** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Standorte verwalten** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Branding ändern** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Abrechnung verwalten** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Systemeinstellungen ändern** | ✅ | ❌ | ❌ | ❌ | ❌ |
+|---|:-:|:-:|:-:|:-:|:-:|
+| dashboard.anzeigen | ✅ | ✅ | ✅ | ✅ | ✅ |
+| proben.ansehen | ✅ | ✅ | ✅ | ✅ | ✅ |
+| proben.erstellen · .bearbeiten | ✅ | ✅ | ✅ | ✅ | |
+| **proben.loeschen** | ✅ | ✅ | | | |
+| pruefungen.ansehen | ✅ | ✅ | ✅ | ✅ | ✅ |
+| pruefungen.erstellen · .bearbeiten | ✅ | ✅ | ✅ | | |
+| **pruefungen.loeschen** | ✅ | ✅ | | | |
+| kunden.ansehen · projekte.ansehen | ✅ | ✅ | ✅ | ✅ | ✅ |
+| kunden./projekte. erstellen · bearbeiten | ✅ | ✅ | | | |
+| **kunden./projekte. loeschen** | ✅ | ✅ | | | |
+| geraete.ansehen | ✅ | ✅ | ✅ | ✅ | ✅ |
+| geraete.erstellen · .bearbeiten | ✅ | ✅ | | | |
+| **geraete.loeschen** | ✅ | | | | |
+| laborbuch.ansehen | ✅ | ✅ | ✅ | ✅ | ✅ |
+| laborbuch.erstellen · .bearbeiten | ✅ | ✅ | ✅ | | |
+| **laborbuch.loeschen** | ✅ | | | | |
+| kalender.ansehen | ✅ | ✅ | ✅ | ✅ | ✅ |
+| kalender.termine_erstellen · .bearbeiten | ✅ | ✅ | ✅ | | |
+| **kalender.loeschen** | ✅ | ✅ | | | |
+| berichte.ansehen | ✅ | ✅ | ✅ | ✅ | ✅ |
+| berichte.erstellen · .bearbeiten | ✅ | ✅ | ✅ | | |
+| **berichte.loeschen** | ✅ | | | | |
+| pdf.exportieren | ✅ | ✅ | ✅ | | |
+| ki.verwenden | ✅ | ✅ | ✅ | ✅ | |
+| standorte.ansehen | ✅ | ✅ | ✅ | ✅ | |
+| mitarbeiter.ansehen | ✅ | ✅ | | | |
+| rollen.ansehen | ✅ | ✅ | | | |
+| administration.mitarbeiter_verwalten | ✅ | ✅ | | | |
+| administration.rollen_verwalten | ✅ | ✅ | | | |
+| administration.standorte_verwalten | ✅ | ✅ | | | |
+| **administration.branding_aendern** | ✅ | | | | |
+| **administration.abrechnung_verwalten** | ✅ | | | | |
+| **administration.systemeinstellungen_aendern** | ✅ | | | | |
+| **rollen.admin_verwalten** | ✅ | | | | |
 
-Fett hervorgehoben: die im Sprint-Brief explizit genannten Kernregeln.
+Beispiel-Custom-Roles: **Qualitätsmanager** = Prüfer-Rechte (22). **Baustellenleiter** (20): Projekte erstellen/bearbeiten, Proben/Prüfungen erstellen, Kalender (erstellen/bearbeiten), Berichte (ansehen/erstellen/bearbeiten), PDF, KI, Standorte ansehen.
 
----
+### 3.1 Aufgelöste Widersprüche
 
-## 4. Explizite Regeln aus dem Sprint-Brief
-
-1. **„Azubis dürfen keine Proben löschen.“**
-   → `proben.loeschen` ist bei der Azubi-Rolle nicht gewährt (siehe Matrix). Im UI bereits als Sicherheitshinweis vorbereitet: `DeleteSampleDialog` zeigt schon heute den Text „Diese Aktion kann später im Audit-Log dokumentiert werden. Löschen ist später nur für Rollen außer Azubi erlaubt.“ – bei echter Anbindung wird daraus eine **serverseitig durchgesetzte** Firestore-Security-Rule (`request.auth.token.role != 'Azubi'`), nicht nur ein UI-Hinweis.
-
-2. **„Admin und Laborleiter dürfen Mitarbeiter verwalten.“**
-   → `administration.mitarbeiter_verwalten` ist bei beiden Rollen gewährt, bei Prüfer/Azubi/Gast nicht.
-
-3. **„Admin darf Rollen, Standorte, Abrechnung, Branding und Systemeinstellungen verwalten.“**
-   → Die 5 zugehörigen `administration.*`-Keys sind ausschließlich bei Admin gewährt (auch Laborleiter hat sie laut Mock-Daten **nicht**, mit Ausnahme von `mitarbeiter_verwalten`).
-
-4. **„Gast hat nur eingeschränkte Leserechte.“**
-   → Gast hat ausschließlich `*.ansehen`-Rechte (Dashboard, Proben, Prüfungen, Kunden, Projekte, Geräte, Laborbuch, Kalender) – keine Erstell-, Bearbeitungs- oder Löschrechte, kein PDF-Export, keine KI-Nutzung.
-
-5. **„Mitarbeiter bei Kündigung nicht hart löschen, sondern Zugriff entziehen/deaktivieren.“**
-   → `EmployeeStatus` kennt bereits `"Gesperrt"` als vollwertigen Status (kein hartes Löschen nötig). Empfehlung für die echte Anbindung:
-   - UI-Aktion „Sperren“ setzt `status: "Gesperrt"` **und** widerruft serverseitig alle aktiven Firebase-Auth-Sessions/Custom-Claims des Mitarbeiters (z. B. via `revokeRefreshTokens`).
-   - Historische Daten (erstellte Proben, Prüfwerte, Berichte) bleiben unverändert dem gesperrten Mitarbeiter zugeordnet (Referenz per `pruefer`/`bearbeiter`-Namen bzw. UID bleibt erhalten – **kein Kaskaden-Löschen**).
-   - Ein echtes Löschen des `employees`-Dokuments ist nicht vorgesehen; falls DSGVO-Löschpflichten entstehen, gehört das in einen separaten, protokollierten Prozess (Anonymisierung statt Dokumentlöschung), nicht in die normale „Mitarbeiter verwalten“-Aktion.
+| Widerspruch | Auflösung |
+|---|---|
+| Doku: „Rollen/Standorte/Branding nur Admin“ – Config: Laborleiter hatte `rollen_verwalten`, `standorte_verwalten`, `branding_aendern` | **Laborleiter:** `standorte_verwalten` ✅ (bleibt), `rollen_verwalten` ✅ (jetzt **begrenzt**, Abschnitt 4), `branding_aendern` ❌ (nur Administrator; Firmenidentität). |
+| `Laborleiter`-Beschreibung „Vollzugriff“ | Beschreibung geändert: „… ohne Administratorrechte“; 7 Rechte sind ausgeschlossen (4 Superuser + `geraete/laborbuch/berichte.loeschen`). |
+| `Gast`: „Leserechte für alle Bereiche“ vs. Berichte | Gast darf Berichte **ansehen** (bisher implizit über Prüfungen); keine Verwaltungsdaten (Standorte, Mitarbeiter, Rollen). |
+| Admin heißt in Mockdaten „Admin“, Rolle „Administrator“ | unverändert (Legacy-Alias, siehe `roleRules.ts`). |
 
 ---
 
-## 5. Durchsetzung: UI vs. Firestore Security Rules
+## 4. Superuser-Rechte und Begrenzungen
 
-Heute (Mock-Prototyp): **keine** echte Durchsetzung – alle Aktionen sind für jeden im UI erreichbar (bewusst, da noch keine Firebase-Anbindung).
+> Grundsatz: **Kein einzelner Schlüssel macht implizit zum Administrator.** Die Grenze zum Administrator ist ein eigener, ausdrücklicher Schlüssel (`rollen.admin_verwalten`), keine versteckte Logik.
 
-Geplant für die echte Anbindung, zweistufig:
+### 4.1 Restricted-Schlüssel (Superuser)
 
-1. **UI-Ebene (Komfort, keine Sicherheit):** Buttons/Menüpunkte je nach `permissions[key]` des eingeloggten Nutzers ein-/ausblenden (z. B. „Löschen“-Button für Azubi gar nicht erst anzeigen). Die dafür nötige Rollen-/Rechte-Struktur (`Role.permissions: Record<string, boolean>`) existiert bereits vollständig im Type-System.
-2. **Firestore Security Rules (echte Sicherheit):** Jede Regel prüft `request.auth.token.companyId == resource.data.companyId` (Tenant-Isolation) **und** ein Custom Claim für die Rolle/Rechte des Nutzers, z. B.:
+`rollen.admin_verwalten`, `administration.abrechnung_verwalten`, `administration.systemeinstellungen_aendern`, `administration.branding_aendern`.
 
-   ```
-   match /companies/{companyId}/samples/{sampleId} {
-     allow delete: if request.auth.token.companyId == companyId
-                   && request.auth.token.role != 'Azubi';
-   }
-   ```
+- Liegen **nur** bei der Administrator-Rolle (Test: `permissions.test.ts`). Keine Custom Role der Config enthält sie.
+- **Vergabe/Entzug dieser Schlüssel** (in einer beliebigen Rolle), **Bearbeiten der Administrator-Rolle**, **Zuweisen einer Rolle, die einen Restricted-Schlüssel enthält** (inkl. Administrator) und **Ändern/Sperren von Mitarbeitern, die eine solche Rolle halten** erfordern `rollen.admin_verwalten`.
+- Rules können Rollen nicht „vergleichen“ (keine Schleifen/Mengenvergleiche). Die Policy ist deshalb als **feste Liste** formuliert (`RESTRICTED_PERMISSION_KEYS`): prüfbar mit `permissions.diff(…).affectedKeys().hasAny([…])`.
 
-   Rollen-Rechte werden am besten als **Firebase Auth Custom Claims** beim Login/Rollenwechsel gesetzt (nicht bei jeder Rules-Auswertung aus Firestore nachgeladen, das wäre langsam und teuer) – die Custom Claims werden aus dem `roles/{roleId}`-Dokument des Nutzers per Cloud Function synchronisiert, sobald sich seine Rolle ändert.
+### 4.2 Bewertung der genannten Schlüssel
+
+| Schlüssel | Kritikalität | Wer | Begrenzung |
+|---|---|---|---|
+| `rollen.admin_verwalten` | **kritisch (Superuser)** | nur Administrator | Einziger Weg, Administratorrechte zu vergeben oder die Administrator-Rolle zu ändern. |
+| `administration.rollen_verwalten` | **kritisch, begrenzt** | Administrator, Laborleiter | Darf **normale** Rollen anlegen/ändern/archivieren, aber: Administrator-Rolle nicht ändern, **keinen Restricted-Schlüssel** vergeben, **keine Admin-Zuweisung**. Ohne diese Begrenzung wäre es ein Superuser-Recht. |
+| `administration.mitarbeiter_verwalten` | **kritisch, begrenzt** | Administrator, Laborleiter | Einladen, Rolle zuweisen, sperren, Daten ändern – aber: Rollen mit Restricted-Schlüssel (und Administrator) nur mit `rollen.admin_verwalten` zuweisen/einladen; Administratoren nicht ändern/sperren; **nie die eigene Rolle ändern** (Self-Promotion). |
+| `administration.standorte_verwalten` | mittel (Stammdaten) | Administrator, Laborleiter | Betrifft Standort-Stammdaten; keine Rechte-Eskalation möglich. |
+| `administration.branding_aendern` | niedrig–mittel (Firmenidentität, erscheint in Berichten/E-Mails) | nur Administrator | Restricted: bewusst nicht beim Laborleiter. |
+| `administration.abrechnung_verwalten` | **kritisch** (Zahlung/Lizenz) | nur Administrator | Restricted; Abrechnungsdaten später nur serverseitig. |
+| `administration.systemeinstellungen_aendern` | **kritisch** (Integrationen, Schlüssel) | nur Administrator | Restricted. |
+
+**Weitere Policy-Regeln (für spätere Rules/Server):**
+- Niemand ändert die **eigene** Rolle oder Membership; niemand sperrt sich selbst aus.
+- Die Administrator-Rolle ist unveränderlich (Berechtigungen und Typ); Änderungen nur über Server/Operator.
+- Mindestens ein aktiver Administrator muss bleiben (Server-Invariante, nicht in Rules prüfbar).
+- Eine Rolle, die Restricted-Schlüssel enthält, kann nur von einem Inhaber von `rollen.admin_verwalten` zugewiesen werden (sonst: Admin legt „Billing-Rolle“ an, Laborleiter weist sie sich selbst zu).
 
 ---
 
-## 6. Systemrollen-Schutz
+## 5. Zuordnung Collection ↔ Permission (Soll für spätere Rules)
 
-Bereits im UI durchgesetzt (`RolesView.tsx`): Rollen mit `type: "System"` können **nicht gelöscht**, nur archiviert werden; die Lösch-Option wird im Menü für Systemrollen gar nicht erst angeboten. Bei echter Anbindung zusätzlich per Security Rule absichern:
+Noch **nicht durchgesetzt**. Jede Collection hat ein eigenes Lese- und Schreibmodell; alle Lücken des Audits sind geschlossen.
 
-```
-allow delete: if resource.data.type != 'System';
-```
+| Collection | Read | Create | Update | Delete |
+|---|---|---|---|---|
+| `customers` | `kunden.ansehen` | `kunden.erstellen` | `kunden.bearbeiten` (inkl. Status/Archiv) | `kunden.loeschen` |
+| `projects` | `projekte.ansehen` | `projekte.erstellen` | `projekte.bearbeiten` (inkl. Status/Archiv) | `projekte.loeschen` |
+| `devices` | `geraete.ansehen` | `geraete.erstellen` | `geraete.bearbeiten` (inkl. Status/Archiv) | `geraete.loeschen` |
+| `samples` | `proben.ansehen` | `proben.erstellen` | `proben.bearbeiten` | `proben.loeschen` |
+| `testValues` | `pruefungen.ansehen` | `pruefungen.erstellen` | `pruefungen.bearbeiten` | `pruefungen.loeschen` |
+| `reports` | `berichte.ansehen` | `berichte.erstellen` | `berichte.bearbeiten` (PDF-/Excel-Export-Status zusätzlich `pdf.exportieren`) | `berichte.loeschen` |
+| `calendarEvents` | `kalender.ansehen` | `kalender.termine_erstellen` | `kalender.bearbeiten` | `kalender.loeschen` |
+| `laborbook` | `laborbuch.ansehen` | `laborbuch.erstellen` | `laborbuch.bearbeiten` (inkl. Archiv) | `laborbuch.loeschen` |
+| `locations` | `standorte.ansehen` | `administration.standorte_verwalten` | `administration.standorte_verwalten` | verboten (Status statt Löschen) |
+| `employees` | `mitarbeiter.ansehen` (+ das eigene Dokument) | **nur Server** (Einladungsannahme) | `administration.mitarbeiter_verwalten` + Begrenzungen (4.2) | verboten (Status „Gesperrt“) |
+| `invitations` | `administration.mitarbeiter_verwalten` | `administration.mitarbeiter_verwalten` + Begrenzungen (4.2) | `administration.mitarbeiter_verwalten` (nur Widerruf) | verboten (Widerruf) |
+| `roles` | `rollen.ansehen` (+ die **eigene** Rolle immer lesbar) | `administration.rollen_verwalten` + Begrenzungen (4.1) | `administration.rollen_verwalten` + Begrenzungen (4.1) | verboten (Archivieren) |
+
+Abhängigkeiten zwischen Collections (Dialoge lesen Referenzdaten) sind im Audit (Abschnitt 4.4) beschrieben; Custom Roles müssen die jeweiligen `*.ansehen` mitbringen (Test: Erstellen/Bearbeiten ohne `ansehen` kommt in den Systemrollen nicht vor).
+
+---
+
+## 6. Hard-Delete-Policy
+
+Für **jede** Domäne existiert Archiv/Status – endgültiges Löschen ist die Ausnahme. Es gibt dafür jetzt in jedem Bereich einen ausdrücklichen `*.loeschen`-Schlüssel (Risikoklasse *destructive*; 8 Stück). Es gibt **keinen** Delete-Schlüssel für `locations`, `employees`, `invitations`, `roles` (diese werden nie gelöscht).
+
+| Bereich | Archiv/Status vorhanden | Löschen vergeben an | Begründung |
+|---|---|---|---|
+| Proben, Prüfungen | ja (Status, Archiv) | Administrator, Laborleiter | bestehende Intention (Azubi/Prüfer nie) |
+| Kunden, Projekte | ja (Inaktiv/Archiviert bzw. Status) | Administrator, Laborleiter | bestehende Intention; **keine referenzielle Sperre** im Code |
+| Kalender | nur geplant/in Arbeit/überfällig/abgeschlossen | Administrator, Laborleiter | Löschen ist der einzige Weg, einen Termin zu stornieren; kein Nachweisdokument |
+| **Geräte** | ja | **nur Administrator** | Referenz für Prüfungen/Kalibrierung |
+| **Laborbuch** | ja (Aktiv/Archiviert) | **nur Administrator** | Nachweisdokument |
+| **Berichte** | ja (Archiviert) | **nur Administrator** | Ausgelieferte Dokumente |
+
+**Empfehlung für die Rules-Phase** (nicht umgesetzt, keine Service-Änderung in diesem Slice): `delete` zusätzlich nur erlauben, wenn `resource.data.status == "Archiviert"` (bzw. dem Archiv-Status der Domäne). Die UI-Hard-Deletes (Proben, Prüfungen, Berichte, Laborbuch, Kalender) bleiben bis dahin bestehen.
+
+---
+
+## 7. Migration
+
+**Kompatibilität:** Es wurde kein Schlüssel entfernt oder umbenannt. Gespeicherte Rollen-Dokumente mit den 31 alten Schlüsseln bleiben gültig; die 14 neuen Schlüssel gelten dort als `false` (`normalizePermissions`, Rules müssen `.get(key, false)` nutzen).
+
+**Bisherige Zuordnung → neue Schlüssel (effektive Rechte bleiben erhalten):**
+
+| Bisher | Wird zu |
+|---|---|
+| `kalender.termine_erstellen` (deckte Termine ändern ab) | zusätzlich `kalender.bearbeiten` |
+| `pruefungen.ansehen` (deckte Berichte lesen ab) | zusätzlich `berichte.ansehen` |
+| `pdf.exportieren` (deckte Berichte erstellen/ändern ab) | zusätzlich `berichte.erstellen`, `berichte.bearbeiten` |
+| `geraete.bearbeiten` (deckte Anlegen ab) | zusätzlich `geraete.erstellen` |
+| `laborbuch.bearbeiten` (deckte Anlegen ab) | zusätzlich `laborbuch.erstellen` |
+| keine (Bereichslesen war ungeregelt) | `standorte.ansehen` für Prüfer/Azubi/Baustellenleiter/Laborleiter/Admin; `mitarbeiter.ansehen`, `rollen.ansehen` für Laborleiter/Admin |
+
+**Bewusste Änderungen gegenüber der bisherigen Config:** Laborleiter verliert `branding_aendern`; Laborleiter und alle anderen erhalten `*.loeschen` für Geräte/Laborbuch/Berichte nicht (nur Administrator); Gast erhält `berichte.ansehen`; Laborleiter-/Gast-Beschreibung angepasst.
+
+**Persistierte Daten (wichtig vor jeder Durchsetzung):**
+- **Emulator/Dev:** `npx tsx scripts/seedRoles.ts --force` überschreibt die Rollen-Dokumente mit der neuen Matrix (überschreibt auch Anpassungen an den Beispielrollen).
+- **Echte Daten:** Die gespeicherten Systemrollen-Dokumente kennen die neuen Schlüssel nicht. **Vor dem Einschalten rollenbasierter Rules müssen sie migriert werden** (Admin-Skript oder manuell über die Rollenverwaltung), sonst hätte z. B. der Administrator in den Rules `berichte.ansehen == false` und wäre ausgesperrt. Maßgeblich für Rules sind die **gespeicherten** Dokumente, nicht die Config; die Rollenverwaltung zeigt ebenfalls die gespeicherten Daten.
+- Ein Konsistenz-Check „gespeicherte Systemrollen = Config-Matrix“ (Skript oder Test gegen Emulator-Daten) ist ein sinnvoller Folge-Schritt.
+
+---
+
+## 8. Weitere Regeln aus dem ursprünglichen Brief
+
+1. **„Azubis dürfen keine Proben löschen.“** → `proben.loeschen` nicht bei Azubi (Test).
+2. **„Admin und Laborleiter dürfen Mitarbeiter verwalten.“** → `administration.mitarbeiter_verwalten`, jetzt mit Begrenzungen (4.2).
+3. **„Gast hat nur eingeschränkte Leserechte.“** → ausschließlich `*.ansehen` und `dashboard.anzeigen` (Test).
+4. **„Mitarbeiter nicht hart löschen, sondern Zugriff entziehen.“** → Status `Gesperrt`; kein Delete-Schlüssel für Mitarbeiter. Die wirksame Sperre liegt in `userMemberships/{uid}.status` (serverseitig; siehe Security Foundations) – **noch nicht** an den Employee-Status gekoppelt.
+5. **Systemrollen-Schutz:** Systemrollen sind nicht löschbar/archivierbar, Name/Farbe/Beschreibung fest; die Administrator-Rolle ist komplett unveränderlich (heute nur Client-Regeln; Server-Durchsetzung folgt).
+
+## 9. Durchsetzung: Stand und Plan
+
+| Ebene | Stand |
+|---|---|
+| Config (Taxonomie, Matrix, Risikoklassen) | ✅ umgesetzt und getestet (`npm run test:permissions`) |
+| UI-Marker (`Nur Administrator`/`Löschen` im Rollen-Editor) | ✅ nur Anzeige |
+| UI-Gating (Buttons/Seiten nach Rechten) | ❌ noch nicht |
+| Firestore Rules (rollenbasiert) | ❌ noch nicht (nur Membership + Firma) |
+| Server (Provisionierung, Rollenzuweisung, Letzter-Admin-Schutz) | ❌ noch nicht |
+
+Architektur der späteren Durchsetzung (Variante D/A im Audit): Membership (`roleId`, `status`) + Role-Dokument (`permissions`) live per `get()` in den Rules; Restricted-Schlüssel als feste Liste; Zuweisungen und Membership-Änderungen serverseitig.

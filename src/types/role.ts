@@ -6,9 +6,19 @@ export type RoleStatus = "Aktiv" | "Archiviert";
 // Nur Farben aus dem bestehenden Design-System, keine neuen Farben erfinden.
 export type RoleColor = "primary" | "success" | "warning" | "danger" | "neutral";
 
+// Risikoklasse einer Berechtigung (Policy, siehe docs/database/permissions.md):
+//  - "restricted":  Superuser-/Administratorrecht. Darf nur von Inhabern von
+//                   rollen.admin_verwalten vergeben, entzogen oder zugewiesen
+//                   werden und liegt bei keiner anderen Systemrolle.
+//  - "destructive": endgültiges Löschen (`*.loeschen`). Nur sehr restriktiv
+//                   zu vergeben; fachlich gibt es überall Archiv/Status.
+// Heute reine Metadaten (Anzeige, Tests, Doku) – keine Durchsetzung.
+export type PermissionRisk = "restricted" | "destructive";
+
 export interface Permission {
   key: string;
   label: string;
+  risk?: PermissionRisk;
 }
 
 export interface PermissionCategoryDef {

@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:rules": "firebase emulators:exec --non-interactive --only firestore --project demo-pruefcheckpro-rules-test \"npm run test:rules:run\"",
+    "test:permissions": "tsx --test \"tests/config/**/*.test.ts\"",
     "test:rules:run": "tsx --test --test-concurrency=1 \"tests/firestore/**/*.test.ts\""
   },
   "dependencies": {

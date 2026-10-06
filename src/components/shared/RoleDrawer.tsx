@@ -65,6 +65,8 @@ function SectionTitle({ children }: { children: string }) {
 const infoBoxes: Record<string, string> = {
   admin:
     "Administratoren besitzen uneingeschränkten Zugriff auf alle Bereiche. Ihre Berechtigungen sind festgeschrieben und nicht änderbar.",
+  laborleiter:
+    "Der Laborleiter hat keine Administratorrechte: kein Branding, keine Abrechnung, keine Systemeinstellungen und keine Verwaltung von Administratorrechten.",
   gast: "Gäste besitzen ausschließlich Leserechte.",
   azubi: "Azubis dürfen später keine Proben endgültig löschen.",
 };

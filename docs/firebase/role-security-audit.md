@@ -2,6 +2,8 @@
 
 Status: **Audit und Planung. Es wird nichts erzwungen und nichts implementiert.** Dieses Dokument ändert weder `firestore.rules` noch Services, Hooks, Seeds oder Datenmodelle. Es beschreibt, was heute gilt, wo die Lücken sind und welche Enforcement-Architektur wir bauen sollten.
 
+> **Update (Slice „Permission-Taxonomie schließen“):** Die in diesem Audit gefundenen Permission-Lücken sind geschlossen, die Systemrollen-Matrix ist bereinigt und der Konflikt „Laborleiter vs. nur Admin“ ist aufgelöst. **Taxonomie: 31 → 45 Schlüssel**, neuer Superuser-Schlüssel `rollen.admin_verwalten`. Die maßgebliche Policy steht jetzt in `docs/database/permissions.md` (Abschnitt 14 dieses Dokuments fasst die Auswirkungen auf das Audit zusammen). Wo unten noch „31 Keys“, „⚠ Lücke“ oder die alten Matrixwerte stehen, beschreibt der Text den **Audit-Stand vor diesem Slice** (Ausgangsbasis); Enforcement ist weiterhin **nicht** umgesetzt.
+
 Stand der Analyse: nach den Slices Kunden, Projekte, Geräte, Proben, Prüfwerte, Berichte, Kalender, Laborbuch, Standorte, Mitarbeiter, Einladungen, Rollen und Security Foundations (`userMemberships/{uid}`).
 
 > **Kernaussage:** Auf Rules-Ebene gilt heute „aktives Mitglied der Firma = darf alles in `companies/{companyId}/…`“. Rollen und Berechtigungen existieren nur als Verwaltungsdaten und werden **nirgends** ausgewertet – weder serverseitig noch in der UI. Ein Gast kann mit dem Firebase-SDK jede Probe löschen, Rollen ändern und Mitarbeiter sperren.
@@ -10,7 +12,7 @@ Stand der Analyse: nach den Slices Kunden, Projekte, Geräte, Proben, Prüfwerte
 
 ## 1. Ist-Zustand (Antworten auf die 14 Fragen)
 
-**1. Welche Permission-Keys existieren?** 31 Keys in 11 Modulen (`permissionCategories` in `src/config/roles.ts`), Inventar siehe Abschnitt 2. Das ältere `docs/database/permissions.md` spricht von „~27“ und geht von Custom Claims (`request.auth.token.role`) aus – beides ist überholt.
+**1. Welche Permission-Keys existieren?** (Audit-Stand; jetzt 45 in 13 Modulen, siehe Abschnitt 14) 31 Keys in 11 Modulen (`permissionCategories` in `src/config/roles.ts`), Inventar siehe Abschnitt 2. Das ältere `docs/database/permissions.md` spricht von „~27“ und geht von Custom Claims (`request.auth.token.role`) aus – beides ist überholt.
 
 **2. Welche werden nur in der UI verwendet?** **Alle 31, und auch dort nur zur Anzeige/Bearbeitung der Rollenverwaltung** (`RolesView`, `RoleDrawer`, `CreateRoleDialog`, `EmployeeDetailDrawer` für die Modulübersicht). **Es gibt keine einzige Stelle, die ein Recht abfragt**, um einen Button zu verstecken oder eine Aktion zu sperren (Suche nach `permissions[`, `hasPermission`, `can(` und den Key-Strings ergibt keine Treffer außerhalb der Rollenverwaltung). Die Berechtigungen sind also heute nicht einmal UI-seitig wirksam.
 
@@ -56,7 +58,7 @@ Stand der Analyse: nach den Slices Kunden, Projekte, Geräte, Proben, Prüfwerte
 
 ---
 
-## 2. Permission-Key-Inventar (31 Keys)
+## 2. Permission-Key-Inventar (Audit-Stand: 31 Keys; aktuell 45, siehe Abschnitt 14)
 
 | Modul | Keys |
 |---|---|
@@ -76,7 +78,7 @@ Die Taxonomie (welche Keys es gibt) ist Code, die Zuordnung pro Rolle liegt in `
 
 **Nicht an Collections gebunden (kein Firestore-Bezug heute):** `dashboard.anzeigen` (reine UI), `ki.verwenden` (`aiChats` nicht angebunden), `administration.branding_aendern`, `.abrechnung_verwalten`, `.systemeinstellungen_aendern` (Firmenstammdaten/Abrechnung/Einstellungen sind nicht angebunden).
 
-## 3. Permission-Matrix der Rollen
+## 3. Permission-Matrix der Rollen (Audit-Stand; aktuelle Matrix: `docs/database/permissions.md`)
 
 | Recht | admin | laborleiter | pruefer | azubi | gast |
 |---|:-:|:-:|:-:|:-:|:-:|
@@ -109,6 +111,8 @@ Custom Roles: `qualitaetsmanager` hat dieselben 16 Rechte wie `pruefer`, `bauste
 ---
 
 ## 4. Collection-Audit und Permission-Matrix
+
+> **Aktualisiert:** Alle hier mit „⚠ Lücke“ markierten Schlüssel existieren jetzt (Abschnitt 14, Tabelle in `docs/database/permissions.md`, Abschnitt 5). Die Tabelle unten ist der Ausgangs-Audit.
 
 Annahme: Auswertung über vorhandene Keys. **⚠ Lücke** = es gibt keinen passenden Key; der genannte Ersatz ist ein Vorschlag, die Entscheidung ist offen. „Archiv/Status“ nennt, was statt Löschen existiert.
 
@@ -350,6 +354,9 @@ Reihenfolge (jeweils eigener Slice, mit Emulator-Tests):
 
 ## 12. Offene Fragen (Entscheidung nötig)
 
+> **Stand nach dem Taxonomie-Slice:** Frage 1 (Laborleiter), 3 (Berichte-Keys), 4 (Hard-Delete), 5 (Geräte/Kalender/Laborbuch-Keys) und 6 (Lese-Rechte) sind **entschieden** (Abschnitt 14). Frage 2 ist teilweise entschieden: Zuweisung durch `mitarbeiter_verwalten`, aber nicht für Rollen mit Restricted-Schlüsseln und nie für die eigene Rolle. Offen bleiben 7–12.
+
+
 1. **Laborleiter und `rollen_verwalten`/`standorte_verwalten`/`branding_aendern`:** In der Config gewährt, im Planungsdokument als „nur Admin“ beschrieben. Soll der Laborleiter das behalten?
 2. **Wer darf Rollen zuweisen?** Nur Administrator (`rollen_verwalten`) – oder auch `mitarbeiter_verwalten` für begrenzte Rollen? (Rules können Stufen nicht vergleichen.)
 3. **Berichte:** Eigene `berichte.*`-Keys oder Zuordnung zu `pruefungen.*`/`pdf.exportieren`?
@@ -368,3 +375,35 @@ Reihenfolge (jeweils eigener Slice, mit Emulator-Tests):
 ## 13. Ergebnis in einem Satz
 
 Die Rollen-/Permission-Struktur ist fachlich gut modelliert, aber **vollständig unwirksam**; empfohlen ist **Membership (server-geschrieben) als Zuordnung + Role-Dokument (live per `get()`) als Permissions** (Variante D/A), eingeführt in Phasen – **zuerst** Testinfrastruktur und Taxonomie-Entscheidung, **dann** Verwaltungs-Collections, **parallel** ein Admin-SDK-Backend für Bootstrap, Rollenzuweisung und Membership-Pflege.
+
+---
+
+## 14. Update: Taxonomie geschlossen (Slice „Permission-Taxonomie schließen“)
+
+Dieser Abschnitt beschreibt, was sich nach dem Audit geändert hat. Die vollständige Policy, Matrix und Begründungen stehen in `docs/database/permissions.md`; die Konfiguration in `src/config/roles.ts` ist durch `tests/config/permissions.test.ts` (`npm run test:permissions`) abgesichert. **Es wurde keine Durchsetzung eingebaut** (`firestore.rules` unverändert, Services unverändert).
+
+### 14.1 Lücken aus 4.3 → entschieden
+
+| Lücke | Ergebnis |
+|---|---|
+| `geraete.erstellen`, `geraete.loeschen` | neue Schlüssel |
+| `kalender.bearbeiten`, `kalender.loeschen` | neue Schlüssel (`kalender.termine_erstellen` bleibt als Legacy-Name für „erstellen“) |
+| `laborbuch.loeschen` (+ `laborbuch.erstellen`) | neue Schlüssel; Erstellen getrennt von Bearbeiten, damit Einträge append-only vergeben werden können |
+| `berichte.ansehen/erstellen/bearbeiten/loeschen` | neue Schlüssel; `pdf.exportieren` bleibt die Export-**Aktion** |
+| Lesen von Standorten/Mitarbeitern/Rollen | neue Schlüssel `standorte.ansehen`, `mitarbeiter.ansehen`, `rollen.ansehen` |
+| Superuser-Grenze | neuer Schlüssel `rollen.admin_verwalten` (nur Administrator) |
+| Einladungen | kein eigener Schlüssel; `administration.mitarbeiter_verwalten` (Lesen und Schreiben) |
+
+**31 → 45 Schlüssel**, 14 neu, **kein bestehender Schlüssel entfernt oder umbenannt**.
+
+### 14.2 Auswirkungen auf die Audit-Aussagen
+
+- **Frage 6 (Matrix):** aktuell Administrator 45 · Laborleiter 38 · Prüfer 22 · Azubi 13 · Gast 9 (statt 31/29/16/11/8).
+- **Abschnitt 3, Abweichung „Laborleiter hat zusätzlich rollen_verwalten/standorte_verwalten/branding_aendern“:** aufgelöst – Laborleiter behält `standorte_verwalten` und `rollen_verwalten` (jetzt **begrenzt**: keine Administrator-Rolle, keine Restricted-Schlüssel, keine Admin-Zuweisung), verliert `branding_aendern` (nur Administrator).
+- **Abschnitt 7 (kritische Aktionen):** `rollen_verwalten` ist durch die Trennung zu `rollen.admin_verwalten` kein Superuser-Recht mehr; die Superuser-Schlüssel sind eine feste, prüfbare Liste (`RESTRICTED_PERMISSION_KEYS`: `rollen.admin_verwalten`, `administration.branding_aendern`, `.abrechnung_verwalten`, `.systemeinstellungen_aendern`). Zuweisung/Einladung mit Administrator- oder Restricted-Rollen erfordert `rollen.admin_verwalten`; niemand ändert die eigene Rolle.
+- **Abschnitt 4.3 Punkt 3 (Hard-Delete):** für jeden Bereich gibt es jetzt `*.loeschen` (8 destructive-Schlüssel). **Geräte, Laborbuch und Berichte** dürfen nur vom Administrator endgültig gelöscht werden; Proben, Prüfungen, Kunden, Projekte, Kalender zusätzlich vom Laborleiter. Empfehlung für die Rules-Phase: Löschen nur archivierter Datensätze.
+- **Abschnitt 11 Risiko 1 (`rollen_verwalten` ist Superuser):** abgeschwächt, nicht erledigt – es bleibt eine **kritische, begrenzte** Berechtigung; die Begrenzung existiert bisher nur als Policy/Config und muss in den Rules und im Server umgesetzt werden.
+
+### 14.3 Neue Voraussetzung für die Durchsetzung: Migration der gespeicherten Rollen
+
+Gespeicherte Rollen-Dokumente kennen die 14 neuen Schlüssel nicht (fehlend = `false`). **Vor** rollenbasierten Rules müssen die Systemrollen auf die neue Matrix migriert werden (Details: `docs/database/permissions.md`, Abschnitt 7); sonst wären auch Administratoren in den Rules ohne `berichte.*`, `standorte.ansehen` usw. Ein Konsistenz-Check „gespeicherte Systemrollen = Config-Matrix“ gehört in den Rules-Slice (Test gegen Emulator-Daten).

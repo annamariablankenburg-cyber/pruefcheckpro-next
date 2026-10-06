@@ -9,9 +9,13 @@ on:
       - "firestore.rules"
       - "firebase.json"
       - "tests/**"
+      - "tests/config/**"
       - "package.json"
       - "package-lock.json"
       - "src/lib/firebase/collections.ts"
+      - "src/config/roles.ts"
+      - "src/types/role.ts"
+      - "src/lib/roles/**"
       - ".github/workflows/firestore-rules.yml"
   push:
     branches: [main]
@@ -19,9 +23,13 @@ on:
       - "firestore.rules"
       - "firebase.json"
       - "tests/**"
+      - "tests/config/**"
       - "package.json"
       - "package-lock.json"
       - "src/lib/firebase/collections.ts"
+      - "src/config/roles.ts"
+      - "src/types/role.ts"
+      - "src/lib/roles/**"
       - ".github/workflows/firestore-rules.yml"
 
 permissions:
@@ -46,6 +54,9 @@ jobs:
           java-version: "21"
 
       - run: npm ci
+
+      # Konfig-Invarianten der Permission-Taxonomie (kein Emulator nötig).
+      - run: npm run test:permissions
 
       # Startet den Emulator über `firebase emulators:exec`, führt die Tests aus
       # und beendet den Emulator wieder.

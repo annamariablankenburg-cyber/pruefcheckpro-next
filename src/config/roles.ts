@@ -1,8 +1,10 @@
 import {
   BookOpen,
+  Building2,
   CalendarDays,
   Cpu,
   FileDown,
+  FileText,
   FlaskConical,
   FolderKanban,
   LayoutDashboard,
@@ -17,6 +19,22 @@ import type { PermissionCategoryDef, Role } from "@/types/role";
 // Berechtigungs-Taxonomie für die Rollenverwaltung. Statische Produkt-
 // konfiguration (welche Berechtigungen es gibt und wie sie gruppiert sind);
 // welche Rolle welche Berechtigung hält, steht in companies/{companyId}/roles.
+//
+// Policy und Begründung: docs/database/permissions.md. Rollen und
+// Berechtigungen steuern heute Verwaltungslogik und Darstellung – es gibt noch
+// KEINE serverseitige Durchsetzung.
+//
+// Systematik: <modul>.ansehen / .erstellen / .bearbeiten / .loeschen.
+// Bewusste Ausnahmen (Legacy-Schlüssel, bleiben wegen gespeicherter Rollen
+// unverändert): `dashboard.anzeigen`, `kalender.termine_erstellen` (= „erstellen“
+// des Kalenders), `pdf.exportieren`, `ki.verwenden` und alle
+// `administration.*`-Schlüssel (Verwaltungsrechte, Schreib-Seite).
+//
+// Risikoklassen (`risk`):
+//  - "restricted":  Superuser-/Administratorrechte. Nur beim Administrator; nur
+//                   Inhaber von rollen.admin_verwalten dürfen sie vergeben.
+//  - "destructive": endgültiges Löschen (alle `*.loeschen`). Fachlich existiert
+//                   überall Archiv/Status; Löschen ist sehr restriktiv.
 export const permissionCategories: PermissionCategoryDef[] = [
   {
     key: "dashboard",
@@ -32,7 +50,7 @@ export const permissionCategories: PermissionCategoryDef[] = [
       { key: "proben.ansehen", label: "Proben ansehen" },
       { key: "proben.erstellen", label: "Proben erstellen" },
       { key: "proben.bearbeiten", label: "Proben bearbeiten" },
-      { key: "proben.loeschen", label: "Proben löschen" },
+      { key: "proben.loeschen", label: "Proben löschen", risk: "destructive" },
     ],
   },
   {
@@ -43,7 +61,7 @@ export const permissionCategories: PermissionCategoryDef[] = [
       { key: "pruefungen.ansehen", label: "Prüfungen ansehen" },
       { key: "pruefungen.erstellen", label: "Prüfungen erstellen" },
       { key: "pruefungen.bearbeiten", label: "Prüfungen bearbeiten" },
-      { key: "pruefungen.loeschen", label: "Prüfungen löschen" },
+      { key: "pruefungen.loeschen", label: "Prüfungen löschen", risk: "destructive" },
     ],
   },
   {
@@ -54,7 +72,7 @@ export const permissionCategories: PermissionCategoryDef[] = [
       { key: "kunden.ansehen", label: "Kunden ansehen" },
       { key: "kunden.erstellen", label: "Kunden erstellen" },
       { key: "kunden.bearbeiten", label: "Kunden bearbeiten" },
-      { key: "kunden.loeschen", label: "Kunden löschen" },
+      { key: "kunden.loeschen", label: "Kunden löschen", risk: "destructive" },
     ],
   },
   {
@@ -65,7 +83,7 @@ export const permissionCategories: PermissionCategoryDef[] = [
       { key: "projekte.ansehen", label: "Projekte ansehen" },
       { key: "projekte.erstellen", label: "Projekte erstellen" },
       { key: "projekte.bearbeiten", label: "Projekte bearbeiten" },
-      { key: "projekte.loeschen", label: "Projekte löschen" },
+      { key: "projekte.loeschen", label: "Projekte löschen", risk: "destructive" },
     ],
   },
   {
@@ -74,7 +92,9 @@ export const permissionCategories: PermissionCategoryDef[] = [
     icon: Cpu,
     permissions: [
       { key: "geraete.ansehen", label: "Geräte ansehen" },
+      { key: "geraete.erstellen", label: "Geräte erstellen" },
       { key: "geraete.bearbeiten", label: "Geräte bearbeiten" },
+      { key: "geraete.loeschen", label: "Geräte löschen", risk: "destructive" },
     ],
   },
   {
@@ -83,7 +103,9 @@ export const permissionCategories: PermissionCategoryDef[] = [
     icon: BookOpen,
     permissions: [
       { key: "laborbuch.ansehen", label: "Laborbuch ansehen" },
+      { key: "laborbuch.erstellen", label: "Laborbuch-Einträge erstellen" },
       { key: "laborbuch.bearbeiten", label: "Laborbuch bearbeiten" },
+      { key: "laborbuch.loeschen", label: "Laborbuch-Einträge löschen", risk: "destructive" },
     ],
   },
   {
@@ -93,6 +115,19 @@ export const permissionCategories: PermissionCategoryDef[] = [
     permissions: [
       { key: "kalender.ansehen", label: "Kalender ansehen" },
       { key: "kalender.termine_erstellen", label: "Termine erstellen" },
+      { key: "kalender.bearbeiten", label: "Termine bearbeiten" },
+      { key: "kalender.loeschen", label: "Termine löschen", risk: "destructive" },
+    ],
+  },
+  {
+    key: "berichte",
+    label: "Berichte",
+    icon: FileText,
+    permissions: [
+      { key: "berichte.ansehen", label: "Berichte ansehen" },
+      { key: "berichte.erstellen", label: "Berichte erstellen" },
+      { key: "berichte.bearbeiten", label: "Berichte bearbeiten" },
+      { key: "berichte.loeschen", label: "Berichte löschen", risk: "destructive" },
     ],
   },
   {
@@ -108,22 +143,51 @@ export const permissionCategories: PermissionCategoryDef[] = [
     permissions: [{ key: "ki.verwenden", label: "PrüfCheck AI verwenden" }],
   },
   {
+    // Lese-Rechte für Verwaltungsdaten. Getrennt von den `*_verwalten`-Rechten,
+    // damit Rules später Lesen und Schreiben unabhängig entscheiden können.
+    key: "unternehmen",
+    label: "Unternehmen (Ansicht)",
+    icon: Building2,
+    permissions: [
+      { key: "standorte.ansehen", label: "Standorte ansehen" },
+      { key: "mitarbeiter.ansehen", label: "Mitarbeiter ansehen" },
+      { key: "rollen.ansehen", label: "Rollen ansehen" },
+    ],
+  },
+  {
     key: "administration",
     label: "Administration",
     icon: ShieldCheck,
     permissions: [
       { key: "administration.mitarbeiter_verwalten", label: "Mitarbeiter verwalten" },
-      { key: "administration.rollen_verwalten", label: "Rollen verwalten" },
+      { key: "administration.rollen_verwalten", label: "Rollen verwalten (ohne Administratorrechte)" },
       { key: "administration.standorte_verwalten", label: "Standorte verwalten" },
-      { key: "administration.branding_aendern", label: "Branding ändern" },
-      { key: "administration.abrechnung_verwalten", label: "Abrechnung verwalten" },
-      { key: "administration.systemeinstellungen_aendern", label: "Systemeinstellungen ändern" },
+      { key: "administration.branding_aendern", label: "Branding ändern", risk: "restricted" },
+      { key: "administration.abrechnung_verwalten", label: "Abrechnung verwalten", risk: "restricted" },
+      {
+        key: "administration.systemeinstellungen_aendern",
+        label: "Systemeinstellungen ändern",
+        risk: "restricted",
+      },
+      { key: "rollen.admin_verwalten", label: "Administratorrechte verwalten (Superuser)", risk: "restricted" },
     ],
   },
 ];
 
 export const allPermissionKeys = permissionCategories.flatMap((category) =>
   category.permissions.map((permission) => permission.key)
+);
+
+// Superuser-/Administratorrechte: gehören ausschließlich der Administrator-
+// Rolle und dürfen nur von Inhabern von `rollen.admin_verwalten` vergeben
+// werden (Policy, noch nicht durchgesetzt).
+export const RESTRICTED_PERMISSION_KEYS = permissionCategories.flatMap((category) =>
+  category.permissions.filter((permission) => permission.risk === "restricted").map((permission) => permission.key)
+);
+
+// Endgültiges Löschen (`*.loeschen`).
+export const DESTRUCTIVE_PERMISSION_KEYS = permissionCategories.flatMap((category) =>
+  category.permissions.filter((permission) => permission.risk === "destructive").map((permission) => permission.key)
 );
 
 export function buildPermissions(granted: string[]): Record<string, boolean> {
@@ -140,9 +204,90 @@ export function buildPermissions(granted: string[]): Record<string, boolean> {
 // (siehe lib/roles/roleRules.ts).
 export const SYSTEM_ROLE_IDS = ["admin", "laborleiter", "pruefer", "azubi", "gast"] as const;
 
+// --- Rollenmatrix -------------------------------------------------------------
+// Jede Rolle listet ihre Rechte ausdrücklich auf (Ausnahme: Administrator =
+// alle, Laborleiter = alle außer der Liste unten). Siehe docs/database/
+// permissions.md für Begründung und Abgrenzung.
+
+// Laborleiter: operative Leitung. Alles AUSSER
+//  - den Superuser-/Administratorrechten (restricted: Branding, Abrechnung,
+//    Systemeinstellungen, Administratorrechte verwalten),
+//  - dem endgültigen Löschen von Geräten, Laborbuch-Einträgen und Berichten
+//    (Nachweis-/Referenzdaten; Archivieren statt Löschen).
+// Endgültiges Löschen von Proben, Prüfungen, Kunden, Projekten und Terminen
+// behält der Laborleiter (bestehende Intention); empfohlen ist, es später nur
+// für archivierte Datensätze zu erlauben.
+const LABORLEITER_DENIED: string[] = [
+  ...RESTRICTED_PERMISSION_KEYS,
+  "geraete.loeschen",
+  "laborbuch.loeschen",
+  "berichte.loeschen",
+];
+
+const PRUEFER_PERMISSIONS: string[] = [
+  "dashboard.anzeigen",
+  "proben.ansehen",
+  "proben.erstellen",
+  "proben.bearbeiten",
+  "pruefungen.ansehen",
+  "pruefungen.erstellen",
+  "pruefungen.bearbeiten",
+  "kunden.ansehen",
+  "projekte.ansehen",
+  "geraete.ansehen",
+  "laborbuch.ansehen",
+  "laborbuch.erstellen",
+  "laborbuch.bearbeiten",
+  "kalender.ansehen",
+  "kalender.termine_erstellen",
+  "kalender.bearbeiten",
+  "berichte.ansehen",
+  "berichte.erstellen",
+  "berichte.bearbeiten",
+  "pdf.exportieren",
+  "ki.verwenden",
+  "standorte.ansehen",
+];
+
+const AZUBI_PERMISSIONS: string[] = [
+  "dashboard.anzeigen",
+  "proben.ansehen",
+  "proben.erstellen",
+  "proben.bearbeiten",
+  "pruefungen.ansehen",
+  "kunden.ansehen",
+  "projekte.ansehen",
+  "geraete.ansehen",
+  "laborbuch.ansehen",
+  "kalender.ansehen",
+  "berichte.ansehen",
+  "ki.verwenden",
+  "standorte.ansehen",
+];
+
+// Gast: ausschließlich Lesen der fachlichen Bereiche. Keine Verwaltungsdaten
+// (Standorte, Mitarbeiter, Rollen), kein PDF-Export, keine KI.
+const GAST_PERMISSIONS: string[] = [
+  "dashboard.anzeigen",
+  "proben.ansehen",
+  "pruefungen.ansehen",
+  "kunden.ansehen",
+  "projekte.ansehen",
+  "geraete.ansehen",
+  "laborbuch.ansehen",
+  "kalender.ansehen",
+  "berichte.ansehen",
+];
+
 // Die Rollen-Stammdaten dienen als Mock-Datenquelle und als Vorlage für
 // scripts/seedRoles.ts. Im Firestore-Modus sind NICHT sie die Wahrheit,
 // sondern companies/{companyId}/roles. Zeitstempel sind ISO-Strings.
+//
+// Migration: Bereits gespeicherte Rollen-Dokumente kennen die neu ergänzten
+// Schlüssel nicht; fehlende Schlüssel gelten als `false`
+// (normalizePermissions). Vor einer rollenbasierten Durchsetzung müssen die
+// Systemrollen daher auf diese Matrix migriert werden (siehe
+// docs/database/permissions.md, Abschnitt „Migration“).
 export const roles: Role[] = [
   {
     id: "admin",
@@ -152,25 +297,20 @@ export const roles: Role[] = [
     color: "primary",
     status: "Aktiv",
     createdAt: "2024-01-01T10:30:00.000Z",
-    updatedAt: "2025-05-15T14:22:00.000Z",
+    updatedAt: "2026-10-06T12:00:00.000Z",
     permissions: buildPermissions(allPermissionKeys),
   },
   {
     id: "laborleiter",
     name: "Laborleiter",
-    description: "Vollzugriff auf alle Laborfunktionen, Prüfungen, Ergebnisse und Berichte.",
+    description:
+      "Leitet Laborfunktionen, Prüfungen, Berichte, Mitarbeiter und Standorte – ohne Administratorrechte.",
     type: "System",
     color: "success",
     status: "Aktiv",
     createdAt: "2024-01-01T10:30:00.000Z",
-    updatedAt: "2025-05-15T14:22:00.000Z",
-    permissions: buildPermissions(
-      allPermissionKeys.filter(
-        (key) =>
-          key !== "administration.abrechnung_verwalten" &&
-          key !== "administration.systemeinstellungen_aendern"
-      )
-    ),
+    updatedAt: "2026-10-06T12:00:00.000Z",
+    permissions: buildPermissions(allPermissionKeys.filter((key) => !LABORLEITER_DENIED.includes(key))),
   },
   {
     id: "pruefer",
@@ -180,25 +320,8 @@ export const roles: Role[] = [
     color: "warning",
     status: "Aktiv",
     createdAt: "2024-01-01T10:30:00.000Z",
-    updatedAt: "2025-04-10T09:05:00.000Z",
-    permissions: buildPermissions([
-      "dashboard.anzeigen",
-      "proben.ansehen",
-      "proben.erstellen",
-      "proben.bearbeiten",
-      "pruefungen.ansehen",
-      "pruefungen.erstellen",
-      "pruefungen.bearbeiten",
-      "kunden.ansehen",
-      "projekte.ansehen",
-      "geraete.ansehen",
-      "laborbuch.ansehen",
-      "laborbuch.bearbeiten",
-      "kalender.ansehen",
-      "kalender.termine_erstellen",
-      "pdf.exportieren",
-      "ki.verwenden",
-    ]),
+    updatedAt: "2026-10-06T12:00:00.000Z",
+    permissions: buildPermissions(PRUEFER_PERMISSIONS),
   },
   {
     id: "azubi",
@@ -208,40 +331,19 @@ export const roles: Role[] = [
     color: "primary",
     status: "Aktiv",
     createdAt: "2024-01-01T10:30:00.000Z",
-    updatedAt: "2025-02-02T11:15:00.000Z",
-    permissions: buildPermissions([
-      "dashboard.anzeigen",
-      "proben.ansehen",
-      "proben.erstellen",
-      "proben.bearbeiten",
-      "pruefungen.ansehen",
-      "kunden.ansehen",
-      "projekte.ansehen",
-      "geraete.ansehen",
-      "laborbuch.ansehen",
-      "kalender.ansehen",
-      "ki.verwenden",
-    ]),
+    updatedAt: "2026-10-06T12:00:00.000Z",
+    permissions: buildPermissions(AZUBI_PERMISSIONS),
   },
   {
     id: "gast",
     name: "Gast",
-    description: "Nur Leserechte für alle Bereiche.",
+    description: "Nur Leserechte für die fachlichen Bereiche.",
     type: "System",
     color: "neutral",
     status: "Aktiv",
     createdAt: "2024-01-01T10:30:00.000Z",
-    updatedAt: "2024-01-01T10:30:00.000Z",
-    permissions: buildPermissions([
-      "dashboard.anzeigen",
-      "proben.ansehen",
-      "pruefungen.ansehen",
-      "kunden.ansehen",
-      "projekte.ansehen",
-      "geraete.ansehen",
-      "laborbuch.ansehen",
-      "kalender.ansehen",
-    ]),
+    updatedAt: "2026-10-06T12:00:00.000Z",
+    permissions: buildPermissions(GAST_PERMISSIONS),
   },
   {
     id: "qualitaetsmanager",
@@ -251,25 +353,9 @@ export const roles: Role[] = [
     color: "success",
     status: "Aktiv",
     createdAt: "2025-06-12T08:40:00.000Z",
-    updatedAt: "2025-06-12T08:40:00.000Z",
-    permissions: buildPermissions([
-      "dashboard.anzeigen",
-      "proben.ansehen",
-      "proben.erstellen",
-      "proben.bearbeiten",
-      "pruefungen.ansehen",
-      "pruefungen.erstellen",
-      "pruefungen.bearbeiten",
-      "kunden.ansehen",
-      "projekte.ansehen",
-      "geraete.ansehen",
-      "laborbuch.ansehen",
-      "laborbuch.bearbeiten",
-      "kalender.ansehen",
-      "kalender.termine_erstellen",
-      "pdf.exportieren",
-      "ki.verwenden",
-    ]),
+    updatedAt: "2026-10-06T12:00:00.000Z",
+    // Entspricht dem Prüfer (bisherige Intention: identische Rechte).
+    permissions: buildPermissions(PRUEFER_PERMISSIONS),
   },
   {
     id: "baustellenleiter",
@@ -279,7 +365,7 @@ export const roles: Role[] = [
     color: "warning",
     status: "Aktiv",
     createdAt: "2025-09-03T13:10:00.000Z",
-    updatedAt: "2025-09-03T13:10:00.000Z",
+    updatedAt: "2026-10-06T12:00:00.000Z",
     permissions: buildPermissions([
       "dashboard.anzeigen",
       "proben.ansehen",
@@ -294,8 +380,13 @@ export const roles: Role[] = [
       "laborbuch.ansehen",
       "kalender.ansehen",
       "kalender.termine_erstellen",
+      "kalender.bearbeiten",
+      "berichte.ansehen",
+      "berichte.erstellen",
+      "berichte.bearbeiten",
       "pdf.exportieren",
       "ki.verwenden",
+      "standorte.ansehen",
     ]),
   },
 ];

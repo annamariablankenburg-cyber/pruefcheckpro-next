@@ -51,7 +51,7 @@ Die **Berechtigungs-Taxonomie** (welche Berechtigungen es gibt und wie sie grupp
 
 Die vorhandenen deutschen Schlüssel (z. B. `proben.ansehen`, `kunden.bearbeiten`, `administration.mitarbeiter_verwalten`) wurden **nicht** durch das englische Vorschlags-Set (`customers.read` …) ersetzt: Die bestehende UI-Domäne ist feiner (ansehen/erstellen/bearbeiten/löschen) und bereits in 11 Module gruppiert (Dashboard, Proben, Prüfungen, Kunden, Projekte, Geräte, Laborbuch, Kalender, PDF, KI, Administration). Eine Umbenennung hätte reinen Aufwand ohne Nutzen erzeugt und bestehende Rollen unlesbar gemacht. Die Gruppierung nach Modulen (mit Zähler „gewährt/gesamt“, Suche und Auf-/Zuklappen) war bereits vorhanden und bleibt.
 
-Die Taxonomie wird in diesem Slice nicht erweitert. Fachlich noch nicht abgebildet sind eigene Schlüssel für Berichte und Einladungen (heute über PDF bzw. `administration.mitarbeiter_verwalten` mit abgedeckt) – siehe „Offene Punkte“.
+Die Taxonomie wurde in diesem Slice nicht erweitert (**Stand danach:** im Slice „Permission-Taxonomie schließen“ von 31 auf 45 Schlüssel in 13 Modulen erweitert, ohne bestehende Schlüssel zu ändern – siehe `docs/database/permissions.md`). Eigene Berichte-Schlüssel existieren inzwischen (`berichte.ansehen`, `berichte.erstellen`, `berichte.bearbeiten`, `berichte.loeschen`); `pdf.exportieren` bleibt die Export-Aktion. Einladungen haben bewusst keinen eigenen Schlüssel und laufen über `administration.mitarbeiter_verwalten`.
 
 **Normalisierung:** Beim Lesen und Schreiben (`normalizePermissions`) werden nur bekannte Schlüssel behalten, jeder mit explizitem `true`/`false`. Entfernte oder unbekannte Schlüssel fallen weg, fehlende gelten als `false`. Die Map enthält Schlüssel mit Punkt – als Map-Schlüssel in Firestore zulässig; geschrieben wird immer die ganze Map (`setDoc`/`addDoc` bzw. Ersetzen des Feldes `permissions` per Update), nie ein Punktpfad.
 
@@ -126,7 +126,7 @@ Bestehende Slices bleiben erhalten: kein Employee-/Invitation-Hard-Delete, `loca
 - **Security-Enforcement:** Rules, Custom Claims, Admin SDK und serverseitige Rollenvergabe folgen in einem eigenen Security-Slice. Bis dahin kann **jeder angemeldete Nutzer der eigenen Firma** Rollen lesen und schreiben (`belongsToCompany`), unabhängig von seiner Rolle.
 - **Rollenname-Race:** Eindeutigkeit ist nicht atomar (Abschnitt 6).
 - **Umbenennung:** Wird eine benutzerdefinierte Rolle umbenannt, zeigen Mitarbeiter/Einladungen den neuen Namen (Auflösung über `roleId`), der gespeicherte Snapshot bleibt alt, bis der Datensatz neu geschrieben wird.
-- **Taxonomie:** keine eigenen Schlüssel für Berichte und Einladungen; keine Erweiterung in diesem Slice.
+- **Taxonomie:** in diesem Slice nicht erweitert; die Berichte-Schlüssel (`berichte.*`) wurden im Slice „Permission-Taxonomie schließen“ ergänzt. Einladungen bleiben bewusst über `administration.mitarbeiter_verwalten` abgedeckt (kein eigener Schlüssel).
 - **Export** der Rolle als Datei fehlt (Platzhalter).
 - **Kein Audit-Log, kein Realtime-Sync, kein „Geändert von“** (keine belastbare Nutzeridentität).
 - **Mitarbeiter-/Einladungsdaten im Emulator** ohne `roleId` (Altseed) werden nur per Name aufgelöst; Umbenennungen der Systemrollen sind ausgeschlossen, daher ist das stabil.
