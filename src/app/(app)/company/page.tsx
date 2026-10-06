@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CreditCard, Palette, UserCog, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -48,16 +48,24 @@ const tabs: CompanyTab[] = [
   { value: "einstellungen", label: "Einstellungen" },
 ];
 
+const DEFAULT_TAB = "uebersicht";
+
 // Erlaubt Deep-Links auf einen bestimmten Tab (z. B. von /admin aus:
-// /company?tab=mitarbeiter), ohne eine neue Route anzulegen.
-function initialTabFromUrl(): string {
-  if (typeof window === "undefined") return "uebersicht";
-  const requestedTab = new URLSearchParams(window.location.search).get("tab");
-  return requestedTab && tabs.some((tab) => tab.value === requestedTab) ? requestedTab : "uebersicht";
+// /company?tab=mitarbeiter), ohne eine neue Route anzulegen. Nur bekannte
+// Tab-Werte werden übernommen, alles andere fällt auf die Übersicht zurück.
+function tabFromSearch(search: string): string {
+  const requestedTab = new URLSearchParams(search).get("tab");
+  return tabs.find((tab) => tab.value === requestedTab)?.value ?? DEFAULT_TAB;
 }
 
 export default function CompanyPage() {
-  const [activeTab, setActiveTab] = useState(initialTabFromUrl);
+  // Server und erster Client-Render starten mit demselben Default (kein
+  // Hydration-Mismatch); der Deep-Link-Tab wird erst nach dem Mount übernommen.
+  const [activeTab, setActiveTab] = useState(DEFAULT_TAB);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setActiveTab(tabFromSearch(window.location.search));
+  }, []);
   const [isNewLocationOpen, setIsNewLocationOpen] = useState(false);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const { message: feedback, showFeedback } = useFeedbackToast();
