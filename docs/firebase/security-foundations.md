@@ -1,6 +1,8 @@
 # Security Foundations (Auth Membership + Firestore Rules)
 
-Status: **Fundament, noch keine rollenbasierte Durchsetzung.** Dieser Slice führt eine geprüfte Zuordnung „Firebase-Auth-User → Firma“ ein und härtet die Firestore Rules darauf. Er ändert keine fachlichen Slices (Kunden, Projekte, …, Rollen, Mitarbeiter, Einladungen) und setzt **keine** Rollen- oder Permission-Auswertung um.
+> **Update (Rules Phase 1):** Für `roles`, `employees`, `invitations` und `locations` gilt jetzt eine rollenbasierte Durchsetzung (siehe `docs/firebase/role-permission-rules-phase1.md`; im Emulator getestet). Für die übrigen acht Company-Collections gilt weiterhin nur dieses Fundament.
+
+Status: **Fundament, noch keine rollenbasierte Durchsetzung (für die acht Fach-Collections weiterhin).** Dieser Slice führt eine geprüfte Zuordnung „Firebase-Auth-User → Firma“ ein und härtet die Firestore Rules darauf. Er ändert keine fachlichen Slices (Kunden, Projekte, …, Rollen, Mitarbeiter, Einladungen) und setzt **keine** Rollen- oder Permission-Auswertung um.
 
 > **Nicht Teil dieses Slices (und nicht simuliert):** Auth-Benutzer anlegen/löschen, Passwörter zurücksetzen, Custom Claims, Firebase Admin SDK, Cloud Functions, echtes User-Provisioning, rollenbasierte Rules. **Ein Membership-Dokument allein erstellt keinen Firebase-Auth-Benutzer.**
 
@@ -130,7 +132,7 @@ isSignedIn()
 
 ## 8. Was noch nicht geschützt ist
 
-- **Keine rollenbasierte Durchsetzung:** Jeder aktive Member der Firma darf alle Firmen-Collections lesen und schreiben – unabhängig von `roleId`/`role` (auch Rollen, Mitarbeiter, Einladungen).
+- **Rollenbasierte Durchsetzung nur in Phase 1:** `roles`, `employees`, `invitations`, `locations` prüfen Permissions (Phase 1). In den **acht übrigen** Collections (`customers`, `projects`, `devices`, `samples`, `testValues`, `reports`, `calendarEvents`, `laborbook`) darf jeder aktive Member der Firma weiterhin alles lesen und schreiben – unabhängig von `roleId`/`role`.
 - **Mitarbeiter-Sperre ≠ Membership-Sperre:** `Employee.status = "Gesperrt"` (UI-Verwaltung) setzt `userMemberships.status` **nicht** automatisch; das ist eine eigene Operation, die Server-Provisionierung braucht.
 - **Profil:** `role`/`plan` sind für den Client nicht mehr änderbar (nur `lastLogin`), das Profil bleibt aber eine reine Anzeige-/Metadatenquelle. Bei der Registrierung setzt der Client selbst das Basisprofil (`role`/`plan` = `"azubi"`, von den Rules erzwungen); Planwechsel/Upgrades brauchen später eine Server-Komponente.
 - **Persönliche Subcollections** (`users/{uid}/aiChats`) haben noch keine Rules (bleiben per Fallback gesperrt).
@@ -162,7 +164,7 @@ Das ist hier **nicht** implementiert und nicht simuliert. Bis dahin legt man Mem
 - `npx tsc --noEmit`, `npm run lint`, `npm run build`: siehe Abschlussbericht.
 - Isoliert getestet: `evaluateMembership` (fehlend, aktiv, gesperrt, leere/fehlende `companyId`, unbekannter Status, Legacy ohne `employeeId`/Rolle).
 - Browser: unauthentifiziert → `/dashboard` leitet auf `/login` (wie bisher). Die vier Sperr-/Ladezustände des Gates (`loading`, `missing`, `blocked`, `invalid`, `error`) und die Freigabe bei `valid`/`disabled` wurden über eine temporäre, wieder entfernte Harness-Seite mit der reinen Anzeige-Komponente geprüft.
-- **Nicht getestet:** echter Login (keine Zugangsdaten, keine Konten angelegt) und damit der echte Pfad Auth → Membership laden → App freigeben/sperren; die **Firestore Rules** (kein Emulator/Java verfügbar, keine Syntaxprüfung durch den Rules-Compiler); der Seed gegen den Emulator.
+- **Nicht getestet (Stand dieses Slices):** echter Login (keine Zugangsdaten, keine Konten angelegt) und damit der echte Pfad Auth → Membership laden → App freigeben/sperren; der Seed gegen den Emulator. *Die Firestore Rules selbst waren damals ohne Emulator ungeprüft; sie werden inzwischen durch die Rules-Tests (`docs/firebase/firestore-rules-testing.md`) im Emulator abgedeckt.*
 
 ## 12. Offene Punkte
 

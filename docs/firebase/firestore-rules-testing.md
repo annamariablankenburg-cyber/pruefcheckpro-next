@@ -70,13 +70,18 @@ tests/firestore/
   helpers/fixtures.ts           Test-User, Firmen, Membership-Seed, Standard-Welt, die 12 Company-Collections
   membership.test.ts            userMemberships/{uid}
   company-isolation.test.ts     Tenant-Isolation, defekte Memberships, Fallback-Pfade
-  company-collections.test.ts   parametrisiert: alle 12 Company-Collections + Abdeckungs-Wächter
+  company-collections.test.ts   parametrisiert: die 8 noch nicht rollenbasierten Company-Collections + Abdeckungs-Wächter (alle 12)
   profile.test.ts               users/{uid} (Login-Profil)
+  phase1-matrix.test.ts         Rules Phase 1: 19 Personas × roles/employees/invitations/locations × get/list/create/update/delete
+  phase1-employees.test.ts      Rules Phase 1: eigenes Dokument, Administrator-/Restricted-Schutz, Self-Promotion
+  phase1-roles.test.ts          Rules Phase 1: Rollen lesen/anlegen/ändern, Restricted-Schlüssel, Administrator-Rolle
+  phase1-invitations-locations.test.ts  Rules Phase 1: Einladungs-Formregeln, Widerruf, Standorte
+  rules-config-sync.test.ts     firestore.rules ↔ src/config/roles.ts (ohne Emulator lauffähig)
 ```
 
 **Ablauf je Test:** Daten werden mit `withSecurityRulesDisabled` angelegt (Setup); die Assertions laufen mit `authenticatedContext(uid)` bzw. `unauthenticatedContext()` und `assertSucceeds`/`assertFails`. Vor jedem Test setzt `clearFirestore()` die Daten zurück.
 
-### Testfall-Kategorien (189 Testfälle)
+### Testfall-Kategorien (711 Testfälle; vor Phase 1: 189)
 
 1. **Membership (`userMemberships/{uid}`)** – eigene lesen (inkl. fehlend/gesperrt: für die App-Zustände nötig), fremde/anonym/Liste/gefilterte Query verboten; Create (auch Selbst-Zuweisung), Update (`companyId`, `roleId`, `role`, `status`, Selbst-Entsperren, Überschreiben, fremde), Delete – jeweils DENY; abgelehnte Writes lassen das Dokument unverändert.
 2. **Tenant-Isolation** (Beispiel `customers`) – richtige Firma ALLOW (Ist-Stand: auch Schreiben/Löschen), falsche Firma, gesperrt, ohne Membership, anonym: DENY.
@@ -85,7 +90,9 @@ tests/firestore/
 5. **Nicht freigegebene Pfade** – `companies/{id}` (Stammdokument), `integrations`, `webhooks`, `auditLog`, `users/{uid}/aiChats`, unbekannte Pfade: DENY (Deny-Fallback).
 6. **Profil (`users/{uid}`)** – eigenes/fremdes/anonym/Liste lesen; Create: das von `createUserProfile()` erzeugte Basisprofil ALLOW; `role: "admin"`, `plan: "enterprise"`, zusätzliche Felder (`companyId`, `laboratoryId`), fremde UID, falsche `id`, ungültige Werte, fehlende Pflichtfelder (je Feld), Client-Zeit statt Server-Timestamp: DENY; Update: nur `lastLogin` (Server-Zeit, auch im `setDoc`-merge-Muster von `updateLastLogin()`) ALLOW, jede andere Änderung (auch zusammen mit `lastLogin`) DENY; Delete DENY.
 
-> **Hinweis zur Ausführung:** 187 der 189 Testfälle brauchen den Emulator. Zwei Wächter-Tests (Abdeckung der Collections) laufen auch ohne Emulator und wurden verifiziert; die Emulator-Tests konnten in der Entwicklungsumgebung dieses Slices **nicht ausgeführt** werden, weil dort kein Java installiert war (siehe Abschlussbericht des Slices).
+> **Phase 1 (Rollen-Rules):** Kategorie 3 testet nur noch die acht übrigen Collections; die Tests für die vier rollenbasierten Collections stehen in `phase1-*.test.ts` (siehe `docs/firebase/role-permission-rules-phase1.md`, Abschnitt 8). Die 12 Collections sind weiter durch den Wächter-Test erfasst; vier davon folgen der Permission-Policy.
+
+> **Hinweis zur Ausführung:** Die Emulator-Tests brauchen Java 21. Auf der lokalen Entwicklungsmaschine lief `npm run test:rules` vollständig grün (189 Tests vor Phase 1; mit Phase 1 698 von 698, 0 Fehler). Die Konsistenz-Tests (`rules-config-sync.test.ts`, Abdeckungs-Wächter) laufen auch ohne Emulator. Nach dem Lauf mit 698 Tests kam die Regel „nur bekannte Permission-Schlüssel“ mit 13 weiteren Tests hinzu (insgesamt 711); diese sind lokal noch zu bestätigen.
 
 ## 6. CI
 

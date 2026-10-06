@@ -32,7 +32,7 @@ Stand der Analyse: nach den Slices Kunden, Projekte, Geräte, Proben, Prüfwerte
 
 **10. Was passiert bei Rollenwechsel?** `useEmployees.changeRole` schreibt `roleId`, `role` (Snapshot) und einen Historieneintrag **nur** ins Employee-Dokument. Die Membership bleibt unverändert, `updatedAt` der Membership ebenfalls. Im heutigen Modell hat das **keine** Auswirkung auf den Zugriff; sobald Autorisierung an die Membership gebunden ist, ändert die UI-Aktion „Rolle ändern“ effektiv nichts (siehe 6). Die Umbenennung einer Rolle aktualisiert die Snapshots in Employee/Invitation/Membership nicht.
 
-**11. Archivierte Rollen?** `status: "Archiviert"` = nicht mehr für neue Zuweisungen wählbar, bestehende Zuweisungen bleiben (UI-Zusage). Rollen werden aufgelöst und weiter angezeigt. Systemrollen sind nicht archivierbar (nur Client-Regel). Für die Rules-Auswertung muss festgelegt werden: **archivierte Rollen behalten ihre Berechtigungen** (sonst sperren sich alle Zugewiesenen aus).
+**11. Archivierte Rollen?** `status: "Archiviert"` = nicht mehr für neue Zuweisungen wählbar, bestehende Zuweisungen bleiben (UI-Zusage; **seit Rules Phase 1 überholt**, siehe Abschnitt 15). Rollen werden aufgelöst und weiter angezeigt. Systemrollen sind nicht archivierbar (nur Client-Regel). *Audit-Empfehlung war: archivierte Rollen behalten ihre Berechtigungen; Phase 1 entscheidet bewusst anders: archivierte Rollen gewähren keine Rechte mehr (Zugewiesene verlieren den Zugriff auf die vier Verwaltungscollections).*
 
 **12. Kann eine Membership auf eine nicht existierende Rolle zeigen?** Ja. `roleId` ist optional, es gibt keine Fremdschlüssel-Prüfung, und die Rules erlauben jedem aktiven Mitglied sogar, Rollen-Dokumente per SDK **zu löschen** (kein Client-Pfad dafür, aber kein Rules-Schutz). Eine solche Membership muss **fail-closed** behandelt werden (kein Zugriff).
 
@@ -193,7 +193,7 @@ function can(companyId, key) {
 | Sicherheit | Gut. Maßgeblich ist ein serverseitig kontrolliertes Dokument (Membership) plus das Rollen-Dokument; `roleId` kommt nie vom Client. Fail-closed bei fehlender Rolle/Membership (`get` auf nicht vorhandenes Dokument → Fehler → Deny). Der Pfad nutzt dieselbe `companyId` wie die Zielressource, damit eine Rolle einer **fremden** Firma nie greift. |
 | Custom Roles | Voll unterstützt: jede Permission-Kombination, kein Rollenname in den Rules. |
 | Aktualität | **Sofort.** Rollen- und Membership-Änderungen wirken bei der nächsten Anfrage; keine Token-Staleness, kein Fan-out. |
-| Archivierte Rollen | Rules ignorieren `status`; archivierte Rollen behalten ihre Rechte für bestehende Zuweisungen. Das deckt die UI-Zusage. |
+| Archivierte Rollen | *Audit-Empfehlung:* Rules ignorieren `status`. **Phase 1 entscheidet anders:** `status != "Aktiv"` gewährt keine Rechte (Abschnitt 15). |
 | Rules-Limits | pro Anfrage 2 distinkte Dokumentzugriffe (Membership + Rolle), bei Spezialfällen 3 (Einladung mit Rolle, Mitarbeiter-Check). Nach aktueller Firebase-Dokumentation liegen die Limits bei 10 (Einzelzugriffe/Queries) bzw. 20 (Mehrfach-Writes, Transaktionen); mehrfach referenzierte Dokumente zählen einmal. **Vor Umsetzung im Emulator verifizieren.** Keine Schleifen in Rules → keine Mengenvergleiche („hat Rolle ≥ Rolle des anderen“). |
 | Kosten/Performance | Jede Rules-Auswertung mit `get()`/`exists()` wird als **Dokument-Read abgerechnet**; hier typischerweise +2 pro Request (pro Query einmal, nicht pro Ergebnisdokument; Batch/Bulk-Writes nutzen den Cache der Anfrage). Das entspricht der heutigen Last (+1 Membership). Latenzzuschlag klein. |
 | Konsistenz | Die Rollen-Permission-Map wird **live** gelesen – es gibt nichts zu synchronisieren außer `Membership.roleId` selbst. |
@@ -256,7 +256,7 @@ Warum:
 | Fall | Soll |
 |---|---|
 | Employee-Rolle in der UI geändert, Membership nicht | **Das Problem.** Die UI-Aktion darf für Rollen nicht mehr rein clientseitig sein. Entweder (a) Server-Operation `assignRole`, die Employee **und** Membership in einer Transaktion schreibt (empfohlen), oder (b) bis dahin ehrliche UI-Kennzeichnung: „Anzeige-Rolle; der Zugriff folgt der Membership“. |
-| Rolle archiviert | Rechte bleiben für bestehende Zuweisungen (Rules ignorieren `status`). UI warnt beim Archivieren, wenn noch Nutzer zugewiesen sind. |
+| Rolle archiviert | *Audit-Empfehlung:* Rechte bleiben für bestehende Zuweisungen. **Phase 1:** archivierte Rolle = keine Rechte (Abschnitt 15); die UI warnt/blockiert noch nicht beim Archivieren zugewiesener Rollen (Folgeaufgabe). |
 | Rolle gelöscht | Soll nie vorkommen: Rules verbieten `delete` auf `roles` für Clients. Falls doch (Admin-Skript): Membership mit unbekannter Rolle ⇒ **fail-closed**. |
 | Membership zeigt auf unbekannte/leere Rolle | Kein Zugriff auf rollengeschützte Collections (die Auswertung wirft → Deny). Bestehende Provisionierung muss `roleId` verpflichtend setzen. |
 | Rolle umbenannt | Snapshots werden nicht automatisch nachgezogen; Anzeige löst über `roleId` auf (heute schon). |
@@ -329,7 +329,7 @@ Heute prüft **nichts** davon serverseitig. „Server“ heißt hier: Rules (R) 
 
 Reihenfolge (jeweils eigener Slice, mit Emulator-Tests):
 
-1. **Rules-Testinfrastruktur.** `@firebase/rules-unit-testing` + Emulator (Java), Testfälle je Collection × Rolle × Operation, CI-Lauf. **Voraussetzung für alles Weitere** (heute nicht möglich: kein Java/Emulator in der Umgebung, Rules wurden bisher nie gegen den Rules-Compiler geprüft).
+1. **Rules-Testinfrastruktur.** `@firebase/rules-unit-testing` + Emulator (Java), Testfälle je Collection × Rolle × Operation, CI-Lauf. **Voraussetzung für alles Weitere** *(Audit-Stand; inzwischen erledigt: Rules-Test-Infrastruktur existiert und läuft lokal mit Java, siehe `docs/firebase/firestore-rules-testing.md`).*
 2. **Permission-Taxonomie schließen.** Entscheidung über die Lücken aus 4.3 (`geraete.erstellen/loeschen`, `kalender.bearbeiten/loeschen`, `laborbuch.loeschen`, `berichte.*`, Lese-Rechte) **oder** bewusste Verwendung der Ersatz-Zuordnung bzw. „Delete verbieten“. Migration bestehender Rollen-Dokumente (neue Keys default `false` → gezielt für Systemrollen setzen, `normalizePermissions` fängt Fehlendes ab). `docs/database/permissions.md` aktualisieren.
 3. **UI-Gating (`usePermissions()`)** aus `membership.roleId` + `useRoles()`: Buttons/Menüs/Seiten gemäß Rechten ausblenden (Komfort, keine Sicherheit). Macht Rollenfehlkonfigurationen früh sichtbar und entfernt/ersetzt die UI-Hard-Deletes, die künftig nicht mehr erlaubt sind.
 4. **Rules Phase 1: Verwaltungs-Collections** (`roles`, `employees`, `invitations`, `locations`) – dort ist das Risiko am höchsten (Eskalation). Enthält: Rollen-Invarianten, Feld-Schutz (`roleId`/`role`), Formprüfung der Einladung, Delete-Verbot.
@@ -407,3 +407,11 @@ Dieser Abschnitt beschreibt, was sich nach dem Audit geändert hat. Die vollstä
 ### 14.3 Neue Voraussetzung für die Durchsetzung: Migration der gespeicherten Rollen
 
 Gespeicherte Rollen-Dokumente kennen die 14 neuen Schlüssel nicht (fehlend = `false`). **Vor** rollenbasierten Rules müssen die Systemrollen auf die neue Matrix migriert werden (Details: `docs/database/permissions.md`, Abschnitt 7); sonst wären auch Administratoren in den Rules ohne `berichte.*`, `standorte.ansehen` usw. Ein Konsistenz-Check „gespeicherte Systemrollen = Config-Matrix“ gehört in den Rules-Slice (Test gegen Emulator-Daten).
+
+---
+
+## 15. Update: Rules Phase 1
+
+Für `roles`, `employees`, `invitations` und `locations` sind rollenbasierte Rules implementiert (Architektur: Membership.roleId → Role-Dokument → `permissions[key]`, Variante D/A aus Abschnitt 6). Details, Verhalten pro Collection, Restricted-/Administrator-Schutz, Self-Promotion-Schutz, Einschränkungen und die **Migrationspflicht vor dem Deployment**: `docs/firebase/role-permission-rules-phase1.md`. **Status: Rules und Emulator-Tests sind umgesetzt; `npm run test:rules` lief lokal vollständig grün (698 von 698); die danach ergänzte Regel „nur bekannte Permission-Schlüssel“ (13 weitere Tests, insgesamt 711) ist noch lokal zu bestätigen.**
+
+Gegenüber den Empfehlungen oben gilt in Phase 1 bewusst: **archivierte Rollen verlieren sofort ihre Rechte** (Abschnitt 6.2 empfahl das Gegenteil) – alle Zugewiesenen verlieren den Zugriff auf die vier Verwaltungscollections, das UI-Versprechen „Bestehende Zuweisungen bleiben erhalten“ ist überholt, ein UI-Umbau steht aus; **geschützte Rollen-Permissions:** neben den 4 Restricted-Schlüsseln erfordern auch die drei Admin-only-Löschrechte (`geraete.`, `laborbuch.`, `berichte.loeschen`) `rollen.admin_verwalten` beim Anlegen/Ändern von Rollen; die acht Fach-Collections sind noch nicht umgestellt; die Mitarbeiter-/Membership-Divergenz (Abschnitt 9) besteht weiter.

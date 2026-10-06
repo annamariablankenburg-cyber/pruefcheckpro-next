@@ -113,6 +113,8 @@ Ausführen (Emulator vorher starten): `npx tsx scripts/seedInvitations.ts`.
 
 ## 11. Rules
 
+> **Update (Rules Phase 1):** Die Collection `invitations` wird seit Phase 1 rollenbasiert geschützt (Permission statt nur Membership) – siehe `docs/firebase/role-permission-rules-phase1.md`. Die folgende Beschreibung gibt den Stand vor Phase 1 wieder.
+
 `firestore.rules`: Block `companies/{companyId}/invitations/{invitationId}` mit `allow read, write: if belongsToCompany(companyId);`. Keine Rollen- oder Claims-Logik. Die Dokumente enthalten keine Tokens oder Links.
 
 ## 12. Verifikation

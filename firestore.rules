@@ -28,9 +28,18 @@ service cloud.firestore {
     // einem Fehler mit Fallback. Das Membership-Dokument wird pro Request nur
     // einmal gelesen (wiederholte get() auf dasselbe Dokument zählen einmal).
     //
-    // BEWUSST NOCH KEINE rollenbasierte Durchsetzung: roleId/role der
-    // Membership werden hier nicht ausgewertet (kein "roleId == admin", keine
-    // Permission-Dokumente). Das folgt in einem eigenen Security-Slice.
+    // Rollenbasierte Durchsetzung, PHASE 1 (siehe
+    // docs/firebase/role-permission-rules-phase1.md): nur für roles, employees,
+    // invitations und locations. Alle anderen Company-Collections prüfen weiter
+    // NUR belongsToCompany (aktive Membership der richtigen Firma).
+    //
+    // Autorisierung: ausschließlich userMemberships/{uid}.roleId -> das
+    // Role-Dokument companies/{companyId}/roles/{roleId} -> permissions[key].
+    // NICHT ausgewertet werden users/{uid}.role und der Snapshot
+    // membership.role. Fehlt irgendein Glied der Kette (Membership, roleId,
+    // Role-Dokument, aktive Rolle, permissions-Map, Schlüssel) oder ist der Wert
+    // nicht exakt true, ist das Ergebnis "kein Recht" – es gibt keinen
+    // Admin-/Demo-Fallback.
     function isSignedIn() {
       return request.auth != null;
     }
@@ -39,11 +48,213 @@ service cloud.firestore {
       return /databases/$(database)/documents/userMemberships/$(request.auth.uid);
     }
 
-    function belongsToCompany(companyId) {
+    // Nur nach hasActiveMembership() aufrufen (setzt ein vorhandenes Dokument voraus).
+    function currentMembership() {
+      return get(membershipPath()).data;
+    }
+
+    function hasActiveMembership(companyId) {
       return isSignedIn() &&
         exists(membershipPath()) &&
-        get(membershipPath()).data.get("companyId", "") == companyId &&
-        get(membershipPath()).data.get("status", "") == "Aktiv";
+        currentMembership().get("companyId", "") == companyId &&
+        currentMembership().get("status", "") == "Aktiv";
+    }
+
+    // Unverändertes Verhalten für die noch nicht rollenbasierten Collections.
+    function belongsToCompany(companyId) {
+      return hasActiveMembership(companyId);
+    }
+
+    function rolePath(companyId, roleId) {
+      return /databases/$(database)/documents/companies/$(companyId)/roles/$(roleId);
+    }
+
+    // roleId der aktuellen Membership (nur nach hasActiveMembership()).
+    function currentRoleId() {
+      return currentMembership().get("roleId", "");
+    }
+
+    // Wert eines Schlüssels in einem Role-Dokument (Map "data"). Fehlt die
+    // permissions-Map oder der Schlüssel: false. Nur exakt true gewährt.
+    function roleGrants(roleData, permissionKey) {
+      return "permissions" in roleData &&
+        roleData.permissions.get(permissionKey, false) == true;
+    }
+
+    // 1. angemeldet  2. aktive Membership derselben Firma  3. nichtleere roleId
+    // 4. Role-Dokument existiert  5. Rolle ist "Aktiv"  6. Schlüssel == true.
+    function hasPermission(companyId, permissionKey) {
+      return hasActiveMembership(companyId) &&
+        currentRoleId() is string &&
+        currentRoleId() != "" &&
+        exists(rolePath(companyId, currentRoleId())) &&
+        get(rolePath(companyId, currentRoleId())).data.get("status", "") == "Aktiv" &&
+        roleGrants(get(rolePath(companyId, currentRoleId())).data, permissionKey);
+    }
+
+    // Restricted-Schlüssel (Superuser-/Administratorrechte). BEWUSST hier
+    // gespiegelt (Rules kennen keine TypeScript-Konstanten); Quelle:
+    // RESTRICTED_PERMISSION_KEYS in src/config/roles.ts. Ein Test
+    // (tests/firestore/restricted-keys-sync.test.ts) prüft die Übereinstimmung.
+    function roleHasRestrictedKey(roleData) {
+      return roleGrants(roleData, "rollen.admin_verwalten") ||
+        roleGrants(roleData, "administration.branding_aendern") ||
+        roleGrants(roleData, "administration.abrechnung_verwalten") ||
+        roleGrants(roleData, "administration.systemeinstellungen_aendern");
+    }
+
+    // Hat sich der Wert irgendeines Restricted-Schlüssels geändert? Verglichen
+    // wird der WIRKSAME Wert (fehlend == false), nicht das Vorhandensein.
+    function restrictedKeyChanged(newRole, oldRole) {
+      return roleGrants(newRole, "rollen.admin_verwalten") != roleGrants(oldRole, "rollen.admin_verwalten") ||
+        roleGrants(newRole, "administration.branding_aendern") != roleGrants(oldRole, "administration.branding_aendern") ||
+        roleGrants(newRole, "administration.abrechnung_verwalten") != roleGrants(oldRole, "administration.abrechnung_verwalten") ||
+        roleGrants(newRole, "administration.systemeinstellungen_aendern") != roleGrants(oldRole, "administration.systemeinstellungen_aendern");
+    }
+
+    // ROLLEN-SCHUTZ: Zusätzlich zu den Restricted-Schlüsseln sind die drei
+    // Admin-only-Löschrechte geschützt (Geräte, Laborbuch, Berichte; Policy in
+    // docs/database/permissions.md). Sie bleiben fachlich "destructive", dürfen
+    // aber – wie Restricted – beim Anlegen/Ändern einer Rolle nur mit
+    // rollen.admin_verwalten vergeben oder entzogen werden. Quelle:
+    // ADMIN_ONLY_DELETE_PERMISSION_KEYS / PROTECTED_ROLE_PERMISSION_KEYS in
+    // src/config/roles.ts (Test: tests/firestore/rules-config-sync.test.ts).
+    // Normale Löschrechte (proben., pruefungen., kunden., projekte., kalender.)
+    // sind NICHT geschützt und bleiben für den Laborleiter vergebbar.
+    function roleHasAdminOnlyDeleteKey(roleData) {
+      return roleGrants(roleData, "geraete.loeschen") ||
+        roleGrants(roleData, "laborbuch.loeschen") ||
+        roleGrants(roleData, "berichte.loeschen");
+    }
+
+    function adminOnlyDeleteKeyChanged(newRole, oldRole) {
+      return roleGrants(newRole, "geraete.loeschen") != roleGrants(oldRole, "geraete.loeschen") ||
+        roleGrants(newRole, "laborbuch.loeschen") != roleGrants(oldRole, "laborbuch.loeschen") ||
+        roleGrants(newRole, "berichte.loeschen") != roleGrants(oldRole, "berichte.loeschen");
+    }
+
+    // Geschützt = Restricted ODER Admin-only-Löschrecht (nur für Rollen anlegen/ändern).
+    function roleHasProtectedKey(roleData) {
+      return roleHasRestrictedKey(roleData) || roleHasAdminOnlyDeleteKey(roleData);
+    }
+
+    function protectedKeyChanged(newRole, oldRole) {
+      return restrictedKeyChanged(newRole, oldRole) || adminOnlyDeleteKeyChanged(newRole, oldRole);
+    }
+
+    // Eine permissions-Map darf AUSSCHLIESSLICH die 45 aktuell bekannten Schlüssel
+    // enthalten (Spiegel von allPermissionKeys in src/config/roles.ts; Test:
+    // tests/firestore/rules-config-sync.test.ts). Hintergrund: Ein heute
+    // gespeicherter unbekannter Schlüssel mit true könnte in einem späteren
+    // Release zu einer echten Berechtigung werden (Future-Privilege-Risk).
+    // Fehlende bekannte Schlüssel sind erlaubt und gelten als false
+    // (Legacy-Rollen mit nur den 31 alten Schlüsseln bleiben gültig); es gibt keine
+    // Pflicht, alle 45 zu speichern. Fehlt permissions ganz, gibt es nichts zu prüfen
+    // (die Create-Regel verlangt die Map separat).
+    function hasOnlyKnownPermissionKeys(roleData) {
+      return !("permissions" in roleData) ||
+        (roleData.permissions is map &&
+         roleData.permissions.keys().hasOnly([
+        "dashboard.anzeigen",
+        "proben.ansehen",
+        "proben.erstellen",
+        "proben.bearbeiten",
+        "proben.loeschen",
+        "pruefungen.ansehen",
+        "pruefungen.erstellen",
+        "pruefungen.bearbeiten",
+        "pruefungen.loeschen",
+        "kunden.ansehen",
+        "kunden.erstellen",
+        "kunden.bearbeiten",
+        "kunden.loeschen",
+        "projekte.ansehen",
+        "projekte.erstellen",
+        "projekte.bearbeiten",
+        "projekte.loeschen",
+        "geraete.ansehen",
+        "geraete.erstellen",
+        "geraete.bearbeiten",
+        "geraete.loeschen",
+        "laborbuch.ansehen",
+        "laborbuch.erstellen",
+        "laborbuch.bearbeiten",
+        "laborbuch.loeschen",
+        "kalender.ansehen",
+        "kalender.termine_erstellen",
+        "kalender.bearbeiten",
+        "kalender.loeschen",
+        "berichte.ansehen",
+        "berichte.erstellen",
+        "berichte.bearbeiten",
+        "berichte.loeschen",
+        "pdf.exportieren",
+        "ki.verwenden",
+        "standorte.ansehen",
+        "mitarbeiter.ansehen",
+        "rollen.ansehen",
+        "administration.mitarbeiter_verwalten",
+        "administration.rollen_verwalten",
+        "administration.standorte_verwalten",
+        "administration.branding_aendern",
+        "administration.abrechnung_verwalten",
+        "administration.systemeinstellungen_aendern",
+        "rollen.admin_verwalten"
+         ]));
+    }
+
+    // "Geschützte Rolle" im Sinne der Zuweisungs-/Änderungsregeln (Mitarbeiter,
+    // Einladungen): die Administrator-Rolle, jede Rolle (System-, Custom- oder
+    // archivierte Rolle), die IRGENDEINEN der 7 geschützten Schlüssel enthält
+    // (4 Restricted + 3 Admin-only-Löschrechte) – und fail-closed alles, was sich
+    // nicht auflösen lässt (fehlende/leere/unbekannte roleId). Eine solche Rolle
+    // darf nur mit rollen.admin_verwalten zugewiesen oder beim Ziel geändert werden.
+    function roleIdIsProtected(companyId, roleId) {
+      return !(roleId is string) ||
+        roleId == "" ||
+        roleId == "admin" ||
+        !exists(rolePath(companyId, roleId)) ||
+        roleHasProtectedKey(get(rolePath(companyId, roleId)).data);
+    }
+
+    // Stabile IDs der Systemrollen (Spiegel von SYSTEM_ROLE_IDS in
+    // src/config/roles.ts; vom Test geprüft). Als benutzerdefinierte Rolle
+    // dürfen diese IDs nie angelegt werden.
+    function isSystemRoleId(roleId) {
+      return roleId in ["admin", "laborleiter", "pruefer", "azubi", "gast"];
+    }
+
+    // Eigenes Dokument über die Membership-Verknüpfung (nie über Name/E-Mail).
+    function isOwnEmployee(companyId, employeeId) {
+      return hasActiveMembership(companyId) &&
+        employeeId != "" &&
+        currentMembership().get("employeeId", "") == employeeId;
+    }
+
+    function isOwnRole(companyId, roleId) {
+      return hasActiveMembership(companyId) &&
+        roleId != "" &&
+        currentRoleId() == roleId;
+    }
+
+    // Verhindert Self-Promotion/Selbstsperre: am EIGENEN Mitarbeiter-Dokument
+    // dürfen roleId, role und status nicht geändert werden.
+    function changesOwnSecurityFields(companyId, employeeId) {
+      return isOwnEmployee(companyId, employeeId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasAny(["roleId", "role", "status"]);
+    }
+
+    // Form-Prüfung für Rollen-Updates (ohne die Berechtigungsprüfung): type und
+    // createdAt unverändert; Systemrollen nur permissions/updatedAt, andere
+    // Rollen nur name/description/color/permissions/status/updatedAt; status
+    // bleibt "Aktiv"/"Archiviert".
+    function isValidRoleUpdate() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let isSystem = resource.data.get("type", "") == "System";
+      return !changed.hasAny(["type", "createdAt"]) &&
+        request.resource.data.get("status", "") in ["Aktiv", "Archiviert"] &&
+        ((isSystem && changed.hasOnly(["permissions", "updatedAt"])) ||
+         (!isSystem && changed.hasOnly(["name", "description", "color", "permissions", "status", "updatedAt"])));
     }
 
     // Membership-Dokument: der eigene Nutzer darf es LESEN (einzelnes Dokument,
@@ -202,36 +413,105 @@ service cloud.firestore {
     }
 
     match /companies/{companyId}/locations/{locationId} {
-      // Gleiches companyId-Muster wie die übrigen Slices: angemeldet + eigene
-      // companyId. Keine Rollen- oder Claims-Logik (siehe
-      // docs/firebase/location-firestore-slice.md, "Offene Punkte").
-      allow read, write: if belongsToCompany(companyId);
+      // Rollenbasiert (Phase 1, docs/firebase/role-permission-rules-phase1.md).
+      // Lesen: standorte.ansehen. Anlegen/Ändern (inkl. Deaktivieren/
+      // Reaktivieren): administration.standorte_verwalten. Löschen nie – Standorte
+      // werden über den Status "Inaktiv" deaktiviert.
+      allow get, list: if hasPermission(companyId, "standorte.ansehen");
+      allow create, update: if hasPermission(companyId, "administration.standorte_verwalten");
+      allow delete: if false;
     }
 
     match /companies/{companyId}/employees/{employeeId} {
-      // Gleiches companyId-Muster wie die übrigen Slices: angemeldet + eigene
-      // companyId. Das Feld "role" eines Mitarbeiters steuert hier ausdrücklich
-      // KEINE Firestore-Rechte (keine Rollen-/Claims-Logik; siehe
-      // docs/firebase/employee-firestore-slice.md, "Offene Punkte").
-      allow read, write: if belongsToCompany(companyId);
+      // Rollenbasiert (Phase 1). Lesen: mitarbeiter.ansehen; zusätzlich darf
+      // jeder aktive User SEIN eigenes Dokument einzeln lesen (Membership.
+      // employeeId == Dokument-ID, kein Abgleich über Name/E-Mail; kein list).
+      allow get: if hasPermission(companyId, "mitarbeiter.ansehen") || isOwnEmployee(companyId, employeeId);
+      allow list: if hasPermission(companyId, "mitarbeiter.ansehen");
+
+      // Anlegen: in Phase 1 nie vom Client (kommt später serverseitig, z. B.
+      // Einladungsannahme). Löschen nie (Status "Gesperrt").
+      allow create: if false;
+      allow delete: if false;
+
+      // Ändern: administration.mitarbeiter_verwalten, aber
+      //  - nie die eigene Rolle (roleId/role) oder den eigenen Status,
+      //  - nie ein Mitarbeiter, dessen aktuelle ODER neue Rolle die
+      //    Administrator-Rolle / eine Rolle mit geschütztem Schlüssel (Restricted
+      //    oder Admin-only-Löschrecht) / nicht
+      //    auflösbar ist, ohne zusätzlich rollen.admin_verwalten.
+      // HINWEIS: Das ändert nur das Mitarbeiter-Dokument. Die wirksame Rolle ist
+      // die der Membership; sie wird nicht automatisch synchronisiert.
+      allow update: if hasPermission(companyId, "administration.mitarbeiter_verwalten") &&
+        !changesOwnSecurityFields(companyId, employeeId) &&
+        (hasPermission(companyId, "rollen.admin_verwalten") ||
+          (!roleIdIsProtected(companyId, resource.data.get("roleId", "")) &&
+           !roleIdIsProtected(companyId, request.resource.data.get("roleId", ""))));
     }
 
     match /companies/{companyId}/invitations/{invitationId} {
-      // Gleiches companyId-Muster wie die übrigen Slices: angemeldet + eigene
-      // companyId. Keine Rollen- oder Claims-Logik. Einladungen sind reine
-      // Metadaten; das Dokument enthält weder Token noch Link (siehe
-      // docs/firebase/invitation-firestore-slice.md, "Offene Punkte").
-      allow read, write: if belongsToCompany(companyId);
+      // Rollenbasiert (Phase 1). Lesen/Anlegen/Widerrufen:
+      // administration.mitarbeiter_verwalten. Löschen nie (Widerruf statt Löschen).
+      allow get, list: if hasPermission(companyId, "administration.mitarbeiter_verwalten");
+
+      // Anlegen: nur als "Ausstehend" (Annahme gibt es nur serverseitig), ohne
+      // acceptedAt/revokedAt. Eine Einladung für die Administrator-Rolle, eine
+      // Rolle mit geschütztem Schlüssel (Restricted oder Admin-only-Löschrecht) oder
+      // eine nicht auflösbare Rolle erfordert
+      // zusätzlich rollen.admin_verwalten.
+      allow create: if hasPermission(companyId, "administration.mitarbeiter_verwalten") &&
+        request.resource.data.get("status", "") == "Ausstehend" &&
+        !request.resource.data.keys().hasAny(["acceptedAt", "revokedAt"]) &&
+        (hasPermission(companyId, "rollen.admin_verwalten") ||
+          !roleIdIsProtected(companyId, request.resource.data.get("roleId", "")));
+
+      // Ändern: ausschließlich der Widerruf (der einzige Update-Pfad des
+      // Services): Ausstehend -> Widerrufen, nur status/revokedAt/updatedAt.
+      allow update: if hasPermission(companyId, "administration.mitarbeiter_verwalten") &&
+        resource.data.get("status", "") == "Ausstehend" &&
+        request.resource.data.get("status", "") == "Widerrufen" &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "revokedAt", "updatedAt"]);
+
+      allow delete: if false;
     }
 
     match /companies/{companyId}/roles/{roleId} {
-      // Gleiches companyId-Muster wie die übrigen Slices: angemeldet + eigene
-      // companyId. Rollen-Dokumente werden hier AUSDRÜCKLICH NICHT ausgewertet:
-      // keine dynamische Role-Abfrage, keine Claims-Logik. Sie sind
-      // Verwaltungsdaten; die serverseitige Durchsetzung folgt in einem späteren
-      // Security-Slice (siehe docs/firebase/role-firestore-slice.md, "Offene
-      // Punkte").
-      allow read, write: if belongsToCompany(companyId);
+      // Rollenbasiert (Phase 1). Lesen: rollen.ansehen; zusätzlich darf jeder
+      // aktive User SEINE EIGENE Rolle (Membership.roleId == Dokument-ID)
+      // einzeln lesen, damit er seine wirksamen Berechtigungen laden kann.
+      allow get: if hasPermission(companyId, "rollen.ansehen") || isOwnRole(companyId, roleId);
+      allow list: if hasPermission(companyId, "rollen.ansehen");
+
+      // Anlegen: administration.rollen_verwalten, nur benutzerdefiniert und
+      // aktiv, nie mit der ID einer Systemrolle, mit permissions-Map (nur bekannte
+      // Schlüssel, siehe hasOnlyKnownPermissionKeys), und ohne
+      // geschützte Schlüssel (Restricted + Admin-only-Löschrechte), außer der
+      // User hat rollen.admin_verwalten.
+      allow create: if hasPermission(companyId, "administration.rollen_verwalten") &&
+        !isSystemRoleId(roleId) &&
+        request.resource.data.get("type", "") == "Benutzerdefiniert" &&
+        request.resource.data.get("status", "") == "Aktiv" &&
+        "permissions" in request.resource.data &&
+        request.resource.data.permissions is map &&
+        hasOnlyKnownPermissionKeys(request.resource.data) &&
+        (hasPermission(companyId, "rollen.admin_verwalten") ||
+          !roleHasProtectedKey(request.resource.data));
+
+      // Ändern: administration.rollen_verwalten. Die Administrator-Rolle ist für
+      // ALLE (auch den Administrator) unveränderlich. type und createdAt sind
+      // unveränderlich. Systemrollen: nur permissions (+ updatedAt). Benutzer-
+      // definierte Rollen: name, description, color, permissions, status.
+      // Änderungen an geschützten Schlüsseln (Restricted + Admin-only-Löschrechte;
+      // Vergabe UND Entzug) erfordern rollen.admin_verwalten.
+      allow update: if hasPermission(companyId, "administration.rollen_verwalten") &&
+        roleId != "admin" &&
+        hasOnlyKnownPermissionKeys(request.resource.data) &&
+        isValidRoleUpdate() &&
+        (!protectedKeyChanged(request.resource.data, resource.data) ||
+          hasPermission(companyId, "rollen.admin_verwalten"));
+
+      // Rollen werden nie gelöscht (Archivieren statt Löschen).
+      allow delete: if false;
     }
 
     // Alles andere ist heute nicht Teil dieser Slices und bleibt gesperrt,

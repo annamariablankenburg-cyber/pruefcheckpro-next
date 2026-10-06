@@ -68,9 +68,9 @@ function StatusForm({
         <DialogTitle>{archiving ? "Rolle archivieren?" : "Rolle reaktivieren?"}</DialogTitle>
         <DialogDescription>
           {archiving
-            ? `„${role.name}“ wird als „Archiviert“ gespeichert und steht nicht mehr für neue Zuweisungen zur Verfügung. Bestehende Zuweisungen bleiben erhalten${
+            ? `„${role.name}“ wird als „Archiviert“ gespeichert und steht nicht mehr für neue Zuweisungen zur Verfügung. Bestehende Zuweisungen bleiben bestehen${
                 userCount ? ` (aktuell ${userCount} Benutzer)` : ""
-              }. Es wird nichts gelöscht, und es ändert sich noch keine technische Zugriffsberechtigung.`
+              }, die archivierte Rolle gewährt aber keine Berechtigungen mehr: Betroffene Benutzer verlieren damit sofort den Zugriff auf die geschützten Verwaltungsbereiche (Mitarbeiter, Einladungen, Standorte, Rollen). Es wird nichts gelöscht.`
             : `„${role.name}“ steht danach wieder für neue Zuweisungen zur Verfügung.`}
         </DialogDescription>
       </DialogHeader>

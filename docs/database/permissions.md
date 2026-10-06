@@ -129,8 +129,12 @@ Beispiel-Custom-Roles: **Qualitätsmanager** = Prüfer-Rechte (22). **Baustellen
 `rollen.admin_verwalten`, `administration.abrechnung_verwalten`, `administration.systemeinstellungen_aendern`, `administration.branding_aendern`.
 
 - Liegen **nur** bei der Administrator-Rolle (Test: `permissions.test.ts`). Keine Custom Role der Config enthält sie.
-- **Vergabe/Entzug dieser Schlüssel** (in einer beliebigen Rolle), **Bearbeiten der Administrator-Rolle**, **Zuweisen einer Rolle, die einen Restricted-Schlüssel enthält** (inkl. Administrator) und **Ändern/Sperren von Mitarbeitern, die eine solche Rolle halten** erfordern `rollen.admin_verwalten`.
+- **Vergabe/Entzug dieser Schlüssel** (in einer beliebigen Rolle), **Bearbeiten der Administrator-Rolle**, **Zuweisen einer Rolle, die einen geschützten Schlüssel enthält (Restricted oder Admin-only-Löschrecht)** (inkl. Administrator) und **Ändern/Sperren von Mitarbeitern, die eine solche Rolle halten** erfordern `rollen.admin_verwalten`.
 - Rules können Rollen nicht „vergleichen“ (keine Schleifen/Mengenvergleiche). Die Policy ist deshalb als **feste Liste** formuliert (`RESTRICTED_PERMISSION_KEYS`): prüfbar mit `permissions.diff(…).affectedKeys().hasAny([…])`.
+
+### 4.1a Admin-only-Löschrechte (geschützt, aber „destructive“)
+
+`geraete.loeschen`, `laborbuch.loeschen`, `berichte.loeschen` liegen nur beim Administrator (Matrix, Test). Sie bleiben Risikoklasse **destructive**, werden aber wie die Restricted-Schlüssel behandelt, **was Vergabe und Entzug in Rollen angeht**: Anlegen/Ändern einer Rolle mit diesen Schlüsseln erfordert `rollen.admin_verwalten` (`ADMIN_ONLY_DELETE_PERMISSION_KEYS`). Zusammen mit den Restricted-Schlüsseln ergibt das die **7 geschützten Rollen-Permissions** (`PROTECTED_ROLE_PERMISSION_KEYS`; in Rules Phase 1 gespiegelt und per Test synchron gehalten). Normale Löschrechte (`proben.`, `pruefungen.`, `kunden.`, `projekte.`, `kalender.loeschen`) sind nicht geschützt und vom Laborleiter vergebbar.
 
 ### 4.2 Bewertung der genannten Schlüssel
 
@@ -138,7 +142,7 @@ Beispiel-Custom-Roles: **Qualitätsmanager** = Prüfer-Rechte (22). **Baustellen
 |---|---|---|---|
 | `rollen.admin_verwalten` | **kritisch (Superuser)** | nur Administrator | Einziger Weg, Administratorrechte zu vergeben oder die Administrator-Rolle zu ändern. |
 | `administration.rollen_verwalten` | **kritisch, begrenzt** | Administrator, Laborleiter | Darf **normale** Rollen anlegen/ändern/archivieren, aber: Administrator-Rolle nicht ändern, **keinen Restricted-Schlüssel** vergeben, **keine Admin-Zuweisung**. Ohne diese Begrenzung wäre es ein Superuser-Recht. |
-| `administration.mitarbeiter_verwalten` | **kritisch, begrenzt** | Administrator, Laborleiter | Einladen, Rolle zuweisen, sperren, Daten ändern – aber: Rollen mit Restricted-Schlüssel (und Administrator) nur mit `rollen.admin_verwalten` zuweisen/einladen; Administratoren nicht ändern/sperren; **nie die eigene Rolle ändern** (Self-Promotion). |
+| `administration.mitarbeiter_verwalten` | **kritisch, begrenzt** | Administrator, Laborleiter | Einladen, Rolle zuweisen, sperren, Daten ändern – aber: Rollen mit einem geschützten Schlüssel (Restricted **oder** Admin-only-Löschrecht) und die Administrator-Rolle nur mit `rollen.admin_verwalten` zuweisen/einladen; Administratoren nicht ändern/sperren; **nie die eigene Rolle ändern** (Self-Promotion). |
 | `administration.standorte_verwalten` | mittel (Stammdaten) | Administrator, Laborleiter | Betrifft Standort-Stammdaten; keine Rechte-Eskalation möglich. |
 | `administration.branding_aendern` | niedrig–mittel (Firmenidentität, erscheint in Berichten/E-Mails) | nur Administrator | Restricted: bewusst nicht beim Laborleiter. |
 | `administration.abrechnung_verwalten` | **kritisch** (Zahlung/Lizenz) | nur Administrator | Restricted; Abrechnungsdaten später nur serverseitig. |
@@ -148,7 +152,7 @@ Beispiel-Custom-Roles: **Qualitätsmanager** = Prüfer-Rechte (22). **Baustellen
 - Niemand ändert die **eigene** Rolle oder Membership; niemand sperrt sich selbst aus.
 - Die Administrator-Rolle ist unveränderlich (Berechtigungen und Typ); Änderungen nur über Server/Operator.
 - Mindestens ein aktiver Administrator muss bleiben (Server-Invariante, nicht in Rules prüfbar).
-- Eine Rolle, die Restricted-Schlüssel enthält, kann nur von einem Inhaber von `rollen.admin_verwalten` zugewiesen werden (sonst: Admin legt „Billing-Rolle“ an, Laborleiter weist sie sich selbst zu).
+- Eine Rolle, die einen geschützten Schlüssel (Restricted oder Admin-only-Löschrecht) enthält, kann nur von einem Inhaber von `rollen.admin_verwalten` zugewiesen werden (sonst: Admin legt „Billing-Rolle“ an, Laborleiter weist sie sich selbst zu).
 
 ---
 
@@ -231,7 +235,7 @@ Für **jede** Domäne existiert Archiv/Status – endgültiges Löschen ist die 
 | Config (Taxonomie, Matrix, Risikoklassen) | ✅ umgesetzt und getestet (`npm run test:permissions`) |
 | UI-Marker (`Nur Administrator`/`Löschen` im Rollen-Editor) | ✅ nur Anzeige |
 | UI-Gating (Buttons/Seiten nach Rechten) | ❌ noch nicht |
-| Firestore Rules (rollenbasiert) | ❌ noch nicht (nur Membership + Firma) |
+| Firestore Rules (rollenbasiert) | 🟡 **Phase 1** für `roles`, `employees`, `invitations`, `locations` implementiert und im Emulator getestet (`docs/firebase/role-permission-rules-phase1.md`; lokal 698/698, danach 13 weitere Tests → 711, deren Lauf lokal zu bestätigen ist); die übrigen acht Collections nur Membership + Firma |
 | Server (Provisionierung, Rollenzuweisung, Letzter-Admin-Schutz) | ❌ noch nicht |
 
 Architektur der späteren Durchsetzung (Variante D/A im Audit): Membership (`roleId`, `status`) + Role-Dokument (`permissions`) live per `get()` in den Rules; Restricted-Schlüssel als feste Liste; Zuweisungen und Membership-Änderungen serverseitig.

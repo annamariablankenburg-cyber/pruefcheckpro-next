@@ -70,7 +70,7 @@ Das bestehende UI kannte Custom Roles bereits (Erstellen, Kopieren, Duplizieren,
 
 - **Erstellen** (auch als Kopie einer bestehenden Rolle oder per Vorlage): `type: "Benutzerdefiniert"`, `status: "Aktiv"`, Name eindeutig.
 - **Bearbeiten**: Name, Beschreibung, Farbe, Berechtigungen – im Drawer als eigener Bearbeitungsmodus mit „Speichern“/„Abbrechen“ (ein Schreibvorgang statt eines Writes pro Schalter).
-- **Archivieren/Reaktivieren** statt Löschen. Archivierte Rollen sind nicht mehr für neue Zuweisungen wählbar; bestehende Zuweisungen bleiben erhalten (die Rolle bleibt auflösbar und sichtbar).
+- **Archivieren/Reaktivieren** statt Löschen. Archivierte Rollen sind nicht mehr für neue Zuweisungen wählbar; die Zuweisung (`roleId`) bleibt bestehen und die Rolle auflösbar/sichtbar. **Seit Rules Phase 1 gewährt eine archivierte Rolle jedoch keine Berechtigungen mehr** (siehe `docs/firebase/role-permission-rules-phase1.md`); das frühere Versprechen „bestehende Zuweisungen bleiben erhalten“ gilt nur noch für die Zuweisung, nicht für die Rechte.
 - **Kein Hard Delete.** Das frühere „Löschen“ ist entfernt, weil Mitarbeiter und Einladungen auf Rollen verweisen können.
 - Mock-Beispielrollen `qualitaetsmanager` und `baustellenleiter` existierten bereits in der Config und werden mitgeseedet. Es wurden **keine** zusätzlichen Rollen erfunden.
 
@@ -112,6 +112,8 @@ Bestehende Slices bleiben erhalten: kein Employee-/Invitation-Hard-Delete, `loca
 **Hinweis:** Wurden Mitarbeiter/Einladungen schon vorher geseedet, tragen sie nur den alten Namen (`"Admin"` …). Das ist kompatibel (Legacy-Auflösung); mit `--force` neu geseedete Datensätze haben zusätzlich `roleId`.
 
 ## 11. Rules
+
+> **Update (Rules Phase 1):** Die Collection `roles` wird seit Phase 1 rollenbasiert geschützt (Permission statt nur Membership) – siehe `docs/firebase/role-permission-rules-phase1.md`. Die folgende Beschreibung gibt den Stand vor Phase 1 wieder.
 
 `firestore.rules`: Block `companies/{companyId}/roles/{roleId}` mit `allow read, write: if belongsToCompany(companyId);`. **Keine** dynamische Role-Abfrage, keine Claims-Logik – das hätte in diesem Slice bestehende Nutzer aussperren können. Das Rollen-Dokument ist reines Verwaltungsdatum.
 

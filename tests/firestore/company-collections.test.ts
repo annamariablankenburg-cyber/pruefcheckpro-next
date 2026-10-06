@@ -1,12 +1,17 @@
-// Smoke-Tests für ALLE Company-Collections. Jede Collection hat in
-// firestore.rules einen eigenen match-Block, daher wird jede einzeln geprüft
-// (nicht nur ein Beispiel).
+// Smoke-Tests für die Company-Collections OHNE rollenbasierte Rules. Jede
+// Collection hat in firestore.rules einen eigenen match-Block, daher wird jede
+// einzeln geprüft (nicht nur ein Beispiel).
 //
-// IST-Stand: aktive Mitglieder der richtigen Firma dürfen in jeder Collection
-// lesen, auflisten, erstellen, ändern und löschen – es gibt noch keine
-// rollenbasierte Permission-Durchsetzung. Diese Tests sind die Regressions-
-// basis für die schrittweise Härtung: Wenn ein späterer Slice z. B. Löschen
-// einschränkt, wird die jeweilige ALLOW-Erwartung hier bewusst angepasst.
+// IST-Stand dieser acht Collections (customers, projects, devices, samples,
+// testValues, reports, calendarEvents, laborbook): aktive Mitglieder der
+// richtigen Firma dürfen lesen, auflisten, erstellen, ändern und löschen – hier
+// gibt es noch keine rollenbasierte Durchsetzung. Wenn ein späterer Slice z. B.
+// Löschen einschränkt, wird die jeweilige ALLOW-Erwartung hier bewusst
+// angepasst.
+//
+// Die vier Collections mit rollenbasierten Rules (Phase 1: roles, employees,
+// invitations, locations) werden in phase1-*.test.ts getestet; eine bloße
+// Membership reicht dort NICHT mehr.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { after, before, beforeEach, describe, it } from "node:test";
@@ -19,6 +24,7 @@ import {
   COMPANY_B,
   COMPANY_COLLECTIONS,
   EXISTING_DOC_ID,
+  LEGACY_COLLECTIONS,
   USERS,
   collectionPath,
   seedWorld,
@@ -44,7 +50,14 @@ describe("Abdeckung der Company-Collections", () => {
   });
 });
 
-describe("Company-Collections: Membership und Tenant-Isolation", () => {
+describe("Company-Collections ohne Rollen-Rules: Membership und Tenant-Isolation", () => {
+  it("es sind genau die acht noch nicht rollenbasierten Collections", () => {
+    assert.deepEqual(
+      [...LEGACY_COLLECTIONS].sort(),
+      ["calendarEvents", "customers", "devices", "laborbook", "projects", "reports", "samples", "testValues"]
+    );
+  });
+
   let env: RulesTestEnvironment;
 
   before(async () => {
@@ -58,7 +71,7 @@ describe("Company-Collections: Membership und Tenant-Isolation", () => {
     await seedWorld(env);
   });
 
-  for (const name of COMPANY_COLLECTIONS) {
+  for (const name of LEGACY_COLLECTIONS) {
     describe(name, () => {
       const pathA = collectionPath(name, COMPANY_A);
       const pathB = collectionPath(name, COMPANY_B);

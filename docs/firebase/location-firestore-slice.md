@@ -123,6 +123,8 @@ Ausführen (Emulator vorher starten): `npx tsx scripts/seedLocations.ts`.
 
 ## 12. Rules
 
+> **Update (Rules Phase 1):** Die Collection `locations` wird seit Phase 1 rollenbasiert geschützt (Permission statt nur Membership) – siehe `docs/firebase/role-permission-rules-phase1.md`. Die folgende Beschreibung gibt den Stand vor Phase 1 wieder.
+
 `firestore.rules`: Block `companies/{companyId}/locations/{locationId}` mit `allow read, write: if belongsToCompany(companyId);`. Keine Rollen- oder Claims-Logik.
 
 ## 13. Verifikation

@@ -190,6 +190,26 @@ export const DESTRUCTIVE_PERMISSION_KEYS = permissionCategories.flatMap((categor
   category.permissions.filter((permission) => permission.risk === "destructive").map((permission) => permission.key)
 );
 
+// Destruktive Rechte, die laut Policy NUR der Administrator hält (Nachweis-/
+// Referenzdaten: Geräte, Laborbuch, Berichte). Sie bleiben Risikoklasse
+// "destructive", dürfen aber – wie die Restricted-Schlüssel – nur von Inhabern
+// von rollen.admin_verwalten vergeben/entzogen werden.
+export const ADMIN_ONLY_DELETE_PERMISSION_KEYS: string[] = [
+  "geraete.loeschen",
+  "laborbuch.loeschen",
+  "berichte.loeschen",
+];
+
+// Geschützte Rollen-Permissions: Änderungen an diesen Schlüsseln (Rolle anlegen
+// oder ändern) erfordern rollen.admin_verwalten. Gespiegelt in firestore.rules
+// (roleHasProtectedKey / protectedKeyChanged); ein Test hält beides synchron.
+// Normale destruktive Schlüssel (proben., pruefungen., kunden., projekte.,
+// kalender. + loeschen) sind NICHT geschützt und vom Laborleiter vergebbar.
+export const PROTECTED_ROLE_PERMISSION_KEYS: string[] = [
+  ...RESTRICTED_PERMISSION_KEYS,
+  ...ADMIN_ONLY_DELETE_PERMISSION_KEYS,
+];
+
 export function buildPermissions(granted: string[]): Record<string, boolean> {
   const grantedSet = new Set(granted);
   const result: Record<string, boolean> = {};
@@ -217,12 +237,7 @@ export const SYSTEM_ROLE_IDS = ["admin", "laborleiter", "pruefer", "azubi", "gas
 // Endgültiges Löschen von Proben, Prüfungen, Kunden, Projekten und Terminen
 // behält der Laborleiter (bestehende Intention); empfohlen ist, es später nur
 // für archivierte Datensätze zu erlauben.
-const LABORLEITER_DENIED: string[] = [
-  ...RESTRICTED_PERMISSION_KEYS,
-  "geraete.loeschen",
-  "laborbuch.loeschen",
-  "berichte.loeschen",
-];
+const LABORLEITER_DENIED: string[] = [...PROTECTED_ROLE_PERMISSION_KEYS];
 
 const PRUEFER_PERMISSIONS: string[] = [
   "dashboard.anzeigen",

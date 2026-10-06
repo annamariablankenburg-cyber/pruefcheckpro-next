@@ -6,7 +6,9 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  ADMIN_ONLY_DELETE_PERMISSION_KEYS,
   DESTRUCTIVE_PERMISSION_KEYS,
+  PROTECTED_ROLE_PERMISSION_KEYS,
   RESTRICTED_PERMISSION_KEYS,
   SYSTEM_ROLE_IDS,
   allPermissionKeys,
@@ -199,6 +201,32 @@ describe("Systemrollen-Matrix", () => {
     }
     const holders = roles.filter((candidate) => candidate.permissions[ADMIN_SUPERUSER_KEY]).map((c) => c.id);
     assert.deepEqual(holders, ["admin"]);
+  });
+
+  it("geschützte Rollen-Permissions: 4 Restricted + 3 Admin-only-Löschrechte; Risikoklasse der Löschrechte bleibt destructive", () => {
+    assert.deepEqual([...ADMIN_ONLY_DELETE_PERMISSION_KEYS].sort(), ["berichte.loeschen", "geraete.loeschen", "laborbuch.loeschen"]);
+    assert.deepEqual(
+      [...PROTECTED_ROLE_PERMISSION_KEYS].sort(),
+      [...RESTRICTED_PERMISSION_KEYS, ...ADMIN_ONLY_DELETE_PERMISSION_KEYS].sort()
+    );
+    for (const key of ADMIN_ONLY_DELETE_PERMISSION_KEYS) {
+      assert.ok(DESTRUCTIVE_PERMISSION_KEYS.includes(key), `${key} muss destructive bleiben`);
+      assert.ok(!RESTRICTED_PERMISSION_KEYS.includes(key), `${key} ist nicht restricted`);
+    }
+  });
+
+  it("alle geschützten Rollen-Permissions liegen nur beim Administrator (Matrix entspricht der geschützten Menge)", () => {
+    for (const key of PROTECTED_ROLE_PERMISSION_KEYS) {
+      const holders = roles.filter((candidate) => candidate.permissions[key]).map((candidate) => candidate.id);
+      assert.deepEqual(holders, ["admin"], key);
+    }
+  });
+
+  it("normale Löschrechte (proben, pruefungen, kunden, projekte, kalender) sind NICHT geschützt und beim Laborleiter vorhanden", () => {
+    for (const key of ["proben.loeschen", "pruefungen.loeschen", "kunden.loeschen", "projekte.loeschen", "kalender.loeschen"]) {
+      assert.ok(!PROTECTED_ROLE_PERMISSION_KEYS.includes(key), key);
+      assert.equal(role("laborleiter").permissions[key], true, key);
+    }
   });
 
   it("Laborleiter: Verwaltung ja, Administratorrechte nein", () => {

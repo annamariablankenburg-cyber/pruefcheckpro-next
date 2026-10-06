@@ -43,8 +43,10 @@ export interface Role {
   // vom Unternehmen angelegt.
   type: RoleType;
   color: RoleColor;
-  // "Archiviert" = nicht mehr für neue Zuweisungen wählbar; bestehende
-  // Zuweisungen bleiben erhalten. Es gibt kein Hard Delete.
+  // "Archiviert" = nicht mehr für neue Zuweisungen wählbar. Bestehende
+  // Zuweisungen (roleId) bleiben bestehen, aber eine archivierte Rolle gewährt
+  // keine Berechtigungen mehr (Firestore Rules Phase 1: Zugriff auf roles,
+  // employees, invitations, locations entfällt). Es gibt kein Hard Delete.
   status: RoleStatus;
   // permission.key -> gewährt ja/nein (Schlüssel siehe config/roles.ts)
   permissions: Record<string, boolean>;
