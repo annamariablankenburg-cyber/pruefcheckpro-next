@@ -20,9 +20,11 @@ export function CompanyLocationsList({
       <CardHeader>
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-base">Standorte</CardTitle>
-          <Button type="button" variant="outline" size="sm" onClick={onNewLocation}>
-            Neuer Standort
-          </Button>
+          {onNewLocation && (
+            <Button type="button" variant="outline" size="sm" onClick={onNewLocation}>
+              Neuer Standort
+            </Button>
+          )}
         </div>
       </CardHeader>
 

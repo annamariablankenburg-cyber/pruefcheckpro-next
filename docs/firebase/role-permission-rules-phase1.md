@@ -1,10 +1,12 @@
 # Rollenbasierte Firestore Rules – Phase 1 (roles · employees · invitations · locations)
 
-Status: **Rules und Emulator-Tests sind implementiert; `npm run test:rules` wurde lokal mit Java ausgeführt und bestand vollständig (698 von 698, 0 Fehler).** Danach kamen die Regel „nur bekannte Permission-Schlüssel“ (Abschnitt 4) und 13 weitere Tests hinzu (**insgesamt 711**); deren lokaler Emulator-Lauf steht noch aus und ist vor dem Commit zu bestätigen. Deployment erst nach der Migration der gespeicherten Rollen (Abschnitt 6).
+Status: **Rules und Emulator-Tests sind implementiert; `npm run test:rules` wurde lokal mit Java ausgeführt und bestand vollständig (698 von 698, 0 Fehler).** Danach kamen die Regel „nur bekannte Permission-Schlüssel“ (Abschnitt 4) und 13 weitere Tests hinzu (**insgesamt 711**); der lokale Emulator-Lauf bestand vollständig (711 von 711, 0 Fehler, auch nach dem UI-Gating-Slice mit unveränderter `firestore.rules`). Deployment erst nach der Migration der gespeicherten Rollen (Abschnitt 6).
 
 Phase 1 schaltet serverseitige Permission-Prüfung **ausschließlich** für diese vier Collections scharf. Die acht übrigen Company-Collections (`customers`, `projects`, `devices`, `samples`, `testValues`, `reports`, `calendarEvents`, `laborbook`) prüfen unverändert nur „aktive Membership der richtigen Firma“ (`belongsToCompany`). Das Policy-Modell steht in `docs/database/permissions.md`, die Analyse in `docs/firebase/role-security-audit.md`.
 
-> **Nicht Teil von Phase 1:** UI-Gating, `usePermissions()`, Membership-Schreiblogik, Admin SDK, Membership↔Employee-Synchronisierung, Einladungsannahme, Custom Claims. **Eine Änderung von `employees.roleId` ändert die wirksame Rolle (Membership) weiterhin nicht.**
+> **UI-Gating** (`usePermissions()`) ist inzwischen als eigener Slice umgesetzt: `docs/firebase/ui-permission-gating.md`.
+>
+> **Nicht Teil von Phase 1:** Membership-Schreiblogik, Admin SDK, Membership↔Employee-Synchronisierung, Einladungsannahme, Custom Claims. **Eine Änderung von `employees.roleId` ändert die wirksame Rolle (Membership) weiterhin nicht.**
 
 ---
 
@@ -93,7 +95,7 @@ Nicht vereinfacht zu „Laborleiter darf alles“: die Logik wurde vollständig 
 1. **Employee-Rollenwechsel ≠ Membership.** `employees.roleId` zu ändern ändert die wirksame Rolle nicht; die Membership wird nicht synchronisiert (kein Admin SDK). Die UI-Aktion „Rolle ändern“ ist weiterhin missverständlich. Gleiches gilt für Sperren: `Employee.status = "Gesperrt"` sperrt die Membership nicht.
 2. **`rollen_verwalten` ist weiterhin breit:** Wer es hält (Laborleiter, jede Custom Role damit), kann über Rollen alle **nicht geschützten** Schlüssel vergeben – auch für die eigene Rolle. Die Restricted-Schlüssel **und** die drei Admin-only-Löschrechte sind geschützt (Rules + Test); alle anderen Rechte, inklusive normaler Löschrechte (`proben.`, `pruefungen.`, `kunden.`, `projekte.`, `kalender.loeschen`), `mitarbeiter_verwalten` und `standorte_verwalten`, nicht. Auch die **Zuweisung** (Mitarbeiter/Einladung) nutzt die komplette geschützte 7er-Menge: Eine vom Administrator angelegte Rolle mit Admin-only-Löschrechten kann der Laborleiter **nicht** zuweisen.
 3. **Verwalten setzt Ansehen voraus.** Die Services lesen vor jedem Schreiben in einer Transaktion (Standort/Mitarbeiter/Rolle ändern): Eine Custom Role mit `*_verwalten` aber ohne das passende `*.ansehen` (bzw. eigene-Dokument-Ausnahme) kann blind schreiben, scheitert aber in der App.
-4. **UI ohne Gating.** Rollen ohne Leserecht sehen in der Company-Verwaltung Fehlerzustände („… konnten nicht geladen werden“): Prüfer/Azubi/Gast für Mitarbeiter, Einladungen und Rollen (Standorte nur der Gast). Auch `AdminView` und der Einladungsdialog (liest Mitarbeiter und Rollen) betroffen. Das ist bis zum UI-Gating-Slice erwartet.
+4. **UI-Gating (erledigt).** Die Company-Seite lädt Mitarbeiter, Einladungen, Rollen und Standorte nur noch mit dem passenden Leserecht (`usePermissions()`); Tabs, Aktionen und der Rollen-Editor passen sich an. Rollen ohne Leserecht sehen keine Fehlerzustände mehr (`docs/firebase/ui-permission-gating.md`). Das ist UX, keine Sicherheit.
 5. **Altdaten ohne `roleId`** (Mitarbeiter, Einladungen) sind nur mit `rollen.admin_verwalten` änderbar (fail-closed).
 6. **Keine Wertprüfung** außer den genannten Formregeln (Name/Farbe/Texte, Typen der `permissions`-Werte – nur `== true` gewährt).
 7. **Kein Mitarbeiter-/Einladungs-Create-Pfad für Employees** (nur Server später); die Emulator-Seeds laufen ohne Rules.

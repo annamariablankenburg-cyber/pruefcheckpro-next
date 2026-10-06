@@ -1,4 +1,4 @@
-import { doc, getDoc, Timestamp } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, Timestamp, type Unsubscribe } from "firebase/firestore";
 
 import { auth, db } from "@/lib/firebase/firebase";
 import { userMembershipDocPath } from "@/lib/firebase/collections";
@@ -37,6 +37,29 @@ export async function getMembership(uid: string): Promise<UserMembership | undef
   } catch (error) {
     throw new FirestoreUserMembershipServiceError("Membership konnte nicht geladen werden.", error);
   }
+}
+
+// Live-Beobachtung des EIGENEN Membership-Dokuments (für die effektiven
+// Berechtigungen: ändern sich roleId oder status, aktualisiert sich die UI).
+// Ein Dokument-Listener nutzt dieselbe Regel wie getDoc (eigenes Dokument,
+// einzelnes get). Fehlt das Dokument, wird undefined gemeldet. Schreibt nichts.
+export function watchMembership(
+  uid: string,
+  onChange: (membership: UserMembership | undefined) => void,
+  onError: (error: unknown) => void
+): Unsubscribe {
+  return onSnapshot(
+    doc(db, userMembershipDocPath(uid)).withConverter(userMembershipConverter),
+    (snapshot) => {
+      if (!snapshot.exists()) {
+        onChange(undefined);
+        return;
+      }
+      const data = snapshot.data();
+      onChange({ ...data, createdAt: toIso(data.createdAt), updatedAt: toIso(data.updatedAt) });
+    },
+    onError
+  );
 }
 
 // Gemeinsamer Ladevorgang pro eingeloggtem User: AuthProvider (UI-Gate) und

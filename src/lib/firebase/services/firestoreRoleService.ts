@@ -1,4 +1,14 @@
-import { addDoc, collection, doc, getDoc, getDocs, runTransaction, type DocumentData } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  onSnapshot,
+  runTransaction,
+  type DocumentData,
+  type Unsubscribe,
+} from "firebase/firestore";
 
 import { db } from "@/lib/firebase/firebase";
 import { companyCollectionPaths } from "@/lib/firebase/collections";
@@ -61,6 +71,22 @@ export const firestoreRoleService = {
     } catch (error) {
       throw new FirestoreRoleServiceError("Rolle konnte nicht geladen werden.", error);
     }
+  },
+
+  // Live-Beobachtung EINES Rollen-Dokuments (die eigene Rolle des Users für die
+  // effektiven Berechtigungen). Die eigene Rolle darf per Rules immer einzeln
+  // gelesen werden, auch wenn sie archiviert ist. Fehlt das Dokument: undefined.
+  watchRoleById(
+    companyId: string,
+    roleId: string,
+    onChange: (role: Role | undefined) => void,
+    onError: (error: unknown) => void
+  ): Unsubscribe {
+    return onSnapshot(
+      rawRoleDocRef(companyId, roleId).withConverter(roleConverter),
+      (snapshot) => onChange(snapshot.exists() ? snapshot.data() : undefined),
+      onError
+    );
   },
 
   // Legt immer eine aktive, benutzerdefinierte Rolle an (Systemrollen kommen

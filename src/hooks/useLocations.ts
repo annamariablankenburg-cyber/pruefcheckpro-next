@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { locationService } from "@/lib/services/locationService";
 import { useSearchAndFilter } from "@/hooks/shared/useSearchAndFilter";
@@ -17,7 +17,11 @@ import type { CompanyLocationDetail } from "@/types/location";
 // lokalen State. Lokaler State ändert sich erst nach einem bestätigten
 // Service-Ergebnis. Fehler (auch LocationRuleError) werden NICHT verschluckt,
 // sondern an die UI weitergereicht.
-export function useLocations() {
+// `enabled` (Standard true): Nur wenn der User die Collection lesen darf, wird
+// geladen. Ist es false, wird NICHT abgefragt (kein erwarteter permission-denied),
+// und der Hook liefert leere Daten ohne Ladezustand/Fehler. Das ist UI-Gating
+// (Komfort); die Firestore Rules bleiben die Sicherheitsgrenze.
+export function useLocations(enabled = true) {
   const [locations, setLocations] = useState<CompanyLocationDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,10 +40,14 @@ export function useLocations() {
   }, []);
 
   useEffect(() => {
+    if (!enabled) return;
     // Lädt die Standorte beim ersten Mount vom Service (Mock oder Firestore).
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshLocations();
-  }, [refreshLocations]);
+  }, [enabled, refreshLocations]);
+
+  // Ohne Leserecht (enabled = false): leere Daten, nichts wurde abgefragt.
+  const visibleLocations = useMemo(() => (enabled ? locations : []), [enabled, locations]);
 
   const {
     search,
@@ -48,7 +56,7 @@ export function useLocations() {
     setFilter,
     filteredItems: filteredLocations,
     resetFilters,
-  } = useSearchAndFilter<CompanyLocationDetail, LocationFilter>(locations, {
+  } = useSearchAndFilter<CompanyLocationDetail, LocationFilter>(visibleLocations, {
     defaultFilter: "Alle",
     matchesFilter: (location, filterValue) => filterValue === location.status || filterValue === location.type,
     matchesSearch: (location, query) =>
@@ -109,10 +117,11 @@ export function useLocations() {
   }
 
   return {
-    locations,
+    locations: visibleLocations,
     filteredLocations,
-    loading,
-    error,
+    enabled,
+    loading: enabled && loading,
+    error: enabled ? error : null,
     refreshLocations,
     search,
     setSearch,

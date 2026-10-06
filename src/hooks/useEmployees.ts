@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { employeeService } from "@/lib/services/employeeService";
 import { useSearchAndFilter } from "@/hooks/shared/useSearchAndFilter";
@@ -25,7 +25,12 @@ import type { Role } from "@/types/role";
 // `roles` ist die gemeinsame Rollenliste der Company-Seite (eine useRoles()-
 // Instanz). Sie wird nur zum Auflösen der Rollennamen für Suche und Filter
 // genutzt; Altdaten ohne roleId werden über ihren Namen aufgelöst.
-export function useEmployees(roles: Role[]) {
+//
+// `enabled` (Standard true): Nur wenn der User die Collection lesen darf, wird
+// geladen. Ist es false, wird NICHT abgefragt (kein erwarteter permission-denied),
+// und der Hook liefert leere Daten ohne Ladezustand/Fehler. Das ist UI-Gating
+// (Komfort); die Firestore Rules bleiben die Sicherheitsgrenze.
+export function useEmployees(roles: Role[], enabled = true) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,10 +49,14 @@ export function useEmployees(roles: Role[]) {
   }, []);
 
   useEffect(() => {
+    if (!enabled) return;
     // Lädt die Mitarbeiter beim ersten Mount vom Service (Mock oder Firestore).
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshEmployees();
-  }, [refreshEmployees]);
+  }, [enabled, refreshEmployees]);
+
+  // Ohne Leserecht (enabled = false): leere Daten, nichts wurde abgefragt.
+  const visibleEmployees = useMemo(() => (enabled ? employees : []), [enabled, employees]);
 
   const {
     search,
@@ -56,7 +65,7 @@ export function useEmployees(roles: Role[]) {
     setFilter,
     filteredItems: filteredEmployees,
     resetFilters,
-  } = useSearchAndFilter<Employee, EmployeeFilter>(employees, {
+  } = useSearchAndFilter<Employee, EmployeeFilter>(visibleEmployees, {
     defaultFilter: "Alle",
     matchesFilter: (employee, filterValue) =>
       filterValue === employee.status || filterValue === getRoleDisplayName(employee, roles),
@@ -136,10 +145,11 @@ export function useEmployees(roles: Role[]) {
   }
 
   return {
-    employees,
+    employees: visibleEmployees,
     filteredEmployees,
-    loading,
-    error,
+    enabled,
+    loading: enabled && loading,
+    error: enabled ? error : null,
     refreshEmployees,
     search,
     setSearch,

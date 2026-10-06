@@ -22,9 +22,11 @@ export function CompanyEmployeesList({
       <CardHeader>
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-base">Mitarbeiter</CardTitle>
-          <Button type="button" variant="outline" size="sm" onClick={onNewEmployee}>
-            Neuer Mitarbeiter
-          </Button>
+          {onNewEmployee && (
+            <Button type="button" variant="outline" size="sm" onClick={onNewEmployee}>
+              Neuer Mitarbeiter
+            </Button>
+          )}
         </div>
       </CardHeader>
 

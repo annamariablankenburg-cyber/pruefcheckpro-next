@@ -18,10 +18,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { EmployeeActionPolicy } from "@/lib/permissions/gatingRules";
 import type { Employee } from "@/types/employee";
 
 interface EmployeeActionsMenuProps {
   employee: Employee;
+  // Welche Aktionen der eingeloggte User für diesen Mitarbeiter angeboten bekommt.
+  actions: EmployeeActionPolicy;
   onViewDetails: () => void;
   onChangeRole: () => void;
   onChangeLocation: () => void;
@@ -34,6 +37,7 @@ interface EmployeeActionsMenuProps {
 
 export function EmployeeActionsMenu({
   employee,
+  actions,
   onViewDetails,
   onChangeRole,
   onChangeLocation,
@@ -63,45 +67,57 @@ export function EmployeeActionsMenu({
           <Eye />
           Details öffnen
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onChangeRole}>
-          <UserCog />
-          Rolle ändern
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onChangeLocation}>
-          <MapPin />
-          Standort ändern
-        </DropdownMenuItem>
+        {actions.canChangeRole && (
+          <DropdownMenuItem onSelect={onChangeRole}>
+            <UserCog />
+            Rolle ändern
+          </DropdownMenuItem>
+        )}
+        {actions.canChangeLocation && (
+          <DropdownMenuItem onSelect={onChangeLocation}>
+            <MapPin />
+            Standort ändern
+          </DropdownMenuItem>
+        )}
 
         {isPending ? (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onSelect={onRevokeInvitation}>
-              <MailX />
-              Einladung widerrufen (später)
-            </DropdownMenuItem>
-          </>
+          actions.canRevokeInvitation && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" onSelect={onRevokeInvitation}>
+                <MailX />
+                Einladung widerrufen (später)
+              </DropdownMenuItem>
+            </>
+          )
         ) : (
           <>
-            <DropdownMenuItem onSelect={onResetPassword}>
-              <KeyRound />
-              Passwort-Reset (später)
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            {isLocked ? (
-              <DropdownMenuItem onSelect={onReactivate}>
-                <PlayCircle />
-                Mitarbeiter reaktivieren
-              </DropdownMenuItem>
-            ) : (
-              <DropdownMenuItem onSelect={onSuspend}>
-                <PauseCircle />
-                Zugriff temporär sperren
+            {actions.canResetPassword && (
+              <DropdownMenuItem onSelect={onResetPassword}>
+                <KeyRound />
+                Passwort-Reset (später)
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem variant="destructive" onSelect={onRevokeAccess}>
-              <UserX />
-              Zugriff entziehen
-            </DropdownMenuItem>
+            {actions.canChangeStatus && (
+              <>
+                <DropdownMenuSeparator />
+                {isLocked ? (
+                  <DropdownMenuItem onSelect={onReactivate}>
+                    <PlayCircle />
+                    Mitarbeiter reaktivieren
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem onSelect={onSuspend}>
+                    <PauseCircle />
+                    Zugriff temporär sperren
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem variant="destructive" onSelect={onRevokeAccess}>
+                  <UserX />
+                  Zugriff entziehen
+                </DropdownMenuItem>
+              </>
+            )}
           </>
         )}
       </DropdownMenuContent>

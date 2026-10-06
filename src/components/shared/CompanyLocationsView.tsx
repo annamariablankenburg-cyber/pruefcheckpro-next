@@ -22,9 +22,13 @@ interface CompanyLocationsViewProps {
   // Übersicht – keine zweite Quelle).
   locationsData: LocationsData;
   onNewLocation: () => void;
+  // standorte.ansehen UND administration.standorte_verwalten: Anlegen, Bearbeiten,
+  // Deaktivieren/Reaktivieren. Verwalten ohne Ansehen wird nicht angeboten (die
+  // Aktionen lesen vor dem Schreiben). Ohne: reine Leseansicht.
+  canManage: boolean;
 }
 
-export function CompanyLocationsView({ locationsData, onNewLocation }: CompanyLocationsViewProps) {
+export function CompanyLocationsView({ locationsData, onNewLocation, canManage }: CompanyLocationsViewProps) {
   const router = useRouter();
   const {
     locations,
@@ -122,13 +126,17 @@ export function CompanyLocationsView({ locationsData, onNewLocation }: CompanyLo
         <div>
           <h2 className="text-xl font-semibold tracking-tight text-foreground">Standorte</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Verwalte alle Laborstandorte, Außenstellen und Baustellenbüros.
+            {canManage
+              ? "Verwalte alle Laborstandorte, Außenstellen und Baustellenbüros."
+              : "Alle Laborstandorte, Außenstellen und Baustellenbüros (nur Ansicht)."}
           </p>
         </div>
-        <Button type="button" onClick={onNewLocation} disabled={loading || Boolean(error)}>
-          <Plus className="size-4" />
-          Neuer Standort
-        </Button>
+        {canManage && (
+          <Button type="button" onClick={onNewLocation} disabled={loading || Boolean(error)}>
+            <Plus className="size-4" />
+            Neuer Standort
+          </Button>
+        )}
       </div>
 
       {loading ? (
@@ -168,6 +176,7 @@ export function CompanyLocationsView({ locationsData, onNewLocation }: CompanyLo
           />
 
           <LocationTable
+            canManage={canManage}
             locations={filteredLocations}
             onResetFilters={resetFilters}
             onViewDetails={(location) => setDetailId(location.id)}
@@ -181,6 +190,7 @@ export function CompanyLocationsView({ locationsData, onNewLocation }: CompanyLo
       )}
 
       <LocationDetailDrawer
+        canManage={canManage}
         location={detailLocation}
         onOpenChange={(open) => !open && setDetailId(null)}
         onEdit={(location) => setEditId(location.id)}

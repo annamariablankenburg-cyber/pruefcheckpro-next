@@ -234,8 +234,8 @@ Für **jede** Domäne existiert Archiv/Status – endgültiges Löschen ist die 
 |---|---|
 | Config (Taxonomie, Matrix, Risikoklassen) | ✅ umgesetzt und getestet (`npm run test:permissions`) |
 | UI-Marker (`Nur Administrator`/`Löschen` im Rollen-Editor) | ✅ nur Anzeige |
-| UI-Gating (Buttons/Seiten nach Rechten) | ❌ noch nicht |
-| Firestore Rules (rollenbasiert) | 🟡 **Phase 1** für `roles`, `employees`, `invitations`, `locations` implementiert und im Emulator getestet (`docs/firebase/role-permission-rules-phase1.md`; lokal 698/698, danach 13 weitere Tests → 711, deren Lauf lokal zu bestätigen ist); die übrigen acht Collections nur Membership + Firma |
+| UI-Gating (Buttons/Seiten nach Rechten) | 🟡 Company-Verwaltung (Tabs, Mitarbeiter, Einladungen, Standorte, Rollen) und `AdminView`-Rollenübersicht über `usePermissions()` (`docs/firebase/ui-permission-gating.md`); Fachseiten (Kunden, Projekte, Geräte, …) noch nicht |
+| Firestore Rules (rollenbasiert) | 🟡 **Phase 1** für `roles`, `employees`, `invitations`, `locations` implementiert und im Emulator getestet (`docs/firebase/role-permission-rules-phase1.md`; lokal 711/711); die übrigen acht Collections nur Membership + Firma |
 | Server (Provisionierung, Rollenzuweisung, Letzter-Admin-Schutz) | ❌ noch nicht |
 
 Architektur der späteren Durchsetzung (Variante D/A im Audit): Membership (`roleId`, `status`) + Role-Dokument (`permissions`) live per `get()` in den Rules; Restricted-Schlüssel als feste Liste; Zuweisungen und Membership-Änderungen serverseitig.

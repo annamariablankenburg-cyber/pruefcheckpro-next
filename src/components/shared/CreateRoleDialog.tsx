@@ -24,6 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { PermissionCategory } from "@/components/shared/PermissionCategory";
 import { PermissionSearch } from "@/components/shared/PermissionSearch";
 import { buildPermissions } from "@/config/roles";
+import { hasProtectedPermission, stripProtectedPermissions } from "@/lib/permissions/gatingRules";
 import { filterPermissionCategories, RoleRuleError, type RoleFormValues } from "@/lib/roles/roleRules";
 import { cn } from "@/lib/utils";
 import type { Role, RoleColor } from "@/types/role";
@@ -59,6 +60,10 @@ interface CreateRoleDialogProps {
   // Erfolg.
   onCreate: (data: NewRoleData) => Promise<void>;
   initialValues?: NewRoleData | null;
+  // rollen.admin_verwalten: nur damit dürfen geschützte Rechte (Administratorrechte,
+  // Admin-only-Löschrechte) gesetzt werden. Ohne dieses Recht werden sie aus
+  // Vorlagen/Kopien NICHT übernommen (sicher auf false) und sind gesperrt.
+  canManageProtected: boolean;
 }
 
 function CreateRoleForm({
@@ -66,6 +71,7 @@ function CreateRoleForm({
   templateRoles,
   onCreate,
   initialValues,
+  canManageProtected,
   isSubmitting,
   onSubmittingChange,
 }: Omit<CreateRoleDialogProps, "open"> & {
@@ -76,8 +82,14 @@ function CreateRoleForm({
   const [description, setDescription] = useState(initialValues?.description ?? "");
   const [color, setColor] = useState<RoleColor>(initialValues?.color ?? "primary");
   const [template, setTemplate] = useState(NO_TEMPLATE);
+  // Ohne rollen.admin_verwalten: geschützte Rechte aus Kopie/Vorlage entfernen.
+  const adopt = (source: Record<string, boolean>) => (canManageProtected ? source : stripProtectedPermissions(source));
   const [permissions, setPermissions] = useState<Record<string, boolean>>(
-    initialValues?.permissions ?? buildPermissions([])
+    adopt(initialValues?.permissions ?? buildPermissions([]))
+  );
+  // Hinweis, dass geschützte Rechte nicht übernommen wurden (Kopie oder Vorlage).
+  const [protectedDropped, setProtectedDropped] = useState(
+    !canManageProtected && hasProtectedPermission(initialValues?.permissions)
   );
   const [search, setSearch] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -85,7 +97,8 @@ function CreateRoleForm({
   function handleTemplateChange(value: string) {
     setTemplate(value);
     const source = templateRoles.find((role) => role.id === value);
-    setPermissions(source ? { ...source.permissions } : buildPermissions([]));
+    setProtectedDropped(!canManageProtected && hasProtectedPermission(source?.permissions));
+    setPermissions(source ? adopt({ ...source.permissions }) : buildPermissions([]));
   }
 
   async function handleCreate() {
@@ -183,6 +196,16 @@ function CreateRoleForm({
 
         <div className="flex flex-col gap-3 border-t border-border pt-5">
           <FieldLabel>Berechtigungen</FieldLabel>
+          {!canManageProtected && (
+            <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/40 px-3.5 py-2.5 text-sm text-muted-foreground">
+              <Info className="mt-0.5 size-4 shrink-0" />
+              <span>
+                Geschützte Rechte (Administratorrechte, Löschrechte für Geräte, Laborbuch und Berichte) kann nur ein
+                Administrator vergeben. Sie sind hier gesperrt
+                {protectedDropped ? " und wurden aus der Vorlage bzw. Kopie nicht übernommen" : ""}.
+              </span>
+            </div>
+          )}
           <PermissionSearch value={search} onChange={setSearch} />
           <div className="flex flex-col gap-3">
             {visibleCategories.map((category) => (
@@ -194,6 +217,7 @@ function CreateRoleForm({
                 onToggle={(key, checked) => setPermissions((current) => ({ ...current, [key]: checked }))}
                 disabled={isSubmitting}
                 defaultOpen={false}
+                protectedLocked={!canManageProtected}
               />
             ))}
           </div>

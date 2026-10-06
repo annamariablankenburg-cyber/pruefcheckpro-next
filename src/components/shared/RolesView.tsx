@@ -14,6 +14,7 @@ import { RoleStatusDialog, type RoleStatusAction } from "@/components/shared/Rol
 import { StatCard } from "@/components/shared/StatCard";
 import type { EmployeesData } from "@/hooks/useEmployees";
 import type { RolesData } from "@/hooks/useRoles";
+import { hasProtectedPermission, stripProtectedPermissions } from "@/lib/permissions/gatingRules";
 import {
   ADMIN_ROLE_ID,
   countGrantedPermissions,
@@ -28,15 +29,20 @@ interface RolesViewProps {
   // Gemeinsame Rollen-Instanz der Company-Seite (derselbe State wie im
   // Mitarbeiter-Tab und im Einladungsdialog – keine zweite Quelle).
   rolesData: RolesData;
-  // Gemeinsame Mitarbeiter-Instanz: nur zum Ableiten der Benutzerzahlen.
-  employeesData: EmployeesData;
+  // Gemeinsame Mitarbeiter-Instanz: nur zum Ableiten der Benutzerzahlen. null,
+  // wenn der User Mitarbeiter nicht lesen darf (dann werden keine Zahlen gezeigt).
+  employeesData: EmployeesData | null;
+  // administration.rollen_verwalten (mit rollen.ansehen): Erstellen/Bearbeiten/Archivieren.
+  canManage: boolean;
+  // rollen.admin_verwalten: geschützte Rechte vergeben/entziehen.
+  canManageProtected: boolean;
 }
 
 // Rollen sind Verwaltungsdaten: Erstellen, Bearbeiten, Archivieren und
 // Reaktivieren sind echt gespeichert. Es gibt kein Löschen; Systemrollen sind
 // geschützt. Berechtigungen steuern aktuell nur Verwaltungslogik und
 // Darstellung – keine serverseitige Durchsetzung.
-export function RolesView({ rolesData, employeesData }: RolesViewProps) {
+export function RolesView({ rolesData, employeesData, canManage, canManageProtected }: RolesViewProps) {
   const { roles, loading, error, refreshRoles, createRole, updateRole, deactivateRole, reactivateRole } =
     rolesData;
   // Auswahl als ID: Drawer/Dialoge zeigen immer den aktuellen Datensatz.
@@ -54,10 +60,11 @@ export function RolesView({ rolesData, employeesData }: RolesViewProps) {
 
   // Benutzer je Rolle: abgeleitet aus den Mitarbeitern, solange diese verfügbar
   // sind (kein gespeicherter Zähler, der veralten könnte).
-  const employeesReady = !employeesData.loading && !employeesData.error;
+  const employeesReady = employeesData !== null && !employeesData.loading && !employeesData.error;
+  const employeeList = employeesData?.employees;
   const userCounts = useMemo(
-    () => (employeesReady ? countRoleUsers(roles, employeesData.employees) : null),
-    [employeesReady, roles, employeesData.employees]
+    () => (employeesReady && employeeList ? countRoleUsers(roles, employeeList) : null),
+    [employeesReady, roles, employeeList]
   );
 
   const kpis = useMemo(() => {
@@ -93,11 +100,12 @@ export function RolesView({ rolesData, employeesData }: RolesViewProps) {
   }
 
   async function handleDuplicateConfirm(role: Role, newName: string) {
+    // Ohne rollen.admin_verwalten werden geschützte Rechte nicht in die Kopie übernommen.
     const created = await createRole({
       name: newName,
       description: role.description,
       color: role.color,
-      permissions: { ...role.permissions },
+      permissions: canManageProtected ? { ...role.permissions } : stripProtectedPermissions(role.permissions),
     });
     showFeedback(`Rolle „${created.name}“ wurde dupliziert.`);
   }
@@ -131,10 +139,12 @@ export function RolesView({ rolesData, employeesData }: RolesViewProps) {
             Verwalte Rollen, Berechtigungen und Zugriffsrechte.
           </p>
         </div>
-        <Button type="button" onClick={handleOpenNewRole} disabled={loading || Boolean(error)}>
-          <Plus className="size-4" />
-          Neue Rolle
-        </Button>
+        {canManage && (
+          <Button type="button" onClick={handleOpenNewRole} disabled={loading || Boolean(error)}>
+            <Plus className="size-4" />
+            Neue Rolle
+          </Button>
+        )}
       </div>
 
       <div className="flex items-start gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-2.5 text-sm text-primary">
@@ -175,12 +185,14 @@ export function RolesView({ rolesData, employeesData }: RolesViewProps) {
             <p className="font-semibold text-foreground">Noch keine Rollen vorhanden</p>
             <p className="max-w-md text-sm text-muted-foreground">
               Die Systemrollen (Administrator, Laborleiter, Prüfer, Azubi, Gast) werden über das
-              Seed-Skript angelegt. Du kannst bereits eine eigene Rolle erstellen.
+              Seed-Skript angelegt.{canManage ? " Du kannst bereits eine eigene Rolle erstellen." : ""}
             </p>
-            <Button type="button" onClick={handleOpenNewRole}>
-              <Plus className="size-4" />
-              Neue Rolle
-            </Button>
+            {canManage && (
+              <Button type="button" onClick={handleOpenNewRole}>
+                <Plus className="size-4" />
+                Neue Rolle
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -221,6 +233,8 @@ export function RolesView({ rolesData, employeesData }: RolesViewProps) {
         onToggleStatus={(role) =>
           setStatusAction({ id: role.id, type: role.status === "Archiviert" ? "reactivate" : "archive" })
         }
+        canManage={canManage}
+        canManageProtected={canManageProtected}
       />
 
       <CreateRoleDialog
@@ -229,12 +243,14 @@ export function RolesView({ rolesData, employeesData }: RolesViewProps) {
         templateRoles={templateRoles}
         initialValues={createPrefill}
         onCreate={handleCreateRole}
+        canManageProtected={canManageProtected}
       />
 
       <DuplicateRoleDialog
         role={duplicateRole}
         onOpenChange={(open) => !open && setDuplicateId(null)}
         onConfirm={handleDuplicateConfirm}
+        protectedNotice={!canManageProtected && duplicateRole !== null && hasProtectedPermission(duplicateRole.permissions)}
       />
 
       <RoleStatusDialog

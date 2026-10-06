@@ -14,6 +14,8 @@ interface LocationActionsMenuProps {
   locationName: string;
   status: LocationStatus;
   onViewDetails: () => void;
+  // standorte.ansehen + administration.standorte_verwalten: Bearbeiten und Deaktivieren/Reaktivieren.
+  canManage: boolean;
   onEdit: () => void;
   onViewEmployees: () => void;
   onViewDevices: () => void;
@@ -25,6 +27,7 @@ export function LocationActionsMenu({
   locationName,
   status,
   onViewDetails,
+  canManage,
   onEdit,
   onViewEmployees,
   onViewDevices,
@@ -50,10 +53,12 @@ export function LocationActionsMenu({
           <Eye />
           Details öffnen
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onEdit}>
-          <Pencil />
-          Bearbeiten
-        </DropdownMenuItem>
+        {canManage && (
+          <DropdownMenuItem onSelect={onEdit}>
+            <Pencil />
+            Bearbeiten
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onSelect={onViewEmployees}>
           <Users />
           Mitarbeiter anzeigen
@@ -66,14 +71,18 @@ export function LocationActionsMenu({
           <FolderKanban />
           Projekte anzeigen
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          variant={isActive ? "destructive" : "default"}
-          onSelect={onToggleStatus}
-        >
-          {isActive ? <PauseCircle /> : <PlayCircle />}
-          {isActive ? "Deaktivieren" : "Reaktivieren"}
-        </DropdownMenuItem>
+        {canManage && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant={isActive ? "destructive" : "default"}
+              onSelect={onToggleStatus}
+            >
+              {isActive ? <PauseCircle /> : <PlayCircle />}
+              {isActive ? "Deaktivieren" : "Reaktivieren"}
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

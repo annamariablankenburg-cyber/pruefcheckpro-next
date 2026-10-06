@@ -15,6 +15,8 @@ import type { CompanyLocationDetail } from "@/types/location";
 interface LocationDetailDrawerProps {
   location: CompanyLocationDetail | null;
   onOpenChange: (open: boolean) => void;
+  // Bearbeiten/Deaktivieren nur mit Verwaltungsrecht (UI-Gating).
+  canManage: boolean;
   onEdit: (location: CompanyLocationDetail) => void;
   onViewEmployees: (location: CompanyLocationDetail) => void;
   onViewDevices: (location: CompanyLocationDetail) => void;
@@ -42,6 +44,7 @@ function SectionTitle({ children }: { children: string }) {
 export function LocationDetailDrawer({
   location,
   onOpenChange,
+  canManage,
   onEdit,
   onViewEmployees,
   onViewDevices,
@@ -161,18 +164,20 @@ export function LocationDetailDrawer({
               </div>
             </DrawerBody>
 
-            <div className="flex flex-col gap-2 border-t border-border px-6 py-4 sm:flex-row sm:justify-between">
-              <Button type="button" variant="outline" onClick={() => onEdit(location)}>
-                Bearbeiten
-              </Button>
-              <Button
-                type="button"
-                variant={isActive ? "destructive" : "default"}
-                onClick={() => onToggleStatus(location)}
-              >
-                {isActive ? "Standort deaktivieren" : "Standort reaktivieren"}
-              </Button>
-            </div>
+            {canManage && (
+              <div className="flex flex-col gap-2 border-t border-border px-6 py-4 sm:flex-row sm:justify-between">
+                <Button type="button" variant="outline" onClick={() => onEdit(location)}>
+                  Bearbeiten
+                </Button>
+                <Button
+                  type="button"
+                  variant={isActive ? "destructive" : "default"}
+                  onClick={() => onToggleStatus(location)}
+                >
+                  {isActive ? "Standort deaktivieren" : "Standort reaktivieren"}
+                </Button>
+              </div>
+            )}
           </>
         )}
       </DrawerContent>

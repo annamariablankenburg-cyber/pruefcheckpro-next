@@ -30,7 +30,12 @@ import type { Role } from "@/types/role";
 //
 // `roles` ist die gemeinsame Rollenliste der Company-Seite (eine useRoles()-
 // Instanz); sie dient nur dem Auflösen der Rollennamen für Suche und Filter.
-export function useInvitations(roles: Role[]) {
+//
+// `enabled` (Standard true): Nur wenn der User die Collection lesen darf, wird
+// geladen. Ist es false, wird NICHT abgefragt (kein erwarteter permission-denied),
+// und der Hook liefert leere Daten ohne Ladezustand/Fehler. Das ist UI-Gating
+// (Komfort); die Firestore Rules bleiben die Sicherheitsgrenze.
+export function useInvitations(roles: Role[], enabled = true) {
   const [records, setRecords] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,17 +57,18 @@ export function useInvitations(roles: Role[]) {
   }, []);
 
   useEffect(() => {
+    if (!enabled) return;
     // Lädt die Einladungen beim ersten Mount vom Service (Mock oder Firestore).
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshInvitations();
-  }, [refreshInvitations]);
+  }, [enabled, refreshInvitations]);
 
   // Einladungen samt abgeleitetem Anzeigestatus ("Abgelaufen" entsteht hier aus
   // expiresAt, nicht aus gespeicherten Daten). Solange das Bezugsdatum fehlt,
   // gibt es keine Zeilen – so erscheinen keine falschen Statuswerte.
   const invitations = useMemo(
-    () => (referenceDate ? toInvitationRows(records, referenceDate) : []),
-    [records, referenceDate]
+    () => (enabled && referenceDate ? toInvitationRows(records, referenceDate) : []),
+    [enabled, records, referenceDate]
   );
 
   const {
@@ -112,8 +118,9 @@ export function useInvitations(roles: Role[]) {
   return {
     invitations,
     filteredInvitations,
-    loading,
-    error,
+    enabled,
+    loading: enabled && loading,
+    error: enabled ? error : null,
     referenceDate,
     refreshInvitations,
     search,

@@ -92,7 +92,7 @@ tests/firestore/
 
 > **Phase 1 (Rollen-Rules):** Kategorie 3 testet nur noch die acht übrigen Collections; die Tests für die vier rollenbasierten Collections stehen in `phase1-*.test.ts` (siehe `docs/firebase/role-permission-rules-phase1.md`, Abschnitt 8). Die 12 Collections sind weiter durch den Wächter-Test erfasst; vier davon folgen der Permission-Policy.
 
-> **Hinweis zur Ausführung:** Die Emulator-Tests brauchen Java 21. Auf der lokalen Entwicklungsmaschine lief `npm run test:rules` vollständig grün (189 Tests vor Phase 1; mit Phase 1 698 von 698, 0 Fehler). Die Konsistenz-Tests (`rules-config-sync.test.ts`, Abdeckungs-Wächter) laufen auch ohne Emulator. Nach dem Lauf mit 698 Tests kam die Regel „nur bekannte Permission-Schlüssel“ mit 13 weiteren Tests hinzu (insgesamt 711); diese sind lokal noch zu bestätigen.
+> **Hinweis zur Ausführung:** Die Emulator-Tests brauchen Java 21. Auf der lokalen Entwicklungsmaschine lief `npm run test:rules` vollständig grün (189 Tests vor Phase 1; mit Phase 1 698 von 698, 0 Fehler). Die Konsistenz-Tests (`rules-config-sync.test.ts`, Abdeckungs-Wächter) laufen auch ohne Emulator. Nach dem Lauf mit 698 Tests kam die Regel „nur bekannte Permission-Schlüssel“ mit 13 weiteren Tests hinzu (insgesamt 711); der lokale Lauf bestätigte 711 von 711 (0 Fehler), auch nach dem UI-Gating-Slice (`firestore.rules` unverändert).
 
 ## 6. CI
 

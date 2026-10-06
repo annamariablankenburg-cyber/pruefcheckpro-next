@@ -13,10 +13,13 @@ import { EmployeeRoleBadge } from "@/components/shared/EmployeeRoleBadge";
 import { EmployeeStatusBadge } from "@/components/shared/EmployeeStatusBadge";
 import { useRoleList } from "@/components/shared/RolesContext";
 import { getRoleDisplayName, resolveRole, summarizePermissions } from "@/lib/roles/roleRules";
+import type { EmployeeActionPolicy } from "@/lib/permissions/gatingRules";
 import type { Employee } from "@/types/employee";
 
 interface EmployeeDetailDrawerProps {
   employee: Employee | null;
+  // Aktionen je Mitarbeiter (Rechte des eingeloggten Users, eigener Datensatz, geschützte Zielrollen).
+  getActions: (employee: Employee) => EmployeeActionPolicy;
   onOpenChange: (open: boolean) => void;
   onChangeRole: (employee: Employee) => void;
   onChangeLocation: (employee: Employee) => void;
@@ -46,6 +49,7 @@ function SectionTitle({ children }: { children: string }) {
 
 export function EmployeeDetailDrawer({
   employee,
+  getActions,
   onOpenChange,
   onChangeRole,
   onChangeLocation,
@@ -150,37 +154,50 @@ export function EmployeeDetailDrawer({
             </DrawerBody>
 
             <div className="flex flex-col gap-2 border-t border-border px-6 py-4">
+              {!getActions(employee).any && (
+                <p className="text-center text-xs text-muted-foreground">
+                  Für diesen Mitarbeiter stehen dir keine Aktionen zur Verfügung.
+                </p>
+              )}
               <div className="grid grid-cols-2 gap-2">
-                <Button type="button" variant="outline" onClick={() => onChangeRole(employee)}>
-                  <UserCog className="size-4" />
-                  Rolle ändern
-                </Button>
-                <Button type="button" variant="outline" onClick={() => onChangeLocation(employee)}>
-                  <MapPin className="size-4" />
-                  Standort ändern
-                </Button>
+                {getActions(employee).canChangeRole && (
+                  <Button type="button" variant="outline" onClick={() => onChangeRole(employee)}>
+                    <UserCog className="size-4" />
+                    Rolle ändern
+                  </Button>
+                )}
+                {getActions(employee).canChangeLocation && (
+                  <Button type="button" variant="outline" onClick={() => onChangeLocation(employee)}>
+                    <MapPin className="size-4" />
+                    Standort ändern
+                  </Button>
+                )}
 
                 {isPending ? (
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    className="col-span-2"
-                    onClick={() => onRevokeInvitation(employee)}
-                  >
-                    <MailX className="size-4" />
-                    Einladung widerrufen (später)
-                  </Button>
-                ) : (
-                  <>
+                  getActions(employee).canRevokeInvitation && (
                     <Button
                       type="button"
-                      variant="outline"
-                      onClick={() => onResetPassword(employee)}
+                      variant="destructive"
+                      className="col-span-2"
+                      onClick={() => onRevokeInvitation(employee)}
                     >
-                      <KeyRound className="size-4" />
-                      Passwort-Reset (später)
+                      <MailX className="size-4" />
+                      Einladung widerrufen (später)
                     </Button>
-                    {isLocked ? (
+                  )
+                ) : (
+                  <>
+                    {getActions(employee).canResetPassword && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => onResetPassword(employee)}
+                      >
+                        <KeyRound className="size-4" />
+                        Passwort-Reset (später)
+                      </Button>
+                    )}
+                    {getActions(employee).canChangeStatus && (isLocked ? (
                       <Button type="button" variant="outline" onClick={() => onReactivate(employee)}>
                         <PlayCircle className="size-4" />
                         Reaktivieren
@@ -190,7 +207,8 @@ export function EmployeeDetailDrawer({
                         <PauseCircle className="size-4" />
                         Temporär sperren
                       </Button>
-                    )}
+                    ))}
+                    {getActions(employee).canChangeStatus && (
                     <Button
                       type="button"
                       variant="destructive"
@@ -200,6 +218,7 @@ export function EmployeeDetailDrawer({
                       <UserX className="size-4" />
                       Zugriff entziehen
                     </Button>
+                    )}
                   </>
                 )}
               </div>

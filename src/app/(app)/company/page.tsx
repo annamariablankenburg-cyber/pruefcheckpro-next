@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CreditCard, Palette, UserCog, Users } from "lucide-react";
+import { AlertTriangle, CreditCard, Palette, ShieldOff, UserCog, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,7 +28,16 @@ import { useInvitations } from "@/hooks/useInvitations";
 import { useLocations } from "@/hooks/useLocations";
 import { useRoles } from "@/hooks/useRoles";
 import { formatLocationAddress, type LocationFormValues } from "@/lib/locations/locationRules";
+import {
+  filterAssignableRoles,
+  getCompanyAccess,
+  getVisibleCompanyTabs,
+  pickActiveTab,
+  type CompanyTabValue,
+} from "@/lib/permissions/gatingRules";
 import { companyRepository } from "@/lib/repositories/companyRepository";
+import { useAuth } from "@/providers/AuthProvider";
+import { usePermissions } from "@/providers/PermissionsProvider";
 import type { CompanyLocation, CompanyQuickAction, PrimaryLocation } from "@/types/company";
 
 // Standortdaten (Übersicht, Primärstandort, Standortzahl) kommen aus
@@ -39,14 +48,14 @@ const companyActivities = companyRepository.getActivities();
 const licenseOverview = companyRepository.getLicenseOverview();
 const companyInfo = companyRepository.getInfo();
 
-const tabs: CompanyTab[] = [
-  { value: "uebersicht", label: "Übersicht" },
-  { value: "standorte", label: "Standorte" },
-  { value: "mitarbeiter", label: "Mitarbeiter" },
-  { value: "einladungen", label: "Einladungen" },
-  { value: "rollen", label: "Rollen & Rechte" },
-  { value: "einstellungen", label: "Einstellungen" },
-];
+const TAB_LABELS: Record<CompanyTabValue, string> = {
+  uebersicht: "Übersicht",
+  standorte: "Standorte",
+  mitarbeiter: "Mitarbeiter",
+  einladungen: "Einladungen",
+  rollen: "Rollen & Rechte",
+  einstellungen: "Einstellungen",
+};
 
 const DEFAULT_TAB = "uebersicht";
 
@@ -55,7 +64,7 @@ const DEFAULT_TAB = "uebersicht";
 // Tab-Werte werden übernommen, alles andere fällt auf die Übersicht zurück.
 function tabFromSearch(search: string): string {
   const requestedTab = new URLSearchParams(search).get("tab");
-  return tabs.find((tab) => tab.value === requestedTab)?.value ?? DEFAULT_TAB;
+  return Object.keys(TAB_LABELS).find((tab) => tab === requestedTab) ?? DEFAULT_TAB;
 }
 
 export default function CompanyPage() {
@@ -69,18 +78,45 @@ export default function CompanyPage() {
   const [isNewLocationOpen, setIsNewLocationOpen] = useState(false);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const { message: feedback, showFeedback } = useFeedbackToast();
-  // Eine Instanz für Übersicht und Standorte-Tab (ein State, eine Quelle).
-  const locationsData = useLocations();
+
+  // Effektive Rechte des eingeloggten Users (Membership → Rolle → permissions).
+  // UI-Gating ist Komfort; die Firestore Rules bleiben die Sicherheitsgrenze.
+  // Fail-closed: solange die Rechte laden oder fehlschlagen, wird nichts geladen.
+  const permissions = usePermissions();
+  const { membership } = useAuth();
+  const permissionsReady = !permissions.loading && !permissions.error;
+  const access = useMemo(() => getCompanyAccess(permissions.permissions), [permissions.permissions]);
+  const ownEmployeeId = membership.status === "valid" ? (membership.membership.employeeId ?? null) : null;
+
+  // Eine Instanz für Übersicht und Standorte-Tab (ein State, eine Quelle). Jede
+  // Collection wird nur mit dem passenden Leserecht geladen.
+  const locationsData = useLocations(permissionsReady && access.locations.view);
   const { locations, loading: locationsLoading, error: locationsError, refreshLocations } = locationsData;
   // Eine Rollen-Instanz für Rollen-Tab, Mitarbeiter-Tab, Einladungen-Tab und
   // Einladungsdialog (ein State, eine Quelle). Rollen sind Verwaltungsdaten –
   // keine serverseitige Durchsetzung.
-  const rolesData = useRoles();
+  const rolesData = useRoles(permissionsReady && access.roles.view);
   const { roles, activeRoles, loading: rolesLoading, error: rolesError } = rolesData;
   // Eine Mitarbeiter-Instanz für Mitarbeiter-Tab und Benutzerzahlen im Rollen-Tab.
-  const employeesData = useEmployees(roles);
+  const employeesData = useEmployees(roles, permissionsReady && access.employees.view);
   // Eine Einladungs-Instanz für Einladungen-Tab, Mitarbeiter-Tab und Dialog.
-  const invitationsData = useInvitations(roles);
+  const invitationsData = useInvitations(roles, permissionsReady && access.invitations.view);
+
+  // Sichtbare Tabs; der aktive Tab ist abgeleitet (gewünschter Tab oder der erste
+  // erlaubte) – kein State-/URL-Schleifenrisiko.
+  const visibleTabValues = useMemo(
+    () => (permissionsReady ? getVisibleCompanyTabs(access) : []),
+    [permissionsReady, access]
+  );
+  const tabs = useMemo<CompanyTab[]>(
+    () => visibleTabValues.map((value) => ({ value, label: TAB_LABELS[value] })),
+    [visibleTabValues]
+  );
+  const currentTab = pickActiveTab(activeTab, visibleTabValues);
+  const assignableRoles = useMemo(
+    () => filterAssignableRoles(activeRoles, access.roles.manageProtected),
+    [activeRoles, access.roles.manageProtected]
+  );
 
   const locationsReady = !locationsLoading && !locationsError;
 
@@ -111,7 +147,7 @@ export default function CompanyPage() {
   }, [locations]);
 
   // Standortzahl im Kopf: aktive Standorte aus derselben Quelle, sobald geladen.
-  const headerProfile = locationsReady
+  const headerProfile = locationsReady && access.locations.view
     ? { ...companyProfile, locationsCount: overviewLocations.length }
     : companyProfile;
 
@@ -135,27 +171,51 @@ export default function CompanyPage() {
   );
 
   const quickActions: CompanyQuickAction[] = [
-    {
+    access.quick.branding && {
       label: "Branding öffnen",
       icon: Palette,
       onClick: () => showFeedback("Branding wird später angebunden."),
     },
-    {
+    access.tabs.standorte && {
       label: "Standorte verwalten",
       icon: Users,
       onClick: () => setActiveTab("standorte"),
     },
-    {
+    access.tabs.mitarbeiter && {
       label: "Mitarbeiter verwalten",
       icon: UserCog,
       onClick: () => setActiveTab("mitarbeiter"),
     },
-    {
+    access.quick.billing && {
       label: "Abrechnung öffnen",
       icon: CreditCard,
       onClick: () => showFeedback("Abrechnung wird später angebunden."),
     },
-  ];
+  ].filter((action): action is CompanyQuickAction => Boolean(action));
+
+  // Rechte laden noch / konnten nicht geladen werden / kein Verwaltungsbereich erlaubt.
+  const permissionsPlaceholder = permissions.loading ? (
+    <Card className="skeleton skeleton-rows h-64" />
+  ) : permissions.error ? (
+    <Card>
+      <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
+        <AlertTriangle className="size-6 text-destructive" />
+        <p className="text-sm text-muted-foreground">{permissions.error}</p>
+        <Button type="button" variant="outline" size="sm" onClick={permissions.retry}>
+          Erneut versuchen
+        </Button>
+      </CardContent>
+    </Card>
+  ) : currentTab === null ? (
+    <Card>
+      <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
+        <ShieldOff className="size-6 text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">
+          Für deinen Zugang sind hier keine Verwaltungsbereiche freigeschaltet.
+        </p>
+      </CardContent>
+    </Card>
+  ) : null;
 
   return (
     <RolesProvider roles={roles}>
@@ -171,27 +231,32 @@ export default function CompanyPage() {
 
         <CompanyHeaderCard profile={headerProfile} />
 
-        <CompanyTabs tabs={tabs} value={activeTab} onChange={setActiveTab} />
+        {permissionsPlaceholder ?? (
+          <CompanyTabs tabs={tabs} value={currentTab ?? ""} onChange={(value) => setActiveTab(value)} />
+        )}
 
-        {activeTab === "uebersicht" && (
+        {currentTab === "uebersicht" && (
           <div className="flex flex-col gap-6">
             <div className="grid gap-6 lg:grid-cols-3">
-              {locationsReady ? (
-                <CompanyLocationsList
-                  locations={overviewLocations}
-                  onViewAll={() => setActiveTab("standorte")}
-                  onNewLocation={() => setIsNewLocationOpen(true)}
+              {access.locations.view &&
+                (locationsReady ? (
+                  <CompanyLocationsList
+                    locations={overviewLocations}
+                    onViewAll={() => setActiveTab("standorte")}
+                    onNewLocation={access.locations.manage ? () => setIsNewLocationOpen(true) : undefined}
+                  />
+                ) : (
+                  locationsPlaceholder
+                ))}
+              {access.employees.view && (
+                <CompanyEmployeesList
+                  employees={companyEmployees}
+                  onViewAll={() => setActiveTab("mitarbeiter")}
+                  onNewEmployee={access.invitations.invite ? () => setIsInviteOpen(true) : undefined}
                 />
-              ) : (
-                locationsPlaceholder
               )}
-              <CompanyEmployeesList
-                employees={companyEmployees}
-                onViewAll={() => setActiveTab("mitarbeiter")}
-                onNewEmployee={() => setIsInviteOpen(true)}
-              />
               <div className="flex flex-col gap-6">
-                <CompanyQuickActions actions={quickActions} />
+                {quickActions.length > 0 && <CompanyQuickActions actions={quickActions} />}
                 <CompanyActivityFeed
                   activities={companyActivities}
                   onViewAll={() => showFeedback("Diese Funktion wird später angebunden.")}
@@ -199,66 +264,89 @@ export default function CompanyPage() {
               </div>
             </div>
 
-            <CompanyLicenseCard
-              license={licenseOverview}
-              onManagePlan={() => showFeedback("Abrechnung wird später angebunden.")}
-            />
-          </div>
-        )}
-
-        {activeTab === "einstellungen" && (
-          <div className="flex flex-col gap-6">
-            <CompanyInfoCard info={companyInfo} />
-            {locationsReady ? (
-              <CompanyPrimaryLocationCard location={primaryLocation} />
-            ) : (
-              locationsPlaceholder
+            {access.quick.billing && (
+              <CompanyLicenseCard
+                license={licenseOverview}
+                onManagePlan={() => showFeedback("Abrechnung wird später angebunden.")}
+              />
             )}
           </div>
         )}
 
-        {activeTab === "standorte" && (
+        {currentTab === "einstellungen" && (
+          <div className="flex flex-col gap-6">
+            <CompanyInfoCard info={companyInfo} />
+            {access.locations.view &&
+              (locationsReady ? (
+                <CompanyPrimaryLocationCard location={primaryLocation} />
+              ) : (
+                locationsPlaceholder
+              ))}
+          </div>
+        )}
+
+        {currentTab === "standorte" && (
           <CompanyLocationsView
             locationsData={locationsData}
+            canManage={access.locations.manage}
             onNewLocation={() => setIsNewLocationOpen(true)}
           />
         )}
-        {activeTab === "mitarbeiter" && (
+        {currentTab === "mitarbeiter" && (
           <EmployeesView
             employeesData={employeesData}
             roles={roles}
             rolesLoading={rolesLoading}
             rolesError={rolesError}
+            rolesAvailable={rolesData.enabled}
+            access={access}
+            ownEmployeeId={ownEmployeeId}
             locations={locations}
             locationsLoading={locationsLoading}
             locationsError={locationsError}
             onInvite={() => setIsInviteOpen(true)}
           />
         )}
-        {activeTab === "einladungen" && (
-          <InvitationsView invitationsData={invitationsData} onInvite={() => setIsInviteOpen(true)} />
+        {currentTab === "einladungen" && (
+          <InvitationsView
+            invitationsData={invitationsData}
+            canInvite={access.invitations.invite}
+            inviteMissing={access.invitations.inviteMissing}
+            onInvite={() => setIsInviteOpen(true)}
+          />
         )}
-        {activeTab === "rollen" && <RolesView rolesData={rolesData} employeesData={employeesData} />}
+        {currentTab === "rollen" && (
+          <RolesView
+            rolesData={rolesData}
+            employeesData={employeesData.enabled ? employeesData : null}
+            canManage={access.roles.manage}
+            canManageProtected={access.roles.manageProtected}
+          />
+        )}
 
-        <NewLocationDialog
-          open={isNewLocationOpen}
-          onOpenChange={setIsNewLocationOpen}
-          onSubmit={handleCreateLocation}
-        />
-        <InviteEmployeeDialog
-          open={isInviteOpen}
-          onOpenChange={setIsInviteOpen}
-          locations={locations.filter((location) => location.status === "Aktiv")}
-          locationsLoading={locationsLoading}
-          locationsError={locationsError}
-          roles={activeRoles}
-          rolesLoading={rolesLoading}
-          rolesError={rolesError}
-          onCreate={invitationsData.createInvitation}
-          onCreated={() =>
-            showFeedback("Einladung gespeichert. Der E-Mail-Versand wird später serverseitig angebunden.")
-          }
-        />
+        {access.locations.manage && (
+          <NewLocationDialog
+            open={isNewLocationOpen}
+            onOpenChange={setIsNewLocationOpen}
+            onSubmit={handleCreateLocation}
+          />
+        )}
+        {access.invitations.invite && (
+          <InviteEmployeeDialog
+            open={isInviteOpen}
+            onOpenChange={setIsInviteOpen}
+            locations={locations.filter((location) => location.status === "Aktiv")}
+            locationsLoading={locationsLoading}
+            locationsError={locationsError}
+            roles={assignableRoles}
+            rolesLoading={rolesLoading}
+            rolesError={rolesError}
+            onCreate={invitationsData.createInvitation}
+            onCreated={() =>
+              showFeedback("Einladung gespeichert. Der E-Mail-Versand wird später serverseitig angebunden.")
+            }
+          />
+        )}
 
         <FeedbackToast message={feedback} />
       </div>

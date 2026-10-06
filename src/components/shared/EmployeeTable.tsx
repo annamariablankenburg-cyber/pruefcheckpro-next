@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { EmployeeActionsMenu } from "@/components/shared/EmployeeActionsMenu";
+import type { EmployeeActionPolicy } from "@/lib/permissions/gatingRules";
 import { EmployeeAvatar } from "@/components/shared/EmployeeAvatar";
 import { EmployeeRoleBadge } from "@/components/shared/EmployeeRoleBadge";
 import { EmployeeStatusBadge } from "@/components/shared/EmployeeStatusBadge";
@@ -9,6 +10,9 @@ import type { Employee } from "@/types/employee";
 
 interface EmployeeTableProps {
   employees: Employee[];
+  // Aktionen je Mitarbeiter (Rechte des eingeloggten Users, eigener Datensatz,
+  // geschützte Zielrollen).
+  getActions: (employee: Employee) => EmployeeActionPolicy;
   onViewDetails: (employee: Employee) => void;
   onChangeRole: (employee: Employee) => void;
   onChangeLocation: (employee: Employee) => void;
@@ -38,6 +42,7 @@ function presenceDotClass(lastLogin: string): string {
 }
 
 export function EmployeeTable({
+  getActions,
   employees,
   onViewDetails,
   onChangeRole,
@@ -118,6 +123,7 @@ export function EmployeeTable({
                   </td>
                   <td className="px-4 py-3 text-right whitespace-nowrap">
                     <EmployeeActionsMenu
+                      actions={getActions(employee)}
                       employee={employee}
                       onViewDetails={() => onViewDetails(employee)}
                       onChangeRole={() => onChangeRole(employee)}
@@ -166,6 +172,7 @@ export function EmployeeTable({
                 <div className="flex shrink-0 items-center gap-1">
                   <EmployeeStatusBadge status={employee.status} />
                   <EmployeeActionsMenu
+                      actions={getActions(employee)}
                     employee={employee}
                     onViewDetails={() => onViewDetails(employee)}
                     onChangeRole={() => onChangeRole(employee)}

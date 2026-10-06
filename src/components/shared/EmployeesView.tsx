@@ -26,6 +26,11 @@ import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToa
 import { StatCard } from "@/components/shared/StatCard";
 import type { EmployeesData } from "@/hooks/useEmployees";
 import { CURRENT_LOCATION_VALUE, CURRENT_ROLE_VALUE } from "@/lib/employees/employeeRules";
+import {
+  filterAssignableRoles,
+  getEmployeeActionPolicy,
+  type CompanyAccess,
+} from "@/lib/permissions/gatingRules";
 import { isRoleActive, resolveRole } from "@/lib/roles/roleRules";
 import type { CompanyLocationDetail } from "@/types/location";
 import type { Employee } from "@/types/employee";
@@ -82,6 +87,13 @@ interface EmployeesViewProps {
   roles: Role[];
   rolesLoading: boolean;
   rolesError: string | null;
+  // false, wenn der User Rollen nicht lesen darf (kein rollen.ansehen): die Liste ist
+  // dann leer, Rollennamen kommen aus dem gespeicherten Snapshot.
+  rolesAvailable: boolean;
+  // Rechte des eingeloggten Users (UI-Gating; die Rules bleiben die Sicherheitsgrenze).
+  access: CompanyAccess;
+  // membership.employeeId: der eigene Mitarbeiter-Datensatz (Rolle/Status nie änderbar).
+  ownEmployeeId: string | null;
   // Standorte der Company-Seite (gemeinsamer State mit dem Standorte-Tab).
   // Keine zweite Standortquelle.
   locations: CompanyLocationDetail[];
@@ -96,6 +108,9 @@ export function EmployeesView({
   roles,
   rolesLoading,
   rolesError,
+  rolesAvailable,
+  access,
+  ownEmployeeId,
   locations,
   locationsLoading,
   locationsError,
@@ -139,7 +154,10 @@ export function EmployeesView({
   // Rolle archiviert oder nicht auflösbar (Altwert), bleibt sie als "bisheriger
   // Wert" sichtbar und wird nicht still überschrieben.
   const roleOptions: EmployeeSelectOption[] = useMemo(() => {
-    const options = activeRoles.map((role) => ({ value: role.id, label: role.name }));
+    // Ohne rollen.admin_verwalten sind geschützte Rollen (Administrator, Restricted-/
+    // Admin-only-Rechte) nicht zuweisbar – die Rules würden es ablehnen.
+    const assignable = filterAssignableRoles(activeRoles, access.roles.manageProtected);
+    const options = assignable.map((role) => ({ value: role.id, label: role.name }));
     if (!roleEmployee) return options;
     const current = resolveRole(roleEmployee, roles);
     if (current && isRoleActive(current)) return options;
@@ -150,7 +168,7 @@ export function EmployeesView({
       },
       ...options,
     ];
-  }, [activeRoles, roles, roleEmployee]);
+  }, [activeRoles, roles, roleEmployee, access.roles.manageProtected]);
 
   const activeLocations = useMemo(
     () => locations.filter((location) => location.status === "Aktiv"),
@@ -178,6 +196,11 @@ export function EmployeesView({
       ...options,
     ];
   }, [activeLocations, locations, locationEmployee]);
+
+  // Aktionen je Mitarbeiter: Verwaltungsrecht, eigener Datensatz (Rolle/Status nie
+  // änderbar), geschützte Zielrollen. Reines UX – die Rules entscheiden.
+  const getActions = (employee: Employee) =>
+    getEmployeeActionPolicy({ access, employee, ownEmployeeId, roles, rolesAvailable });
 
   const totalCount = employees.length;
   const activeCount = employees.filter((employee) => employee.status === "Aktiv").length;
@@ -269,16 +292,23 @@ export function EmployeesView({
             Verwalte Benutzer, Rollen, Standorte und Zugriffe.
           </p>
         </div>
-        <Button type="button" onClick={onInvite}>
-          <Plus className="size-4" />
-          Mitarbeiter einladen
-        </Button>
+        {access.invitations.invite && (
+          <Button type="button" onClick={onInvite}>
+            <Plus className="size-4" />
+            Mitarbeiter einladen
+          </Button>
+        )}
       </div>
 
       <div className="flex items-start gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-2.5 text-sm text-primary">
         <Info className="mt-0.5 size-4 shrink-0" />
-        Rollen, Standorte und Status sind Verwaltungsdaten in PrüfCheckPro. Eine echte Anmelde-Sperre
-        und Passwort-Resets folgen mit der serverseitigen Auth-Verwaltung.
+        <span>
+          Rollen, Standorte und Status sind Verwaltungsdaten in PrüfCheckPro. Die hier gepflegte Rolle
+          ändert die effektiven Zugriffsrechte des Nutzers nicht automatisch – die Zugriffsrolle wird
+          separat serverseitig zugeordnet. Eine echte Anmelde-Sperre und Passwort-Resets folgen mit der
+          serverseitigen Auth-Verwaltung.
+          {!access.employees.manage && " Du kannst Mitarbeiter ansehen, aber nicht verwalten."}
+        </span>
       </div>
 
       {loading ? (
@@ -319,6 +349,7 @@ export function EmployeesView({
           />
 
           <EmployeeTable
+            getActions={getActions}
             employees={filteredEmployees}
             onResetFilters={resetFilters}
             onViewDetails={(employee) => setDetailId(employee.id)}
@@ -335,6 +366,7 @@ export function EmployeesView({
 
       <EmployeeDetailDrawer
         employee={detailEmployee}
+        getActions={getActions}
         onOpenChange={(open) => !open && setDetailId(null)}
         onChangeRole={openRoleDialog}
         onChangeLocation={openLocationDialog}
@@ -359,7 +391,7 @@ export function EmployeesView({
       <EmployeeSelectFieldDialog
         employee={roleEmployee}
         title="Rolle ändern"
-        description="Passe die Rolle dieses Mitarbeiters an. Die Rolle ist ein Verwaltungsdatum; die serverseitige Durchsetzung folgt in einem späteren Security-Slice."
+        description="Passe die Rolle dieses Mitarbeiters an. Die Rolle ist ein Verwaltungsdatum des Mitarbeiters und ändert die effektiven Zugriffsrechte des Nutzers nicht automatisch; die Zugriffsrolle wird separat serverseitig zugeordnet."
         fieldLabel="Rolle auswählen"
         options={roleOptions}
         getInitialValue={(employee) => {

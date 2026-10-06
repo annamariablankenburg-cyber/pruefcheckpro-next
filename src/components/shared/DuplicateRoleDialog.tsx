@@ -21,10 +21,13 @@ interface DuplicateRoleDialogProps {
   onOpenChange: (open: boolean) => void;
   // Muss bei Fehlern werfen. Der Dialog schließt nur nach Erfolg.
   onConfirm: (role: Role, newName: string) => Promise<void>;
+  // Die Kopie enthält geschützte Rechte nicht (User ohne rollen.admin_verwalten).
+  protectedNotice?: boolean;
 }
 
 function DuplicateRoleForm({
   role,
+  protectedNotice,
   isSubmitting,
   onSubmittingChange,
   onOpenChange,
@@ -70,6 +73,14 @@ function DuplicateRoleForm({
         />
       </div>
 
+      {protectedNotice && (
+        <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/40 px-3.5 py-2.5 text-sm text-muted-foreground">
+          <Info className="mt-0.5 size-4 shrink-0" />
+          Geschützte Rechte (Administratorrechte, Löschrechte für Geräte, Laborbuch und Berichte) kann nur ein
+          Administrator vergeben und werden daher nicht in die Kopie übernommen.
+        </div>
+      )}
+
       {error && (
         <div className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 px-3.5 py-2.5 text-sm text-destructive">
           <Info className="mt-0.5 size-4 shrink-0" />
@@ -90,7 +101,7 @@ function DuplicateRoleForm({
   );
 }
 
-export function DuplicateRoleDialog({ role, onOpenChange, onConfirm }: DuplicateRoleDialogProps) {
+export function DuplicateRoleDialog({ role, onOpenChange, onConfirm, protectedNotice }: DuplicateRoleDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   return (
@@ -101,6 +112,7 @@ export function DuplicateRoleDialog({ role, onOpenChange, onConfirm }: Duplicate
           <DuplicateRoleForm
             key={role.id}
             role={role}
+            protectedNotice={protectedNotice}
             isSubmitting={isSubmitting}
             onSubmittingChange={setIsSubmitting}
             onOpenChange={onOpenChange}

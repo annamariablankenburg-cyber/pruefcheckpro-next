@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 
 import { PermissionSwitch } from "@/components/shared/PermissionSwitch";
+import { PROTECTED_ROLE_PERMISSION_KEYS } from "@/config/roles";
 import { cn } from "@/lib/utils";
 import type { Permission, PermissionCategoryDef } from "@/types/role";
 
@@ -14,6 +15,11 @@ interface PermissionCategoryProps {
   onToggle: (key: string, checked: boolean) => void;
   disabled?: boolean;
   defaultOpen?: boolean;
+  // Geschützte Rechte (Standard: PROTECTED_ROLE_PERMISSION_KEYS aus der Config).
+  // Sie sind als "Nur Administrator" markiert.
+  protectedKeys?: readonly string[];
+  // true: geschützte Schalter sind deaktiviert (User ohne rollen.admin_verwalten).
+  protectedLocked?: boolean;
 }
 
 export function PermissionCategory({
@@ -23,6 +29,8 @@ export function PermissionCategory({
   onToggle,
   disabled,
   defaultOpen = true,
+  protectedKeys = PROTECTED_ROLE_PERMISSION_KEYS,
+  protectedLocked = false,
 }: PermissionCategoryProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const grantedCount = permissions.filter((permission) => values[permission.key]).length;
@@ -58,9 +66,10 @@ export function PermissionCategory({
               key={permission.key}
               label={permission.label}
               risk={permission.risk}
+              badge={protectedKeys.includes(permission.key) ? "Nur Administrator" : undefined}
               checked={values[permission.key] ?? false}
               onCheckedChange={(checked) => onToggle(permission.key, checked)}
-              disabled={disabled}
+              disabled={disabled || (protectedLocked && protectedKeys.includes(permission.key))}
             />
           ))}
         </div>

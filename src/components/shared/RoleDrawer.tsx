@@ -42,6 +42,11 @@ interface RoleDrawerProps {
   onExport: (role: Role) => void;
   // Archivieren bzw. Reaktivieren (je nach Status der Rolle).
   onToggleStatus: (role: Role) => void;
+  // administration.rollen_verwalten (+ rollen.ansehen): Bearbeiten, Kopieren,
+  // Duplizieren, Archivieren. Ohne: reine Leseansicht.
+  canManage: boolean;
+  // rollen.admin_verwalten: geschützte Schalter dürfen nur damit bearbeitet werden.
+  canManageProtected: boolean;
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {
@@ -81,6 +86,8 @@ function RoleDrawerBody({
   onDuplicate,
   onExport,
   onToggleStatus,
+  canManage,
+  canManageProtected,
 }: Omit<RoleDrawerProps, "role" | "onOpenChange"> & {
   role: Role;
   isSaving: boolean;
@@ -100,7 +107,7 @@ function RoleDrawerBody({
   const permissionsEditable = arePermissionsEditable(role);
   // Benutzerdefinierte Rollen sind vollständig bearbeitbar, Systemrollen nur
   // über ihre Berechtigungen (außer dem Administrator).
-  const canEdit = !system || permissionsEditable;
+  const canEdit = canManage && (!system || permissionsEditable);
   const infoBox = infoBoxes[role.id];
 
   const visibleCategories = filterPermissionCategories(search);
@@ -260,6 +267,7 @@ function RoleDrawerBody({
                 permissions={category.permissions}
                 values={values}
                 disabled={!editing || isSaving || !permissionsEditable}
+                protectedLocked={!canManageProtected}
                 onToggle={(key, checked) => setDraftPermissions((current) => ({ ...current, [key]: checked }))}
               />
             ))}
@@ -290,23 +298,27 @@ function RoleDrawerBody({
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-2">
-            <Button type="button" variant="outline" onClick={startEdit} disabled={!canEdit}>
-              <Pencil className="size-4" />
-              Bearbeiten
-            </Button>
-            <Button type="button" variant="outline" onClick={() => onCopy(role)}>
-              <Copy className="size-4" />
-              Kopieren
-            </Button>
-            <Button type="button" variant="outline" onClick={() => onDuplicate(role)}>
-              <Copy className="size-4" />
-              Duplizieren
-            </Button>
-            <Button type="button" variant="outline" onClick={() => onExport(role)}>
+            {canManage && (
+              <>
+                <Button type="button" variant="outline" onClick={startEdit} disabled={!canEdit}>
+                  <Pencil className="size-4" />
+                  Bearbeiten
+                </Button>
+                <Button type="button" variant="outline" onClick={() => onCopy(role)}>
+                  <Copy className="size-4" />
+                  Kopieren
+                </Button>
+                <Button type="button" variant="outline" onClick={() => onDuplicate(role)}>
+                  <Copy className="size-4" />
+                  Duplizieren
+                </Button>
+              </>
+            )}
+            <Button type="button" variant="outline" onClick={() => onExport(role)} className={canManage ? undefined : "col-span-2"}>
               <Download className="size-4" />
               Exportieren
             </Button>
-            {(isRoleArchivable(role) || role.status === "Archiviert") && (
+            {canManage && (isRoleArchivable(role) || role.status === "Archiviert") && (
               <Button
                 type="button"
                 variant="outline"
@@ -324,7 +336,9 @@ function RoleDrawerBody({
           </div>
         )}
         <p className="text-center text-xs text-muted-foreground">
-          {system
+          {!canManage
+            ? "Du kannst Rollen ansehen, aber nicht bearbeiten."
+            : system
             ? "Systemrollen können weder archiviert noch gelöscht werden – nur ihre Berechtigungen sind änderbar."
             : "Rollen werden nie gelöscht, nur archiviert."}
         </p>

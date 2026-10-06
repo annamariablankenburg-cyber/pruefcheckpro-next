@@ -10,6 +10,8 @@ import type { CompanyLocationDetail } from "@/types/location";
 interface LocationTableProps {
   locations: CompanyLocationDetail[];
   onViewDetails: (location: CompanyLocationDetail) => void;
+  // Bearbeiten/Deaktivieren nur mit Verwaltungsrecht (UI-Gating).
+  canManage: boolean;
   onEdit: (location: CompanyLocationDetail) => void;
   onViewEmployees: (location: CompanyLocationDetail) => void;
   onViewDevices: (location: CompanyLocationDetail) => void;
@@ -35,6 +37,7 @@ const columns = [
 export function LocationTable({
   locations,
   onViewDetails,
+  canManage,
   onEdit,
   onViewEmployees,
   onViewDevices,
@@ -115,6 +118,7 @@ export function LocationTable({
                       locationName={location.name}
                       status={location.status}
                       onViewDetails={() => onViewDetails(location)}
+                      canManage={canManage}
                       onEdit={() => onEdit(location)}
                       onViewEmployees={() => onViewEmployees(location)}
                       onViewDevices={() => onViewDevices(location)}
@@ -159,7 +163,8 @@ export function LocationTable({
                     locationName={location.name}
                     status={location.status}
                     onViewDetails={() => onViewDetails(location)}
-                    onEdit={() => onEdit(location)}
+                    canManage={canManage}
+                      onEdit={() => onEdit(location)}
                     onViewEmployees={() => onViewEmployees(location)}
                     onViewDevices={() => onViewDevices(location)}
                     onViewProjects={() => onViewProjects(location)}

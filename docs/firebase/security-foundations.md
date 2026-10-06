@@ -1,5 +1,7 @@
 # Security Foundations (Auth Membership + Firestore Rules)
 
+> **Update (UI-Gating):** Die Oberfläche liest die effektiven Rechte (`usePermissions()`: Membership → Rolle → `permissions`) und blendet Tabs/Aktionen entsprechend aus (`docs/firebase/ui-permission-gating.md`). Das ist Komfort, keine Sicherheitsgrenze.
+
 > **Update (Rules Phase 1):** Für `roles`, `employees`, `invitations` und `locations` gilt jetzt eine rollenbasierte Durchsetzung (siehe `docs/firebase/role-permission-rules-phase1.md`; im Emulator getestet). Für die übrigen acht Company-Collections gilt weiterhin nur dieses Fundament.
 
 Status: **Fundament, noch keine rollenbasierte Durchsetzung (für die acht Fach-Collections weiterhin).** Dieser Slice führt eine geprüfte Zuordnung „Firebase-Auth-User → Firma“ ein und härtet die Firestore Rules darauf. Er ändert keine fachlichen Slices (Kunden, Projekte, …, Rollen, Mitarbeiter, Einladungen) und setzt **keine** Rollen- oder Permission-Auswertung um.

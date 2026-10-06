@@ -14,7 +14,11 @@ import type { Role } from "@/types/role";
 // Rollen sind Verwaltungsdaten: kein Löschen (nur Archivieren) und keine
 // serverseitige Durchsetzung. Eine einzige Instanz lebt auf der Company-Seite
 // und versorgt Rollen-Tab, Mitarbeiter-Tab, Einladungs-Tab und Dialoge.
-export function useRoles() {
+// `enabled` (Standard true): Nur wenn der User die Collection lesen darf, wird
+// geladen. Ist es false, wird NICHT abgefragt (kein erwarteter permission-denied),
+// und der Hook liefert leere Daten ohne Ladezustand/Fehler. Das ist UI-Gating
+// (Komfort); die Firestore Rules bleiben die Sicherheitsgrenze.
+export function useRoles(enabled = true) {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,13 +36,17 @@ export function useRoles() {
   }, []);
 
   useEffect(() => {
+    if (!enabled) return;
     // Lädt die Rollen beim ersten Mount vom Service (Mock oder Firestore).
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshRoles();
-  }, [refreshRoles]);
+  }, [enabled, refreshRoles]);
+
+  // Ohne Leserecht (enabled = false): leere Daten, nichts wurde abgefragt.
+  const visibleRoles = useMemo(() => (enabled ? roles : []), [enabled, roles]);
 
   // Nur aktive (nicht archivierte) Rollen sind für neue Zuweisungen wählbar.
-  const activeRoles = useMemo(() => roles.filter(isRoleActive), [roles]);
+  const activeRoles = useMemo(() => visibleRoles.filter(isRoleActive), [visibleRoles]);
 
   function replaceRole(updated: Role | undefined) {
     if (!updated) return;
@@ -70,10 +78,11 @@ export function useRoles() {
   }
 
   return {
-    roles,
+    roles: visibleRoles,
     activeRoles,
-    loading,
-    error,
+    enabled,
+    loading: enabled && loading,
+    error: enabled ? error : null,
     refreshRoles,
     createRole,
     updateRole,

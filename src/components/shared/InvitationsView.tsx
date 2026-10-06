@@ -22,13 +22,18 @@ interface InvitationsViewProps {
   invitationsData: InvitationsData;
   // Öffnet den Einladungsdialog der Company-Seite.
   onInvite: () => void;
+  // Einladen erfordert zusätzlich Leserechte (Mitarbeiter, Rollen, Standorte): Der
+  // Dialog prüft Duplikate gegen Mitarbeiter, validiert Rollen und listet Standorte.
+  canInvite: boolean;
+  // Namen der fehlenden Leserechte, die das Einladen verhindern (für den Hinweis).
+  inviteMissing: string[];
 }
 
 // Einladungen sind Metadatensätze: Widerrufen ist echt, E-Mail-Aktionen
 // (Erinnerung, erneut senden) sind noch nicht angebunden und lösen nur einen
 // Hinweis aus. Es gibt weder Löschen noch einen Einladungslink noch eine
 // Möglichkeit, eine Einladung als "angenommen" zu markieren.
-export function InvitationsView({ invitationsData, onInvite }: InvitationsViewProps) {
+export function InvitationsView({ invitationsData, onInvite, canInvite, inviteMissing }: InvitationsViewProps) {
   const {
     invitations,
     filteredInvitations,
@@ -86,11 +91,20 @@ export function InvitationsView({ invitationsData, onInvite }: InvitationsViewPr
             Verwalte ausstehende, angenommene, widerrufene und abgelaufene Einladungen.
           </p>
         </div>
-        <Button type="button" onClick={onInvite}>
-          <Plus className="size-4" />
-          Einladung erstellen
-        </Button>
+        {canInvite && (
+          <Button type="button" onClick={onInvite}>
+            <Plus className="size-4" />
+            Einladung erstellen
+          </Button>
+        )}
       </div>
+
+      {!canInvite && inviteMissing.length > 0 && (
+        <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/40 px-3.5 py-2.5 text-sm text-muted-foreground">
+          <Info className="mt-0.5 size-4 shrink-0" />
+          Zum Erstellen von Einladungen fehlen dir Leserechte für: {inviteMissing.join(", ")}.
+        </div>
+      )}
 
       <div className="flex items-start gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-2.5 text-sm text-primary">
         <Info className="mt-0.5 size-4 shrink-0" />
@@ -143,12 +157,14 @@ export function InvitationsView({ invitationsData, onInvite }: InvitationsViewPr
                 </div>
                 <p className="section-title">Noch keine Einladungen</p>
                 <p className="max-w-sm text-sm text-muted-foreground">
-                  Erstelle eine Einladung, um sie mit Rolle und Standort vorzumerken.
+                  {canInvite ? "Erstelle eine Einladung, um sie mit Rolle und Standort vorzumerken." : "Es liegen keine Einladungen vor."}
                 </p>
-                <Button type="button" size="sm" onClick={onInvite}>
-                  <Plus className="size-4" />
-                  Einladung erstellen
-                </Button>
+                {canInvite && (
+                  <Button type="button" size="sm" onClick={onInvite}>
+                    <Plus className="size-4" />
+                    Einladung erstellen
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ) : (
