@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check } from "lucide-react";
+import { Check, Info, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -23,14 +23,14 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { PermissionCategory } from "@/components/shared/PermissionCategory";
 import { PermissionSearch } from "@/components/shared/PermissionSearch";
-import { buildPermissions, permissionCategories, roles, systemRoleNames } from "@/config/roles";
+import { buildPermissions } from "@/config/roles";
+import { filterPermissionCategories, RoleRuleError, type RoleFormValues } from "@/lib/roles/roleRules";
 import { cn } from "@/lib/utils";
-import type { RoleColor } from "@/types/role";
+import type { Role, RoleColor } from "@/types/role";
 
-const noTemplate = "Keine Vorlage";
-const templateOptions = [noTemplate, ...systemRoleNames];
+const NO_TEMPLATE = "__none__";
 
-const colorOptions: { value: RoleColor; label: string; swatchClass: string }[] = [
+export const roleColorOptions: { value: RoleColor; label: string; swatchClass: string }[] = [
   { value: "primary", label: "Blau", swatchClass: "bg-primary" },
   { value: "success", label: "Grün", swatchClass: "bg-success" },
   { value: "warning", label: "Amber", swatchClass: "bg-warning" },
@@ -47,181 +47,195 @@ function FieldLabel({ children, required }: { children: string; required?: boole
   );
 }
 
-export interface NewRoleData {
-  name: string;
-  description: string;
-  color: RoleColor;
-  permissions: Record<string, boolean>;
-}
+// Vorbelegung (z. B. beim "Kopieren" einer Rolle).
+export type NewRoleData = RoleFormValues;
 
 interface CreateRoleDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreate: (data: NewRoleData) => void;
-  initialName?: string;
-  initialDescription?: string;
-  initialColor?: RoleColor;
-  initialPermissions?: Record<string, boolean>;
+  // Aktive Rollen der Rollenverwaltung, die als Vorlage dienen können.
+  templateRoles: Role[];
+  // Speichert die Rolle. Muss bei Fehlern werfen; der Dialog schließt nur nach
+  // Erfolg.
+  onCreate: (data: NewRoleData) => Promise<void>;
+  initialValues?: NewRoleData | null;
 }
 
-export function CreateRoleDialog({
-  open,
+function CreateRoleForm({
   onOpenChange,
+  templateRoles,
   onCreate,
-  initialName = "",
-  initialDescription = "",
-  initialColor = "primary",
-  initialPermissions,
-}: CreateRoleDialogProps) {
-  const [name, setName] = useState(initialName);
-  const [description, setDescription] = useState(initialDescription);
-  const [color, setColor] = useState<RoleColor>(initialColor);
-  const [template, setTemplate] = useState(noTemplate);
+  initialValues,
+  isSubmitting,
+  onSubmittingChange,
+}: Omit<CreateRoleDialogProps, "open"> & {
+  isSubmitting: boolean;
+  onSubmittingChange: (isSubmitting: boolean) => void;
+}) {
+  const [name, setName] = useState(initialValues?.name ?? "");
+  const [description, setDescription] = useState(initialValues?.description ?? "");
+  const [color, setColor] = useState<RoleColor>(initialValues?.color ?? "primary");
+  const [template, setTemplate] = useState(NO_TEMPLATE);
   const [permissions, setPermissions] = useState<Record<string, boolean>>(
-    initialPermissions ?? buildPermissions([])
+    initialValues?.permissions ?? buildPermissions([])
   );
   const [search, setSearch] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   function handleTemplateChange(value: string) {
     setTemplate(value);
-    if (value === noTemplate) {
-      setPermissions(buildPermissions([]));
-      return;
-    }
-    const source = roles.find((role) => role.name === value);
+    const source = templateRoles.find((role) => role.id === value);
     setPermissions(source ? { ...source.permissions } : buildPermissions([]));
   }
 
-  function handleOpenChange(nextOpen: boolean) {
-    if (!nextOpen) {
-      setName(initialName);
-      setDescription(initialDescription);
-      setColor(initialColor);
-      setTemplate(noTemplate);
-      setPermissions(initialPermissions ?? buildPermissions([]));
-      setSearch("");
+  async function handleCreate() {
+    if (isSubmitting) return;
+    setErrorMessage(null);
+    if (name.trim().length === 0) {
+      setErrorMessage("Bitte einen Rollennamen angeben.");
+      return;
     }
-    onOpenChange(nextOpen);
+    onSubmittingChange(true);
+    try {
+      await onCreate({ name, description, color, permissions });
+      onOpenChange(false);
+    } catch (caught) {
+      setErrorMessage(caught instanceof RoleRuleError ? caught.message : "Rolle konnte nicht gespeichert werden.");
+    } finally {
+      onSubmittingChange(false);
+    }
   }
 
-  function handleCreate() {
-    onCreate({ name, description, color, permissions });
-    handleOpenChange(false);
-  }
-
-  const visibleCategories = (() => {
-    const query = search.trim().toLowerCase();
-    if (query.length === 0) return permissionCategories;
-
-    return permissionCategories
-      .map((category) => ({
-        ...category,
-        permissions: category.permissions.filter(
-          (permission) =>
-            permission.label.toLowerCase().includes(query) ||
-            category.label.toLowerCase().includes(query)
-        ),
-      }))
-      .filter((category) => category.permissions.length > 0);
-  })();
+  const visibleCategories = filterPermissionCategories(search);
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Neue Rolle</DialogTitle>
-          <DialogDescription>
-            Lege eine neue benutzerdefinierte Rolle an. Noch keine echte Speicherung – reine
-            UI-Vorschau.
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <DialogHeader>
+        <DialogTitle>Neue Rolle</DialogTitle>
+        <DialogDescription>
+          Lege eine neue benutzerdefinierte Rolle an. Rollen und Berechtigungen steuern aktuell die
+          Verwaltungslogik und Darstellung. Die serverseitige Durchsetzung folgt in einem späteren
+          Security-Slice.
+        </DialogDescription>
+      </DialogHeader>
 
-        <div className="flex flex-col gap-5">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
-              <FieldLabel required>Rollenname</FieldLabel>
-              <Input
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="z. B. Qualitätsmanager"
-                required
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <FieldLabel>Rolle kopieren von</FieldLabel>
-              <Select value={template} onValueChange={handleTemplateChange}>
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {templateOptions.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
+      <div className="flex flex-col gap-5">
+        <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
-            <FieldLabel>Beschreibung</FieldLabel>
-            <Textarea
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              placeholder="Wofür wird diese Rolle eingesetzt?"
+            <FieldLabel required>Rollenname</FieldLabel>
+            <Input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="z. B. Qualitätsmanager"
+              disabled={isSubmitting}
+              required
             />
           </div>
-
-          <div className="flex flex-col gap-2">
-            <FieldLabel>Farbe auswählen</FieldLabel>
-            <div className="flex flex-wrap gap-2">
-              {colorOptions.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setColor(option.value)}
-                  aria-label={option.label}
-                  className={cn(
-                    "flex size-9 items-center justify-center rounded-full ring-2 ring-offset-2 ring-offset-popover transition-all",
-                    option.swatchClass,
-                    color === option.value ? "ring-foreground/60" : "ring-transparent"
-                  )}
-                >
-                  {color === option.value && <Check className="size-4 text-white" />}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3 border-t border-border pt-5">
-            <FieldLabel>Berechtigungen</FieldLabel>
-            <PermissionSearch value={search} onChange={setSearch} />
-            <div className="flex flex-col gap-3">
-              {visibleCategories.map((category) => (
-                <PermissionCategory
-                  key={category.key}
-                  category={category}
-                  permissions={category.permissions}
-                  values={permissions}
-                  onToggle={(key, checked) =>
-                    setPermissions((current) => ({ ...current, [key]: checked }))
-                  }
-                  defaultOpen={false}
-                />
-              ))}
-            </div>
+          <div className="flex flex-col gap-1.5">
+            <FieldLabel>Rolle kopieren von</FieldLabel>
+            <Select value={template} onValueChange={handleTemplateChange} disabled={isSubmitting}>
+              <SelectTrigger className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_TEMPLATE}>Keine Vorlage</SelectItem>
+                {templateRoles.map((role) => (
+                  <SelectItem key={role.id} value={role.id}>
+                    {role.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
-            Abbrechen
-          </Button>
-          <Button type="button" onClick={handleCreate} disabled={name.trim().length === 0}>
-            Rolle erstellen
-          </Button>
-        </DialogFooter>
+        <div className="flex flex-col gap-1.5">
+          <FieldLabel>Beschreibung</FieldLabel>
+          <Textarea
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            placeholder="Wofür wird diese Rolle eingesetzt?"
+            disabled={isSubmitting}
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <FieldLabel>Farbe auswählen</FieldLabel>
+          <div className="flex flex-wrap gap-2">
+            {roleColorOptions.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setColor(option.value)}
+                disabled={isSubmitting}
+                aria-label={option.label}
+                className={cn(
+                  "flex size-9 items-center justify-center rounded-full ring-2 ring-offset-2 ring-offset-popover transition-all disabled:opacity-60",
+                  option.swatchClass,
+                  color === option.value ? "ring-foreground/60" : "ring-transparent"
+                )}
+              >
+                {color === option.value && <Check className="size-4 text-white" />}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 border-t border-border pt-5">
+          <FieldLabel>Berechtigungen</FieldLabel>
+          <PermissionSearch value={search} onChange={setSearch} />
+          <div className="flex flex-col gap-3">
+            {visibleCategories.map((category) => (
+              <PermissionCategory
+                key={category.key}
+                category={category}
+                permissions={category.permissions}
+                values={permissions}
+                onToggle={(key, checked) => setPermissions((current) => ({ ...current, [key]: checked }))}
+                disabled={isSubmitting}
+                defaultOpen={false}
+              />
+            ))}
+          </div>
+        </div>
+
+        {errorMessage && (
+          <div className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 px-3.5 py-2.5 text-sm text-destructive">
+            <Info className="mt-0.5 size-4 shrink-0" />
+            {errorMessage}
+          </div>
+        )}
+      </div>
+
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+          Abbrechen
+        </Button>
+        <Button type="button" onClick={handleCreate} disabled={isSubmitting || name.trim().length === 0}>
+          {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+          Rolle erstellen
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
+
+export function CreateRoleDialog({ open, onOpenChange, ...rest }: CreateRoleDialogProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  return (
+    // ESC, Overlay und Close-Button werden während des Speicherns ignoriert.
+    // Der Formularzustand lebt im Kind und wird pro Öffnen neu initialisiert.
+    <Dialog open={open} onOpenChange={(next) => !isSubmitting && onOpenChange(next)}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+        {open && (
+          <CreateRoleForm
+            onOpenChange={onOpenChange}
+            isSubmitting={isSubmitting}
+            onSubmittingChange={setIsSubmitting}
+            {...rest}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );

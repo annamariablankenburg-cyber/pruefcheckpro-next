@@ -24,10 +24,12 @@ import {
 import { EmployeeTable } from "@/components/shared/EmployeeTable";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { StatCard } from "@/components/shared/StatCard";
-import { useEmployees } from "@/hooks/useEmployees";
-import { CURRENT_LOCATION_VALUE } from "@/lib/employees/employeeRules";
+import type { EmployeesData } from "@/hooks/useEmployees";
+import { CURRENT_LOCATION_VALUE, CURRENT_ROLE_VALUE } from "@/lib/employees/employeeRules";
+import { isRoleActive, resolveRole } from "@/lib/roles/roleRules";
 import type { CompanyLocationDetail } from "@/types/location";
-import type { Employee, EmployeeRole } from "@/types/employee";
+import type { Employee } from "@/types/employee";
+import type { Role } from "@/types/role";
 
 // Nur Statusänderungen am Mitarbeiter-Datensatz. Passwort-Reset und
 // Einladung widerrufen sind (noch) nicht angebunden und lösen nur einen
@@ -73,6 +75,13 @@ const confirmConfigs: Record<ConfirmActionType, ConfirmConfig> = {
 };
 
 interface EmployeesViewProps {
+  // Eine gemeinsame useEmployees()-Instanz der Company-Seite (auch für die
+  // Benutzerzahlen im Rollen-Tab).
+  employeesData: EmployeesData;
+  // Rollen der Company-Seite (eine useRoles()-Instanz). Keine zweite Quelle.
+  roles: Role[];
+  rolesLoading: boolean;
+  rolesError: string | null;
   // Standorte der Company-Seite (gemeinsamer State mit dem Standorte-Tab).
   // Keine zweite Standortquelle.
   locations: CompanyLocationDetail[];
@@ -82,7 +91,16 @@ interface EmployeesViewProps {
   onInvite: () => void;
 }
 
-export function EmployeesView({ locations, locationsLoading, locationsError, onInvite }: EmployeesViewProps) {
+export function EmployeesView({
+  employeesData,
+  roles,
+  rolesLoading,
+  rolesError,
+  locations,
+  locationsLoading,
+  locationsError,
+  onInvite,
+}: EmployeesViewProps) {
   const {
     employees,
     filteredEmployees,
@@ -99,11 +117,10 @@ export function EmployeesView({ locations, locationsLoading, locationsError, onI
     suspendEmployee,
     reactivateEmployee,
     revokeAccess,
-    employeeRoles,
-  } = useEmployees();
+  } = employeesData;
   // Auswahl als ID: Drawer/Dialoge zeigen immer den aktuellen Datensatz.
   const [detailId, setDetailId] = useState<string | null>(null);
-  const [roleId, setRoleId] = useState<string | null>(null);
+  const [roleEmployeeId, setRoleEmployeeId] = useState<string | null>(null);
   const [locationId, setLocationId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ id: string; type: ConfirmActionType } | null>(null);
   const [actionPending, setActionPending] = useState(false);
@@ -111,9 +128,29 @@ export function EmployeesView({ locations, locationsLoading, locationsError, onI
 
   const findEmployee = (id: string | null) => employees.find((employee) => employee.id === id) ?? null;
   const detailEmployee = findEmployee(detailId);
-  const roleEmployee = findEmployee(roleId);
+  const roleEmployee = findEmployee(roleEmployeeId);
   const locationEmployee = findEmployee(locationId);
   const confirmEmployee = findEmployee(confirmAction?.id ?? null);
+
+  const activeRoles = useMemo(() => roles.filter(isRoleActive), [roles]);
+  const roleFilterOptions = useMemo(() => activeRoles.map((role) => role.name), [activeRoles]);
+
+  // Neue Ziele sind nur aktive Rollen (Wert = ID, Label = Name). Ist die aktuelle
+  // Rolle archiviert oder nicht auflösbar (Altwert), bleibt sie als "bisheriger
+  // Wert" sichtbar und wird nicht still überschrieben.
+  const roleOptions: EmployeeSelectOption[] = useMemo(() => {
+    const options = activeRoles.map((role) => ({ value: role.id, label: role.name }));
+    if (!roleEmployee) return options;
+    const current = resolveRole(roleEmployee, roles);
+    if (current && isRoleActive(current)) return options;
+    return [
+      {
+        value: CURRENT_ROLE_VALUE,
+        label: `${current?.name ?? roleEmployee.role} (${current ? "archiviert" : "bisheriger Wert"})`,
+      },
+      ...options,
+    ];
+  }, [activeRoles, roles, roleEmployee]);
 
   const activeLocations = useMemo(
     () => locations.filter((location) => location.status === "Aktiv"),
@@ -147,6 +184,18 @@ export function EmployeesView({ locations, locationsLoading, locationsError, onI
   const lockedCount = employees.filter((employee) => employee.status === "Gesperrt").length;
   const pendingCount = employees.filter((employee) => employee.status === "Ausstehend").length;
   const onlineCount = employees.filter((employee) => employee.lastLogin === "Online").length;
+
+  function openRoleDialog(employee: Employee) {
+    if (rolesLoading) {
+      showFeedback("Rollen werden noch geladen.");
+      return;
+    }
+    if (rolesError) {
+      showFeedback("Rollen konnten nicht geladen werden.");
+      return;
+    }
+    setRoleEmployeeId(employee.id);
+  }
 
   function openLocationDialog(employee: Employee) {
     if (locationsLoading) {
@@ -185,7 +234,9 @@ export function EmployeesView({ locations, locationsLoading, locationsError, onI
   }
 
   async function handleRoleConfirm(employee: Employee, value: string) {
-    const updated = await changeRole(employee.id, value as EmployeeRole);
+    const target = activeRoles.find((role) => role.id === value);
+    if (!target) throw new Error("Rolle nicht verfügbar.");
+    const updated = await changeRole(employee.id, { id: target.id, name: target.name });
     if (!updated) throw new Error("Mitarbeiter nicht gefunden.");
     showFeedback("Rolle geändert.");
   }
@@ -264,13 +315,14 @@ export function EmployeesView({ locations, locationsLoading, locationsError, onI
             onSearchChange={setSearch}
             filter={filter}
             onFilterChange={setFilter}
+            roleOptions={roleFilterOptions}
           />
 
           <EmployeeTable
             employees={filteredEmployees}
             onResetFilters={resetFilters}
             onViewDetails={(employee) => setDetailId(employee.id)}
-            onChangeRole={(employee) => setRoleId(employee.id)}
+            onChangeRole={openRoleDialog}
             onChangeLocation={openLocationDialog}
             onResetPassword={handleResetPassword}
             onSuspend={requestConfirm("suspend")}
@@ -284,7 +336,7 @@ export function EmployeesView({ locations, locationsLoading, locationsError, onI
       <EmployeeDetailDrawer
         employee={detailEmployee}
         onOpenChange={(open) => !open && setDetailId(null)}
-        onChangeRole={(employee) => setRoleId(employee.id)}
+        onChangeRole={openRoleDialog}
         onChangeLocation={openLocationDialog}
         onResetPassword={handleResetPassword}
         onSuspend={requestConfirm("suspend")}
@@ -307,13 +359,16 @@ export function EmployeesView({ locations, locationsLoading, locationsError, onI
       <EmployeeSelectFieldDialog
         employee={roleEmployee}
         title="Rolle ändern"
-        description="Passe die Rolle dieses Mitarbeiters an. Die Rolle ist ein Verwaltungsdatum; es gibt noch keine echte Zugriffskontrolle."
+        description="Passe die Rolle dieses Mitarbeiters an. Die Rolle ist ein Verwaltungsdatum; die serverseitige Durchsetzung folgt in einem späteren Security-Slice."
         fieldLabel="Rolle auswählen"
-        options={employeeRoles.map((role) => ({ value: role, label: role }))}
-        getInitialValue={(employee) => employee.role}
+        options={roleOptions}
+        getInitialValue={(employee) => {
+          const current = resolveRole(employee, roles);
+          return current && isRoleActive(current) ? current.id : CURRENT_ROLE_VALUE;
+        }}
         confirmLabel="Rolle ändern"
         errorMessage="Rolle konnte nicht geändert werden."
-        onOpenChange={(open) => !open && setRoleId(null)}
+        onOpenChange={(open) => !open && setRoleEmployeeId(null)}
         onConfirm={handleRoleConfirm}
       />
 

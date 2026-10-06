@@ -22,7 +22,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { employeeRoles } from "@/config/employees";
 import {
   DEFAULT_EXPIRY_DAYS,
   INVITATION_EXPIRY_OPTIONS,
@@ -30,9 +29,9 @@ import {
   isPlausibleEmail,
   type InvitationFormValues,
 } from "@/lib/invitations/invitationRules";
-import type { EmployeeRole } from "@/types/employee";
 import type { Invitation } from "@/types/invitation";
 import type { CompanyLocationDetail } from "@/types/location";
+import type { Role } from "@/types/role";
 
 interface InviteEmployeeDialogProps {
   open: boolean;
@@ -43,6 +42,11 @@ interface InviteEmployeeDialogProps {
   locations: CompanyLocationDetail[];
   locationsLoading?: boolean;
   locationsError?: string | null;
+  // Aktive Rollen der Rollenverwaltung (Wert = role.id, Label = Name). Keine
+  // Fallback-Liste: ohne geladene Rollen lässt sich nicht speichern.
+  roles: Role[];
+  rolesLoading?: boolean;
+  rolesError?: string | null;
   // Speichert die Einladung (nur Datensatz!). Muss bei Fehlern werfen; der
   // Dialog schließt nur nach Erfolg.
   onCreate: (values: InvitationFormValues) => Promise<Invitation>;
@@ -65,6 +69,9 @@ function InviteForm({
   locations,
   locationsLoading,
   locationsError,
+  roles,
+  rolesLoading,
+  rolesError,
   onCreate,
   onCreated,
   isSubmitting,
@@ -75,7 +82,9 @@ function InviteForm({
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<EmployeeRole>("Prüfer");
+  const [roleId, setRoleId] = useState<string>(
+    (roles.find((role) => role.id === "pruefer") ?? roles[0])?.id ?? ""
+  );
   const [locationId, setLocationId] = useState<string>(locations[0]?.id ?? "");
   const [message, setMessage] = useState("");
   const [expiryDays, setExpiryDays] = useState<number>(DEFAULT_EXPIRY_DAYS);
@@ -87,6 +96,10 @@ function InviteForm({
   const selectedLocation =
     locations.find((location) => location.id === locationId) ?? locations[0] ?? null;
   const locationsUnavailable = Boolean(locationsLoading) || Boolean(locationsError);
+  // Dasselbe für Rollen: kommen sie später oder ändert sich die Liste, fällt die
+  // Auswahl auf eine vorhandene aktive Rolle zurück.
+  const selectedRole = roles.find((role) => role.id === roleId) ?? roles[0] ?? null;
+  const rolesUnavailable = Boolean(rolesLoading) || Boolean(rolesError);
 
   async function handleSubmit() {
     if (isSubmitting) return;
@@ -100,6 +113,10 @@ function InviteForm({
       setErrorMessage("Bitte eine gültige E-Mail-Adresse angeben.");
       return;
     }
+    if (rolesUnavailable || !selectedRole) {
+      setErrorMessage("Es ist keine aktive Rolle verfügbar. Bitte zuerst Rollen laden bzw. anlegen.");
+      return;
+    }
     if (locationsUnavailable || !selectedLocation) {
       setErrorMessage("Es ist kein aktiver Standort verfügbar. Bitte zuerst einen Standort anlegen.");
       return;
@@ -110,7 +127,8 @@ function InviteForm({
       const created = await onCreate({
         name,
         email,
-        role,
+        roleId: selectedRole.id,
+        role: selectedRole.name,
         locationId: selectedLocation.id,
         location: selectedLocation.name,
         message,
@@ -159,14 +177,26 @@ function InviteForm({
 
           <div className="flex flex-col gap-1.5">
             <FieldLabel required>Rolle</FieldLabel>
-            <Select value={role} onValueChange={(value) => setRole(value as EmployeeRole)} disabled={isSubmitting}>
+            <Select
+              value={selectedRole?.id ?? ""}
+              onValueChange={setRoleId}
+              disabled={isSubmitting || rolesUnavailable || roles.length === 0}
+            >
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue
+                  placeholder={
+                    rolesLoading
+                      ? "Rollen werden geladen…"
+                      : rolesError
+                        ? "Laden fehlgeschlagen"
+                        : "Keine aktive Rolle"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
-                {employeeRoles.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
+                {roles.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -263,7 +293,7 @@ function InviteForm({
         <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
           Abbrechen
         </Button>
-        <Button type="button" onClick={handleSubmit} disabled={isSubmitting || locationsUnavailable}>
+        <Button type="button" onClick={handleSubmit} disabled={isSubmitting || locationsUnavailable || rolesUnavailable}>
           {isSubmitting && <Loader2 className="size-4 animate-spin" />}
           Einladung speichern
         </Button>

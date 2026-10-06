@@ -1,27 +1,9 @@
 import { companyLocationDetails } from "@/config/locations";
-import type { Employee, EmployeeRole } from "@/types/employee";
+import type { Employee } from "@/types/employee";
 
 // Standortnamen aus der bestehenden Standorte-Verwaltung übernommen, damit
 // beide Bereiche konsistent bleiben.
 export const locationNames = companyLocationDetails.map((location) => location.name);
-
-export const employeeRoles: EmployeeRole[] = [
-  "Admin",
-  "Laborleiter",
-  "Prüfer",
-  "Azubi",
-  "Gast",
-];
-
-// Illustrative Berechtigungsübersicht je Rolle. Rein informativ, keine
-// echte Zugriffskontrolle.
-export const rolePermissions: Record<EmployeeRole, string[]> = {
-  Admin: ["Vollzugriff", "Mitarbeiter verwalten", "Abrechnung verwalten", "Alle Standorte"],
-  Laborleiter: ["Proben verwalten", "Prüfwerte freigeben", "Mitarbeiter verwalten", "Standort verwalten"],
-  Prüfer: ["Prüfwerte eintragen", "Proben einsehen", "Kalender nutzen"],
-  Azubi: ["Lernbereich", "Proben einsehen (lesend)"],
-  Gast: ["Eingeschränkte Ansicht"],
-};
 
 export const employees: Employee[] = [
   {
@@ -30,7 +12,8 @@ export const employees: Employee[] = [
     initials: "MM",
     email: "max@musterlabor.de",
     phone: "+49 711 1234567",
-    role: "Admin",
+    role: "Administrator",
+    roleId: "admin",
     location: "Labor Stuttgart",
     status: "Aktiv",
     lastLogin: "Online",
@@ -48,6 +31,7 @@ export const employees: Employee[] = [
     email: "anna@musterlabor.de",
     phone: "+49 711 1234568",
     role: "Laborleiter",
+    roleId: "laborleiter",
     location: "Labor Stuttgart",
     status: "Aktiv",
     lastLogin: "Online",
@@ -62,6 +46,7 @@ export const employees: Employee[] = [
     email: "tom@musterlabor.de",
     phone: "+49 89 9876543",
     role: "Prüfer",
+    roleId: "pruefer",
     location: "Labor München",
     status: "Aktiv",
     lastLogin: "Vor 2 Std.",
@@ -75,6 +60,7 @@ export const employees: Employee[] = [
     initials: "LS",
     email: "laura@musterlabor.de",
     role: "Azubi",
+    roleId: "azubi",
     location: "Labor Remseck",
     status: "Aktiv",
     lastLogin: "Vor 1 Tag",
@@ -88,6 +74,7 @@ export const employees: Employee[] = [
     initials: "JB",
     email: "jonas@musterlabor.de",
     role: "Prüfer",
+    roleId: "pruefer",
     location: "Labor Stuttgart",
     status: "Gesperrt",
     lastLogin: "Vor 12 Tagen",
@@ -104,6 +91,7 @@ export const employees: Employee[] = [
     initials: "EK",
     email: "eva@musterlabor.de",
     role: "Gast",
+    roleId: "gast",
     location: "Baustellenbüro Nord",
     status: "Ausstehend",
     lastLogin: "Einladung offen",

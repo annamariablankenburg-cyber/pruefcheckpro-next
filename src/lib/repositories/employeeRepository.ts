@@ -1,4 +1,4 @@
-import { employees, employeeRoles, rolePermissions } from "@/config/employees";
+import { employees } from "@/config/employees";
 import type { Employee } from "@/types/employee";
 import { createArrayRepository } from "@/lib/repositories/base/createArrayRepository";
 
@@ -11,10 +11,4 @@ export const employeeRepository = {
   getAll: base.getAll,
   getById: base.getById,
   update: base.update,
-  getEmployeeRoles() {
-    return employeeRoles;
-  },
-  getRolePermissions() {
-    return rolePermissions;
-  },
 };

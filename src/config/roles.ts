@@ -14,8 +14,9 @@ import {
 
 import type { PermissionCategoryDef, Role } from "@/types/role";
 
-// Berechtigungs-Taxonomie für die Rollenverwaltung. Rein clientseitige
-// Mock-Daten, keine Firebase-/Firestore-Anbindung.
+// Berechtigungs-Taxonomie für die Rollenverwaltung. Statische Produkt-
+// konfiguration (welche Berechtigungen es gibt und wie sie gruppiert sind);
+// welche Rolle welche Berechtigung hält, steht in companies/{companyId}/roles.
 export const permissionCategories: PermissionCategoryDef[] = [
   {
     key: "dashboard",
@@ -134,31 +135,35 @@ export function buildPermissions(granted: string[]): Record<string, boolean> {
   return result;
 }
 
+// Stabile IDs der Systemrollen. Sie sind zugleich die Dokument-IDs in
+// companies/{companyId}/roles und die Zielwerte der Legacy-Zuordnung
+// (siehe lib/roles/roleRules.ts).
+export const SYSTEM_ROLE_IDS = ["admin", "laborleiter", "pruefer", "azubi", "gast"] as const;
+
+// Die Rollen-Stammdaten dienen als Mock-Datenquelle und als Vorlage für
+// scripts/seedRoles.ts. Im Firestore-Modus sind NICHT sie die Wahrheit,
+// sondern companies/{companyId}/roles. Zeitstempel sind ISO-Strings.
 export const roles: Role[] = [
   {
-    id: "role-administrator",
+    id: "admin",
     name: "Administrator",
     description: "Uneingeschränkter Zugriff auf alle Bereiche und Einstellungen.",
     type: "System",
     color: "primary",
     status: "Aktiv",
-    userCount: 1,
-    createdAt: "01.01.2024, 10:30",
-    updatedAt: "15.05.2025, 14:22",
-    updatedBy: "Max Mustermann",
+    createdAt: "2024-01-01T10:30:00.000Z",
+    updatedAt: "2025-05-15T14:22:00.000Z",
     permissions: buildPermissions(allPermissionKeys),
   },
   {
-    id: "role-laborleiter",
+    id: "laborleiter",
     name: "Laborleiter",
     description: "Vollzugriff auf alle Laborfunktionen, Prüfungen, Ergebnisse und Berichte.",
     type: "System",
     color: "success",
     status: "Aktiv",
-    userCount: 3,
-    createdAt: "01.01.2024, 10:30",
-    updatedAt: "15.05.2025, 14:22",
-    updatedBy: "Max Mustermann",
+    createdAt: "2024-01-01T10:30:00.000Z",
+    updatedAt: "2025-05-15T14:22:00.000Z",
     permissions: buildPermissions(
       allPermissionKeys.filter(
         (key) =>
@@ -168,16 +173,14 @@ export const roles: Role[] = [
     ),
   },
   {
-    id: "role-pruefer",
+    id: "pruefer",
     name: "Prüfer",
     description: "Durchführung von Prüfungen und Eingabe von Ergebnissen.",
     type: "System",
     color: "warning",
     status: "Aktiv",
-    userCount: 4,
-    createdAt: "01.01.2024, 10:30",
-    updatedAt: "10.04.2025, 09:05",
-    updatedBy: "Anna Neumann",
+    createdAt: "2024-01-01T10:30:00.000Z",
+    updatedAt: "2025-04-10T09:05:00.000Z",
     permissions: buildPermissions([
       "dashboard.anzeigen",
       "proben.ansehen",
@@ -198,16 +201,14 @@ export const roles: Role[] = [
     ]),
   },
   {
-    id: "role-azubi",
+    id: "azubi",
     name: "Azubi",
     description: "Eingeschränkter Zugriff für Auszubildende.",
     type: "System",
     color: "primary",
     status: "Aktiv",
-    userCount: 2,
-    createdAt: "01.01.2024, 10:30",
-    updatedAt: "02.02.2025, 11:15",
-    updatedBy: "Anna Neumann",
+    createdAt: "2024-01-01T10:30:00.000Z",
+    updatedAt: "2025-02-02T11:15:00.000Z",
     permissions: buildPermissions([
       "dashboard.anzeigen",
       "proben.ansehen",
@@ -223,16 +224,14 @@ export const roles: Role[] = [
     ]),
   },
   {
-    id: "role-gast",
+    id: "gast",
     name: "Gast",
     description: "Nur Leserechte für alle Bereiche.",
     type: "System",
     color: "neutral",
     status: "Aktiv",
-    userCount: 1,
-    createdAt: "01.01.2024, 10:30",
-    updatedAt: "01.01.2024, 10:30",
-    updatedBy: "Max Mustermann",
+    createdAt: "2024-01-01T10:30:00.000Z",
+    updatedAt: "2024-01-01T10:30:00.000Z",
     permissions: buildPermissions([
       "dashboard.anzeigen",
       "proben.ansehen",
@@ -245,16 +244,14 @@ export const roles: Role[] = [
     ]),
   },
   {
-    id: "role-qualitaetsmanager",
+    id: "qualitaetsmanager",
     name: "Qualitätsmanager",
     description: "Prüft und korrigiert Ergebnisse, exportiert Berichte für das Qualitätsmanagement.",
     type: "Benutzerdefiniert",
     color: "success",
     status: "Aktiv",
-    userCount: 1,
-    createdAt: "12.06.2025, 08:40",
-    updatedAt: "12.06.2025, 08:40",
-    updatedBy: "Max Mustermann",
+    createdAt: "2025-06-12T08:40:00.000Z",
+    updatedAt: "2025-06-12T08:40:00.000Z",
     permissions: buildPermissions([
       "dashboard.anzeigen",
       "proben.ansehen",
@@ -275,16 +272,14 @@ export const roles: Role[] = [
     ]),
   },
   {
-    id: "role-baustellenleiter",
+    id: "baustellenleiter",
     name: "Baustellenleiter",
     description: "Verwaltet Projekte und Proben vor Ort auf der Baustelle.",
     type: "Benutzerdefiniert",
     color: "warning",
     status: "Aktiv",
-    userCount: 1,
-    createdAt: "03.09.2025, 13:10",
-    updatedAt: "03.09.2025, 13:10",
-    updatedBy: "Anna Neumann",
+    createdAt: "2025-09-03T13:10:00.000Z",
+    updatedAt: "2025-09-03T13:10:00.000Z",
     permissions: buildPermissions([
       "dashboard.anzeigen",
       "proben.ansehen",
@@ -304,7 +299,3 @@ export const roles: Role[] = [
     ]),
   },
 ];
-
-export const systemRoleNames = roles
-  .filter((role) => role.type === "System")
-  .map((role) => role.name);

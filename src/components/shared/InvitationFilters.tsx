@@ -3,26 +3,19 @@ import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-export const invitationFilterOptions = [
-  "Alle",
-  "Ausstehend",
-  "Angenommen",
-  "Abgelaufen",
-  "Widerrufen",
-  "Admin",
-  "Laborleiter",
-  "Prüfer",
-  "Azubi",
-  "Gast",
-] as const;
+// Status-Filter sind fix; Rollen-Filter kommen aus den echten Rollen
+// (Company-Seite), nicht aus einer statischen Liste.
+export const invitationStatusFilterOptions = ["Alle", "Ausstehend", "Angenommen", "Abgelaufen", "Widerrufen"] as const;
 
-export type InvitationFilter = (typeof invitationFilterOptions)[number];
+export type InvitationFilter = string;
 
 interface InvitationFiltersProps {
   search: string;
   onSearchChange: (value: string) => void;
   filter: InvitationFilter;
   onFilterChange: (filter: InvitationFilter) => void;
+  // Namen der wählbaren (nicht archivierten) Rollen.
+  roleOptions: string[];
 }
 
 export function InvitationFilters({
@@ -30,7 +23,9 @@ export function InvitationFilters({
   onSearchChange,
   filter,
   onFilterChange,
+  roleOptions,
 }: InvitationFiltersProps) {
+  const options = [...invitationStatusFilterOptions, ...roleOptions];
   return (
     <div className="flex flex-col gap-3">
       <div className="relative">
@@ -44,7 +39,7 @@ export function InvitationFilters({
       </div>
 
       <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-        {invitationFilterOptions.map((option) => (
+        {options.map((option) => (
           <button
             key={option}
             type="button"

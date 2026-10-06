@@ -4,7 +4,6 @@
 // Eine Einladung ist ein Metadatensatz. Es gibt hier keinen Mailversand, keinen
 // Auth-Account, keinen Einladungslink und keine Annahme-Logik.
 import { formatDateDE } from "@/lib/calendar/calendarDates";
-import type { EmployeeRole } from "@/types/employee";
 import type { Invitation, InvitationRow, InvitationStatus } from "@/types/invitation";
 
 // Ablaufoptionen des Dialogs. Gespeichert wird nie das Label, sondern der
@@ -22,7 +21,9 @@ export const DEFAULT_EXPIRY_DAYS = 7;
 export interface InvitationFormValues {
   name: string;
   email: string;
-  role: EmployeeRole;
+  // Stabile Rollen-ID aus companies/{companyId}/roles + Namens-Snapshot.
+  roleId: string;
+  role: string;
   locationId: string;
   location: string;
   message?: string;

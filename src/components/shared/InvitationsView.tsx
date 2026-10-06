@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AlertTriangle, Check, Clock, Info, Mail, Plus, ShieldCheck, XCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,10 @@ import { InvitationDetailDrawer } from "@/components/shared/InvitationDetailDraw
 import { InvitationFilters } from "@/components/shared/InvitationFilters";
 import { InvitationRevokeDialog } from "@/components/shared/InvitationRevokeDialog";
 import { InvitationTable } from "@/components/shared/InvitationTable";
+import { useRoleList } from "@/components/shared/RolesContext";
 import { StatCard } from "@/components/shared/StatCard";
 import type { InvitationsData } from "@/hooks/useInvitations";
+import { isRoleActive } from "@/lib/roles/roleRules";
 import type { InvitationRow } from "@/types/invitation";
 
 interface InvitationsViewProps {
@@ -45,6 +47,12 @@ export function InvitationsView({ invitationsData, onInvite }: InvitationsViewPr
   const [detailId, setDetailId] = useState<string | null>(null);
   const [revokeId, setRevokeId] = useState<string | null>(null);
   const { message: feedback, showFeedback } = useFeedbackToast();
+  // Rollen-Filter aus den echten (nicht archivierten) Rollen der Company-Seite.
+  const roles = useRoleList();
+  const roleFilterOptions = useMemo(
+    () => roles.filter(isRoleActive).map((role) => role.name),
+    [roles]
+  );
 
   const detailInvitation = invitations.find((invitation) => invitation.id === detailId) ?? null;
   const revokeTarget = invitations.find((invitation) => invitation.id === revokeId) ?? null;
@@ -124,6 +132,7 @@ export function InvitationsView({ invitationsData, onInvite }: InvitationsViewPr
             onSearchChange={setSearch}
             filter={filter}
             onFilterChange={setFilter}
+            roleOptions={roleFilterOptions}
           />
 
           {invitations.length === 0 ? (

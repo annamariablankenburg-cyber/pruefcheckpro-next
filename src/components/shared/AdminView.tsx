@@ -55,7 +55,8 @@ import { INVITATION_DEMO_TODAY, invitations } from "@/config/invitations";
 import { parseDateDE } from "@/lib/calendar/calendarDates";
 import { getInvitationDisplayStatus } from "@/lib/invitations/invitationRules";
 import { companyLocationDetails } from "@/config/locations";
-import { roles } from "@/config/roles";
+import { useRoles } from "@/hooks/useRoles";
+import { countRoleUsers } from "@/lib/roles/roleRules";
 import { billingInfo, invoices } from "@/config/settings";
 import { cn } from "@/lib/utils";
 import type { AuditStatus, SupportRequestStatus, SystemServiceStatus } from "@/types/admin";
@@ -100,6 +101,11 @@ function uniqueValues(values: string[]): string[] {
 export function AdminView() {
   const [activeTab, setActiveTab] = useState("uebersicht");
   const [employeeList, setEmployeeList] = useState<Employee[]>(employees);
+  // Rollen kommen aus derselben Quelle wie in der Rollenverwaltung (roleService),
+  // nicht mehr aus der Config. Die Benutzerzahlen werden aus dieser Seite
+  // Mitarbeiterliste abgeleitet.
+  const { roles, loading: rolesLoading, error: rolesError, refreshRoles } = useRoles();
+  const roleUserCounts = useMemo(() => countRoleUsers(roles, employeeList), [roles, employeeList]);
   const [statusConfirm, setStatusConfirm] = useState<{ employee: Employee; nextStatus: EmployeeStatus } | null>(null);
 
   const [auditSearch, setAuditSearch] = useState("");
@@ -116,7 +122,7 @@ export function AdminView() {
       activeUsers: employeeList.filter((employee) => employee.status === "Aktiv").length,
       lockedUsers: employeeList.filter((employee) => employee.status === "Gesperrt").length,
       locations: companyLocationDetails.length,
-      roles: roles.length,
+      roles: rolesLoading || rolesError ? "–" : roles.length,
       openInvitations: invitations.filter(
         (invitation) =>
           getInvitationDisplayStatus(invitation, parseDateDE(INVITATION_DEMO_TODAY)) === "Ausstehend"
@@ -124,7 +130,7 @@ export function AdminView() {
       storage: `${companyProfile.storageUsedGb} / ${companyProfile.storageTotalGb} GB`,
       auditEventsToday: auditLogEntries.filter((entry) => entry.timestamp.startsWith("11.07.2026")).length,
     }),
-    [employeeList]
+    [employeeList, roles.length, rolesLoading, rolesError]
   );
 
   const auditUsers = useMemo(() => uniqueValues(auditLogEntries.map((entry) => entry.user)), []);
@@ -403,6 +409,17 @@ export function AdminView() {
             </Button>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {rolesLoading && <Card className="skeleton h-32" />}
+            {rolesError && (
+              <Card>
+                <CardContent className="flex flex-col items-start gap-2">
+                  <p className="text-sm text-muted-foreground">{rolesError}</p>
+                  <Button type="button" variant="outline" size="sm" onClick={refreshRoles}>
+                    Erneut versuchen
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
             {roles.map((role) => (
               <Card key={role.id}>
                 <CardContent className="flex h-full flex-col gap-2">
@@ -414,7 +431,7 @@ export function AdminView() {
                   </div>
                   <p className="text-sm break-words text-muted-foreground">{role.description}</p>
                   <p className="mt-auto text-xs text-muted-foreground">
-                    {role.userCount} Nutzer · {role.type}
+                    {roleUserCounts[role.id] ?? 0} Nutzer · {role.type}
                   </p>
                   <Button type="button" variant="outline" size="sm" className="w-fit" asChild>
                     <Link href="/company?tab=rollen">Berechtigungen prüfen</Link>

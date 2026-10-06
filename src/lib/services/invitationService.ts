@@ -11,6 +11,8 @@ import {
 import type { IInvitationService } from "@/lib/interfaces/IInvitationService";
 import { invitationRepository } from "@/lib/repositories/invitationRepository";
 import { employeeService } from "@/lib/services/employeeService";
+import { roleService } from "@/lib/services/roleService";
+import { isRoleActive } from "@/lib/roles/roleRules";
 import type { Invitation } from "@/types/invitation";
 
 // Facade: branch je Methode anhand von NEXT_PUBLIC_DATA_SOURCE zwischen dem
@@ -53,7 +55,17 @@ export const invitationService: IInvitationService = {
     return loadById(id);
   },
 
-  async createInvitation(input) {
+  async createInvitation(rawInput) {
+    // Die Rolle muss existieren und aktiv sein (z. B. nicht zwischenzeitlich
+    // archiviert). Der Rollenname wird aus der Rolle übernommen (Snapshot),
+    // nicht blind aus dem Client.
+    const roles = await roleService.getRoles();
+    const role = roles.find((candidate) => candidate.id === rawInput.roleId);
+    if (!role || !isRoleActive(role)) {
+      throw new InvitationRuleError("Die gewählte Rolle ist nicht verfügbar. Bitte eine aktive Rolle wählen.");
+    }
+    const input = { ...rawInput, roleId: role.id, role: role.name };
+
     // Mitarbeiter-E-Mails kommen über denselben employeeService wie in der
     // Mitarbeiterverwaltung (keine zweite Quelle). Bewusst ein einfacher
     // Prüfschritt vor dem Schreiben, nicht atomar (siehe Doku).

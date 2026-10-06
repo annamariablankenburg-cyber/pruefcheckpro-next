@@ -65,8 +65,4 @@ export const employeeService: IEmployeeService = {
     }
     return updateMock(id, { status: "Gesperrt" }, historyEntry);
   },
-
-  getEmployeeRoles() {
-    return employeeRepository.getEmployeeRoles();
-  },
 };

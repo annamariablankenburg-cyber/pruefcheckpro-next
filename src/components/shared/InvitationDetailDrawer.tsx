@@ -11,11 +11,13 @@ import {
 import { EmployeeAvatar } from "@/components/shared/EmployeeAvatar";
 import { EmployeeRoleBadge } from "@/components/shared/EmployeeRoleBadge";
 import { InvitationStatusBadge } from "@/components/shared/InvitationStatusBadge";
+import { useRoleList } from "@/components/shared/RolesContext";
 import {
   buildInvitationTimeline,
   formatIsoDateDE,
   initialsOf,
 } from "@/lib/invitations/invitationRules";
+import { getRoleDisplayName } from "@/lib/roles/roleRules";
 import type { InvitationRow } from "@/types/invitation";
 
 interface InvitationDetailDrawerProps {
@@ -50,6 +52,7 @@ export function InvitationDetailDrawer({
   onResend,
   onRevoke,
 }: InvitationDetailDrawerProps) {
+  const roles = useRoleList();
   const isPending = invitation?.displayStatus === "Ausstehend";
   const canResend = invitation !== null && invitation.displayStatus !== "Angenommen";
   const timeline = invitation ? buildInvitationTimeline(invitation) : [];
@@ -68,7 +71,7 @@ export function InvitationDetailDrawer({
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <EmployeeRoleBadge role={invitation.role} />
+                <EmployeeRoleBadge role={invitation.role} roleId={invitation.roleId} />
                 <InvitationStatusBadge status={invitation.displayStatus} />
               </div>
             </DrawerHeader>
@@ -79,7 +82,7 @@ export function InvitationDetailDrawer({
                 <div className="divide-y divide-border">
                   <DetailRow label="Empfänger" value={invitation.name} />
                   <DetailRow label="E-Mail" value={invitation.email} />
-                  <DetailRow label="Rolle" value={invitation.role} />
+                  <DetailRow label="Rolle" value={getRoleDisplayName(invitation, roles)} />
                   <DetailRow label="Standort" value={invitation.location} />
                   <DetailRow label="Status" value={invitation.displayStatus} />
                 </div>

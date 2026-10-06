@@ -1,4 +1,3 @@
-import type { EmployeeRole } from "@/types/employee";
 
 // Persistierter Status. Bewusst OHNE "Abgelaufen": der Ablauf ist aus
 // `expiresAt` zuverlässig ableitbar und wird nicht manuell gespeichert (sonst
@@ -17,7 +16,10 @@ export interface Invitation {
   id: string;
   name: string;
   email: string;
-  role: EmployeeRole;
+  // Lesbarer Rollenname (Snapshot/Legacy) + stabile Beziehung roleId (fehlt bei
+  // Altdaten; dann Auflösung über den Namen).
+  role: string;
+  roleId?: string;
   // Verweis auf companies/{companyId}/locations/{locationId}. Fehlt bei Altdaten.
   locationId?: string;
   // Lesbarer Standortname (Snapshot/Legacy).

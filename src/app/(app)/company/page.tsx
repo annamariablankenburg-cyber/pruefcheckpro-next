@@ -21,9 +21,12 @@ import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToa
 import { InvitationsView } from "@/components/shared/InvitationsView";
 import { InviteEmployeeDialog } from "@/components/shared/InviteEmployeeDialog";
 import { NewLocationDialog } from "@/components/shared/NewLocationDialog";
+import { RolesProvider } from "@/components/shared/RolesContext";
 import { RolesView } from "@/components/shared/RolesView";
+import { useEmployees } from "@/hooks/useEmployees";
 import { useInvitations } from "@/hooks/useInvitations";
 import { useLocations } from "@/hooks/useLocations";
+import { useRoles } from "@/hooks/useRoles";
 import { formatLocationAddress, type LocationFormValues } from "@/lib/locations/locationRules";
 import { companyRepository } from "@/lib/repositories/companyRepository";
 import type { CompanyLocation, CompanyQuickAction, PrimaryLocation } from "@/types/company";
@@ -61,8 +64,15 @@ export default function CompanyPage() {
   // Eine Instanz für Übersicht und Standorte-Tab (ein State, eine Quelle).
   const locationsData = useLocations();
   const { locations, loading: locationsLoading, error: locationsError, refreshLocations } = locationsData;
+  // Eine Rollen-Instanz für Rollen-Tab, Mitarbeiter-Tab, Einladungen-Tab und
+  // Einladungsdialog (ein State, eine Quelle). Rollen sind Verwaltungsdaten –
+  // keine serverseitige Durchsetzung.
+  const rolesData = useRoles();
+  const { roles, activeRoles, loading: rolesLoading, error: rolesError } = rolesData;
+  // Eine Mitarbeiter-Instanz für Mitarbeiter-Tab und Benutzerzahlen im Rollen-Tab.
+  const employeesData = useEmployees(roles);
   // Eine Einladungs-Instanz für Einladungen-Tab, Mitarbeiter-Tab und Dialog.
-  const invitationsData = useInvitations();
+  const invitationsData = useInvitations(roles);
 
   const locationsReady = !locationsLoading && !locationsError;
 
@@ -140,101 +150,110 @@ export default function CompanyPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-6 p-4 sm:p-6 lg:p-8">
-      <div>
-        <h1 className="page-title">
-          Unternehmen
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Verwalten Sie Ihre Firma, Standorte, Mitarbeiter und Einstellungen.
-        </p>
-      </div>
+    <RolesProvider roles={roles}>
+      <div className="flex flex-col gap-6 p-4 sm:p-6 lg:p-8">
+        <div>
+          <h1 className="page-title">
+            Unternehmen
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Verwalten Sie Ihre Firma, Standorte, Mitarbeiter und Einstellungen.
+          </p>
+        </div>
 
-      <CompanyHeaderCard profile={headerProfile} />
+        <CompanyHeaderCard profile={headerProfile} />
 
-      <CompanyTabs tabs={tabs} value={activeTab} onChange={setActiveTab} />
+        <CompanyTabs tabs={tabs} value={activeTab} onChange={setActiveTab} />
 
-      {activeTab === "uebersicht" && (
-        <div className="flex flex-col gap-6">
-          <div className="grid gap-6 lg:grid-cols-3">
-            {locationsReady ? (
-              <CompanyLocationsList
-                locations={overviewLocations}
-                onViewAll={() => setActiveTab("standorte")}
-                onNewLocation={() => setIsNewLocationOpen(true)}
+        {activeTab === "uebersicht" && (
+          <div className="flex flex-col gap-6">
+            <div className="grid gap-6 lg:grid-cols-3">
+              {locationsReady ? (
+                <CompanyLocationsList
+                  locations={overviewLocations}
+                  onViewAll={() => setActiveTab("standorte")}
+                  onNewLocation={() => setIsNewLocationOpen(true)}
+                />
+              ) : (
+                locationsPlaceholder
+              )}
+              <CompanyEmployeesList
+                employees={companyEmployees}
+                onViewAll={() => setActiveTab("mitarbeiter")}
+                onNewEmployee={() => setIsInviteOpen(true)}
               />
+              <div className="flex flex-col gap-6">
+                <CompanyQuickActions actions={quickActions} />
+                <CompanyActivityFeed
+                  activities={companyActivities}
+                  onViewAll={() => showFeedback("Diese Funktion wird später angebunden.")}
+                />
+              </div>
+            </div>
+
+            <CompanyLicenseCard
+              license={licenseOverview}
+              onManagePlan={() => showFeedback("Abrechnung wird später angebunden.")}
+            />
+          </div>
+        )}
+
+        {activeTab === "einstellungen" && (
+          <div className="flex flex-col gap-6">
+            <CompanyInfoCard info={companyInfo} />
+            {locationsReady ? (
+              <CompanyPrimaryLocationCard location={primaryLocation} />
             ) : (
               locationsPlaceholder
             )}
-            <CompanyEmployeesList
-              employees={companyEmployees}
-              onViewAll={() => setActiveTab("mitarbeiter")}
-              onNewEmployee={() => setIsInviteOpen(true)}
-            />
-            <div className="flex flex-col gap-6">
-              <CompanyQuickActions actions={quickActions} />
-              <CompanyActivityFeed
-                activities={companyActivities}
-                onViewAll={() => showFeedback("Diese Funktion wird später angebunden.")}
-              />
-            </div>
           </div>
+        )}
 
-          <CompanyLicenseCard
-            license={licenseOverview}
-            onManagePlan={() => showFeedback("Abrechnung wird später angebunden.")}
+        {activeTab === "standorte" && (
+          <CompanyLocationsView
+            locationsData={locationsData}
+            onNewLocation={() => setIsNewLocationOpen(true)}
           />
-        </div>
-      )}
+        )}
+        {activeTab === "mitarbeiter" && (
+          <EmployeesView
+            employeesData={employeesData}
+            roles={roles}
+            rolesLoading={rolesLoading}
+            rolesError={rolesError}
+            locations={locations}
+            locationsLoading={locationsLoading}
+            locationsError={locationsError}
+            onInvite={() => setIsInviteOpen(true)}
+          />
+        )}
+        {activeTab === "einladungen" && (
+          <InvitationsView invitationsData={invitationsData} onInvite={() => setIsInviteOpen(true)} />
+        )}
+        {activeTab === "rollen" && <RolesView rolesData={rolesData} employeesData={employeesData} />}
 
-      {activeTab === "einstellungen" && (
-        <div className="flex flex-col gap-6">
-          <CompanyInfoCard info={companyInfo} />
-          {locationsReady ? (
-            <CompanyPrimaryLocationCard location={primaryLocation} />
-          ) : (
-            locationsPlaceholder
-          )}
-        </div>
-      )}
-
-      {activeTab === "standorte" && (
-        <CompanyLocationsView
-          locationsData={locationsData}
-          onNewLocation={() => setIsNewLocationOpen(true)}
+        <NewLocationDialog
+          open={isNewLocationOpen}
+          onOpenChange={setIsNewLocationOpen}
+          onSubmit={handleCreateLocation}
         />
-      )}
-      {activeTab === "mitarbeiter" && (
-        <EmployeesView
-          locations={locations}
+        <InviteEmployeeDialog
+          open={isInviteOpen}
+          onOpenChange={setIsInviteOpen}
+          locations={locations.filter((location) => location.status === "Aktiv")}
           locationsLoading={locationsLoading}
           locationsError={locationsError}
-          onInvite={() => setIsInviteOpen(true)}
+          roles={activeRoles}
+          rolesLoading={rolesLoading}
+          rolesError={rolesError}
+          onCreate={invitationsData.createInvitation}
+          onCreated={() =>
+            showFeedback("Einladung gespeichert. Der E-Mail-Versand wird später serverseitig angebunden.")
+          }
         />
-      )}
-      {activeTab === "einladungen" && (
-        <InvitationsView invitationsData={invitationsData} onInvite={() => setIsInviteOpen(true)} />
-      )}
-      {activeTab === "rollen" && <RolesView />}
 
-      <NewLocationDialog
-        open={isNewLocationOpen}
-        onOpenChange={setIsNewLocationOpen}
-        onSubmit={handleCreateLocation}
-      />
-      <InviteEmployeeDialog
-        open={isInviteOpen}
-        onOpenChange={setIsInviteOpen}
-        locations={locations.filter((location) => location.status === "Aktiv")}
-        locationsLoading={locationsLoading}
-        locationsError={locationsError}
-        onCreate={invitationsData.createInvitation}
-        onCreated={() =>
-          showFeedback("Einladung gespeichert. Der E-Mail-Versand wird später serverseitig angebunden.")
-        }
-      />
-
-      <FeedbackToast message={feedback} />
-    </div>
+        <FeedbackToast message={feedback} />
+      </div>
+    </RolesProvider>
   );
 }

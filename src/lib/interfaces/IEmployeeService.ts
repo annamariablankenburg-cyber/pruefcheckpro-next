@@ -1,4 +1,4 @@
-import type { Employee, EmployeeHistoryEntry, EmployeeRole } from "@/types/employee";
+import type { Employee, EmployeeHistoryEntry } from "@/types/employee";
 
 // Promise-basiert. Mutationen liefern das bestätigte Ergebnis zurück.
 // `historyEntry` wird atomar an die bestehende Historie angehängt.
@@ -19,6 +19,4 @@ export interface IEmployeeService {
   reactivateEmployee(id: string, historyEntry: EmployeeHistoryEntry): Promise<Employee | undefined>;
   // Fachlich ebenfalls Status "Gesperrt", aber mit eigener Historienmeldung.
   revokeAccess(id: string, historyEntry: EmployeeHistoryEntry): Promise<Employee | undefined>;
-  // Rollenliste ist statische Produktkonfiguration (config/employees.ts).
-  getEmployeeRoles(): EmployeeRole[];
 }

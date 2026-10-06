@@ -1,17 +1,15 @@
-import { roles, permissionCategories, allPermissionKeys, buildPermissions, systemRoleNames } from "@/config/roles";
+import { roles, permissionCategories, allPermissionKeys, buildPermissions } from "@/config/roles";
 import type { Role } from "@/types/role";
 import { createArrayRepository } from "@/lib/repositories/base/createArrayRepository";
 
 const base = createArrayRepository<Role>(roles, (role) => role.id);
 
+// Bewusst ohne remove(): Rollen werden nie hart gelöscht (nur archiviert).
 export const roleRepository = {
-  ...base,
-  archive(id: string) {
-    return base.update(id, { status: "Archiviert" } as Partial<Role>);
-  },
-  restore(id: string) {
-    return base.update(id, { status: "Aktiv" } as Partial<Role>);
-  },
+  getAll: base.getAll,
+  getById: base.getById,
+  create: base.create,
+  update: base.update,
   getPermissionCategories() {
     return permissionCategories;
   },
@@ -19,7 +17,4 @@ export const roleRepository = {
     return allPermissionKeys;
   },
   buildPermissions,
-  getSystemRoleNames() {
-    return systemRoleNames;
-  },
 };

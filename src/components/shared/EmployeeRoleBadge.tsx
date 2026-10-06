@@ -1,19 +1,23 @@
-import { StatusBadge } from "@/components/shared/StatusBadge";
-import type { EmployeeRole } from "@/types/employee";
+"use client";
 
-const roleStyles: Record<EmployeeRole, string> = {
-  Admin: "bg-primary/10 text-primary",
-  Laborleiter: "bg-success/10 text-success",
-  Prüfer: "bg-muted text-muted-foreground",
-  Azubi: "bg-warning/10 text-warning",
-  Gast: "bg-muted text-muted-foreground/70",
-};
+import { roleColorStyles } from "@/components/shared/RoleBadge";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { useRoleList } from "@/components/shared/RolesContext";
+import { resolveRole } from "@/lib/roles/roleRules";
 
 interface EmployeeRoleBadgeProps {
-  role: EmployeeRole;
+  // Gespeicherter Rollenname (Snapshot/Legacy) und optionale stabile ID.
+  role: string;
+  roleId?: string;
   className?: string;
 }
 
-export function EmployeeRoleBadge({ role, className }: EmployeeRoleBadgeProps) {
-  return <StatusBadge value={role} styles={roleStyles} className={className} />;
+// Zeigt den AKTUELLEN Rollennamen und die Rollenfarbe, sobald die Rolle über
+// roleId (bzw. Altname) auflösbar ist; sonst den gespeicherten Namen neutral.
+export function EmployeeRoleBadge({ role, roleId, className }: EmployeeRoleBadgeProps) {
+  const roles = useRoleList();
+  const resolved = resolveRole({ role, roleId }, roles);
+  const name = resolved?.name ?? role;
+  const style = resolved ? roleColorStyles[resolved.color] : "bg-muted text-muted-foreground";
+  return <StatusBadge value={name} styles={{ [name]: style }} className={className} />;
 }

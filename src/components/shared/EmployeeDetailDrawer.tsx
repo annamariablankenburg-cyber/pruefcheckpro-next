@@ -11,7 +11,8 @@ import {
 import { EmployeeAvatar } from "@/components/shared/EmployeeAvatar";
 import { EmployeeRoleBadge } from "@/components/shared/EmployeeRoleBadge";
 import { EmployeeStatusBadge } from "@/components/shared/EmployeeStatusBadge";
-import { rolePermissions } from "@/config/employees";
+import { useRoleList } from "@/components/shared/RolesContext";
+import { getRoleDisplayName, resolveRole, summarizePermissions } from "@/lib/roles/roleRules";
 import type { Employee } from "@/types/employee";
 
 interface EmployeeDetailDrawerProps {
@@ -54,6 +55,9 @@ export function EmployeeDetailDrawer({
   onRevokeAccess,
   onRevokeInvitation,
 }: EmployeeDetailDrawerProps) {
+  const roles = useRoleList();
+  const role = employee ? resolveRole(employee, roles) : undefined;
+  const permissionSummary = role ? summarizePermissions(role.permissions).filter((group) => group.granted > 0) : [];
   const isPending = employee?.status === "Ausstehend";
   const isLocked = employee?.status === "Gesperrt";
 
@@ -71,7 +75,7 @@ export function EmployeeDetailDrawer({
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <EmployeeRoleBadge role={employee.role} />
+                <EmployeeRoleBadge role={employee.role} roleId={employee.roleId} />
                 <EmployeeStatusBadge status={employee.status} />
               </div>
             </DrawerHeader>
@@ -80,7 +84,7 @@ export function EmployeeDetailDrawer({
               <div className="flex flex-col gap-1">
                 <SectionTitle>Stammdaten</SectionTitle>
                 <div className="divide-y divide-border">
-                  <DetailRow label="Rolle" value={employee.role} />
+                  <DetailRow label="Rolle" value={getRoleDisplayName(employee, roles)} />
                   <DetailRow label="Standort" value={employee.location} />
                   <DetailRow label="Status" value={employee.status} />
                   <DetailRow label="Letzte Anmeldung" value={employee.lastLogin} />
@@ -98,18 +102,23 @@ export function EmployeeDetailDrawer({
                   <SectionTitle>Berechtigungsübersicht</SectionTitle>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  {rolePermissions[employee.role].map((permission) => (
+                  {permissionSummary.map((group) => (
                     <span
-                      key={permission}
+                      key={group.key}
                       className="rounded-full border border-border bg-muted/40 px-2.5 py-1 text-xs font-medium text-muted-foreground"
                     >
-                      {permission}
+                      {group.label} {group.granted}/{group.total}
                     </span>
                   ))}
+                  {!role && (
+                    <span className="text-xs text-muted-foreground">
+                      Rolle nicht gefunden – Berechtigungen können nicht angezeigt werden.
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground/70">
-                  Berechtigungen ergeben sich aus der Rolle. Die Rolle ist ein Verwaltungsdatum – noch
-                  keine echte Zugriffskontrolle, reine UI-Übersicht.
+                  Berechtigungen ergeben sich aus der Rolle (gewährt/gesamt je Modul). Die Rolle ist ein
+                  Verwaltungsdatum – die serverseitige Durchsetzung folgt in einem späteren Security-Slice.
                 </p>
               </div>
 

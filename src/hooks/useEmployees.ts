@@ -10,7 +10,9 @@ import {
   employeeHistoryMessages,
   sortEmployees,
 } from "@/lib/employees/employeeRules";
-import type { Employee, EmployeeRole } from "@/types/employee";
+import { getRoleDisplayName } from "@/lib/roles/roleRules";
+import type { Employee } from "@/types/employee";
+import type { Role } from "@/types/role";
 
 // Lädt Mitarbeiter über employeeService (Mock oder Firestore) und hält sie als
 // lokalen State. Lokaler State ändert sich erst nach einem bestätigten
@@ -19,7 +21,11 @@ import type { Employee, EmployeeRole } from "@/types/employee";
 //
 // Kein Löschen: Mitarbeiter bleiben samt Historie erhalten. "Sperren" und
 // "Zugriff entziehen" sind fachliche Statusänderungen – keine Auth-Sperre.
-export function useEmployees() {
+//
+// `roles` ist die gemeinsame Rollenliste der Company-Seite (eine useRoles()-
+// Instanz). Sie wird nur zum Auflösen der Rollennamen für Suche und Filter
+// genutzt; Altdaten ohne roleId werden über ihren Namen aufgelöst.
+export function useEmployees(roles: Role[]) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,11 +58,12 @@ export function useEmployees() {
     resetFilters,
   } = useSearchAndFilter<Employee, EmployeeFilter>(employees, {
     defaultFilter: "Alle",
-    matchesFilter: (employee, filterValue) => filterValue === employee.status || filterValue === employee.role,
+    matchesFilter: (employee, filterValue) =>
+      filterValue === employee.status || filterValue === getRoleDisplayName(employee, roles),
     matchesSearch: (employee, query) =>
       employee.name.toLowerCase().includes(query) ||
       employee.email.toLowerCase().includes(query) ||
-      employee.role.toLowerCase().includes(query) ||
+      getRoleDisplayName(employee, roles).toLowerCase().includes(query) ||
       employee.location.toLowerCase().includes(query),
   });
 
@@ -77,8 +84,18 @@ export function useEmployees() {
     return updated;
   }
 
-  function changeRole(id: string, role: EmployeeRole) {
-    return updateEmployee(id, { role }, employeeHistoryMessages.roleChanged(role));
+  // Speichert ID UND Namen: stabile Beziehung über roleId, lesbarer Snapshot in
+  // role (analog zu changeLocation). Nur aktive Rollen sind wählbar.
+  function changeRole(id: string, role: { id: string; name: string }) {
+    const target = roles.find((item) => item.id === role.id);
+    if (!target || target.status !== "Aktiv") {
+      throw new Error("Rolle nicht verfügbar.");
+    }
+    return updateEmployee(
+      id,
+      { role: target.name, roleId: target.id },
+      employeeHistoryMessages.roleChanged(target.name)
+    );
   }
 
   // Speichert Name UND ID, damit die Beziehung stabil über locationId läuft,
@@ -135,6 +152,8 @@ export function useEmployees() {
     suspendEmployee,
     reactivateEmployee,
     revokeAccess,
-    employeeRoles: employeeService.getEmployeeRoles(),
   };
 }
+
+// Gemeinsame Instanz für Mitarbeiter-Tab und Rollen-Tab (Benutzer je Rolle).
+export type EmployeesData = ReturnType<typeof useEmployees>;

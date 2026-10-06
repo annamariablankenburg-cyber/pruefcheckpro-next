@@ -74,7 +74,7 @@ export function InvitationTable({
                     </button>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <EmployeeRoleBadge role={invitation.role} />
+                    <EmployeeRoleBadge role={invitation.role} roleId={invitation.roleId} />
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
                     {invitation.location}
@@ -146,7 +146,7 @@ export function InvitationTable({
               <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
                 <div>
                   <p className="text-muted-foreground">Rolle</p>
-                  <EmployeeRoleBadge role={invitation.role} className="mt-0.5" />
+                  <EmployeeRoleBadge role={invitation.role} roleId={invitation.roleId} className="mt-0.5" />
                 </div>
                 <div>
                   <p className="text-muted-foreground">Standort</p>

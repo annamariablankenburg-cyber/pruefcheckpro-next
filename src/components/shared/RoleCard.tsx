@@ -7,10 +7,12 @@ import type { Role } from "@/types/role";
 
 interface RoleCardProps {
   role: Role;
+  // Abgeleitet aus den Mitarbeitern (nicht gespeichert); undefined = noch nicht verfügbar.
+  userCount?: number;
   onClick: (role: Role) => void;
 }
 
-export function RoleCard({ role, onClick }: RoleCardProps) {
+export function RoleCard({ role, userCount, onClick }: RoleCardProps) {
   return (
     <button type="button" onClick={() => onClick(role)} className="block w-full text-left">
       <Card
@@ -45,7 +47,9 @@ export function RoleCard({ role, onClick }: RoleCardProps) {
             <p className="mt-0.5 text-sm text-muted-foreground">{role.description}</p>
           </div>
 
-          <p className="text-sm font-medium text-foreground">{role.userCount} Benutzer</p>
+          <p className="text-sm font-medium text-foreground">
+            {userCount === undefined ? "Benutzer: –" : `${userCount} Benutzer`}
+          </p>
         </CardContent>
       </Card>
     </button>

@@ -3,25 +3,19 @@ import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-export const employeeFilterOptions = [
-  "Alle",
-  "Aktiv",
-  "Gesperrt",
-  "Ausstehend",
-  "Admin",
-  "Laborleiter",
-  "Prüfer",
-  "Azubi",
-  "Gast",
-] as const;
+// Status-Filter sind fix; Rollen-Filter kommen aus den echten Rollen
+// (Company-Seite), nicht aus einer statischen Liste.
+export const employeeStatusFilterOptions = ["Alle", "Aktiv", "Gesperrt", "Ausstehend"] as const;
 
-export type EmployeeFilter = (typeof employeeFilterOptions)[number];
+export type EmployeeFilter = string;
 
 interface EmployeeFiltersProps {
   search: string;
   onSearchChange: (value: string) => void;
   filter: EmployeeFilter;
   onFilterChange: (filter: EmployeeFilter) => void;
+  // Namen der wählbaren (nicht archivierten) Rollen.
+  roleOptions: string[];
 }
 
 export function EmployeeFilters({
@@ -29,7 +23,9 @@ export function EmployeeFilters({
   onSearchChange,
   filter,
   onFilterChange,
+  roleOptions,
 }: EmployeeFiltersProps) {
+  const options = [...employeeStatusFilterOptions, ...roleOptions];
   return (
     <div className="flex flex-col gap-3">
       <div className="relative">
@@ -43,7 +39,7 @@ export function EmployeeFilters({
       </div>
 
       <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-        {employeeFilterOptions.map((option) => (
+        {options.map((option) => (
           <button
             key={option}
             type="button"

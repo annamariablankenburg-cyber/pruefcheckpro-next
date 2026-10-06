@@ -28,3 +28,7 @@ export function sortEmployees(employees: Employee[]): Employee[] {
 // Sentinel-Wert im Standort-Dialog für "bisheriger Wert" (Altdaten oder
 // inzwischen inaktiver Standort). Wird nie gespeichert.
 export const CURRENT_LOCATION_VALUE = "__current__";
+
+// Sentinel-Wert im Rollen-Dialog für "bisheriger Wert" (Altdaten ohne
+// auflösbare Rolle oder inzwischen archivierte Rolle). Wird nie gespeichert.
+export const CURRENT_ROLE_VALUE = "__current__";

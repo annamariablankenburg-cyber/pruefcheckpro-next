@@ -15,7 +15,9 @@ import {
 } from "@/lib/invitations/invitationRules";
 import type { NewInvitationInput } from "@/lib/interfaces/IInvitationService";
 import { invitationService } from "@/lib/services/invitationService";
+import { getRoleDisplayName } from "@/lib/roles/roleRules";
 import type { Invitation } from "@/types/invitation";
+import type { Role } from "@/types/role";
 
 // Lädt Einladungen über invitationService (Mock oder Firestore) und hält sie
 // als lokalen State. Lokaler State ändert sich erst nach einem bestätigten
@@ -25,7 +27,10 @@ import type { Invitation } from "@/types/invitation";
 //
 // Eine Einladung ist ein reiner Metadatensatz: kein E-Mail-Versand, kein Auth-
 // Account, kein Löschen, kein "als angenommen markieren".
-export function useInvitations() {
+//
+// `roles` ist die gemeinsame Rollenliste der Company-Seite (eine useRoles()-
+// Instanz); sie dient nur dem Auflösen der Rollennamen für Suche und Filter.
+export function useInvitations(roles: Role[]) {
   const [records, setRecords] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,11 +75,11 @@ export function useInvitations() {
   } = useSearchAndFilter(invitations, {
     defaultFilter: "Alle" as InvitationFilter,
     matchesFilter: (invitation, filterValue) =>
-      filterValue === invitation.displayStatus || filterValue === invitation.role,
+      filterValue === invitation.displayStatus || filterValue === getRoleDisplayName(invitation, roles),
     matchesSearch: (invitation, query) =>
       invitation.name.toLowerCase().includes(query) ||
       invitation.email.toLowerCase().includes(query) ||
-      invitation.role.toLowerCase().includes(query) ||
+      getRoleDisplayName(invitation, roles).toLowerCase().includes(query) ||
       invitation.location.toLowerCase().includes(query),
   });
 
@@ -83,6 +88,7 @@ export function useInvitations() {
       name: values.name.trim(),
       email: normalizeEmail(values.email),
       role: values.role,
+      roleId: values.roleId,
       locationId: values.locationId,
       location: values.location,
       message: values.message?.trim() || undefined,

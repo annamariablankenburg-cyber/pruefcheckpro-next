@@ -97,7 +97,7 @@ export function EmployeeTable({
                     </button>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <EmployeeRoleBadge role={employee.role} />
+                    <EmployeeRoleBadge role={employee.role} roleId={employee.roleId} />
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
                     {employee.location}
@@ -182,7 +182,7 @@ export function EmployeeTable({
               <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
                 <div>
                   <p className="text-muted-foreground">Rolle</p>
-                  <EmployeeRoleBadge role={employee.role} className="mt-0.5" />
+                  <EmployeeRoleBadge role={employee.role} roleId={employee.roleId} className="mt-0.5" />
                 </div>
                 <div>
                   <p className="text-muted-foreground">Standort</p>
