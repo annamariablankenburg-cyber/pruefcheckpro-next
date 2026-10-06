@@ -1,13 +1,18 @@
 import { employeeRepository } from "@/lib/repositories/employeeRepository";
 import { firestoreEmployeeService } from "@/lib/firebase/services/firestoreEmployeeService";
 import { resolveActiveCompanyId } from "@/lib/firebase/activeCompany";
+import { memberActionsClient } from "@/lib/services/memberActionsClient";
 import { isFirestoreDataSource } from "@/config/dataSource";
 import type { IEmployeeService } from "@/lib/interfaces/IEmployeeService";
 import type { Employee, EmployeeHistoryEntry } from "@/types/employee";
 
 // Facade: branch je Methode anhand von NEXT_PUBLIC_DATA_SOURCE zwischen dem
-// In-Memory-Repository (Mock) und dem Firestore-Service. Beide arbeiten nur
-// auf Mitarbeiter-Metadaten – keine Auth-Verwaltung, kein Löschen.
+// In-Memory-Repository (Mock) und Firestore. Keine Auth-Verwaltung, kein Löschen.
+//
+// Firestore: Rolle und Status (sicherheitsrelevant) ändert ausschließlich der
+// Server über /api/member-actions (Employee + Membership atomar, mit Prüfung von
+// Rechten, geschützten Rollen, Eigenänderung und letztem Administrator). Die
+// übrigen Felder (z. B. Standort) schreibt weiter der Client direkt.
 async function updateMock(
   id: string,
   changes: Partial<Employee>,
@@ -45,23 +50,30 @@ export const employeeService: IEmployeeService = {
     return updateMock(id, changes, historyEntry);
   },
 
+  async assignRole(id, role, historyEntry) {
+    if (isFirestoreDataSource) {
+      return memberActionsClient.assignRole(id, role.id);
+    }
+    return updateMock(id, { role: role.name, roleId: role.id }, historyEntry);
+  },
+
   async suspendEmployee(id, historyEntry) {
     if (isFirestoreDataSource) {
-      return firestoreEmployeeService.suspendEmployee(await resolveActiveCompanyId(), id, historyEntry);
+      return memberActionsClient.setMemberStatus(id, "Gesperrt");
     }
     return updateMock(id, { status: "Gesperrt" }, historyEntry);
   },
 
   async reactivateEmployee(id, historyEntry) {
     if (isFirestoreDataSource) {
-      return firestoreEmployeeService.reactivateEmployee(await resolveActiveCompanyId(), id, historyEntry);
+      return memberActionsClient.setMemberStatus(id, "Aktiv");
     }
     return updateMock(id, { status: "Aktiv" }, historyEntry);
   },
 
   async revokeAccess(id, historyEntry) {
     if (isFirestoreDataSource) {
-      return firestoreEmployeeService.revokeAccess(await resolveActiveCompanyId(), id, historyEntry);
+      return memberActionsClient.setMemberStatus(id, "Gesperrt", "revoke-access");
     }
     return updateMock(id, { status: "Gesperrt" }, historyEntry);
   },

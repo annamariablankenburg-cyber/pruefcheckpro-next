@@ -88,10 +88,15 @@ describe("firestore.rules ↔ src/config/roles.ts", () => {
       assert.ok(assignment.includes(part), `roleIdIsProtected: ${part} fehlt (fail-closed)`);
     }
     assert.ok(!/roleIdIsRestricted/.test(code), "veralteter Funktionsname roleIdIsRestricted");
-    // Mitarbeiter und Einladungen verwenden diese Prüfung für aktuelle UND neue Rolle bzw. die eingeladene Rolle.
+    // Einladungen prüfen die eingeladene Rolle; Mitarbeiter die AKTUELLE Rolle des Ziels (neue Rollen
+    // setzt nur der Server, siehe changesServerOnlyEmployeeFields).
     const employees = matchBlock("employees");
     assert.ok(employees.includes('roleIdIsProtected(companyId, resource.data.get("roleId", ""))'));
-    assert.ok(employees.includes('roleIdIsProtected(companyId, request.resource.data.get("roleId", ""))'));
+    assert.ok(!employees.includes('request.resource.data.get("roleId"'), "Mitarbeiter: neue roleId darf der Client nie setzen");
+    // Rolle/Status eines Mitarbeiters sind für Clients gesperrt (nur Server); die Funktion deckt genau diese Felder ab.
+    assert.ok(employees.includes("!changesServerOnlyEmployeeFields()"));
+    assert.deepEqual(stringLiterals(functionBody("changesServerOnlyEmployeeFields")).sort(), ["role", "roleId", "status"]);
+    assert.ok(!/changesOwnSecurityFields/.test(code), "veralteter Funktionsname changesOwnSecurityFields");
     assert.ok(matchBlock("invitations").includes('roleIdIsProtected(companyId, request.resource.data.get("roleId", ""))'));
     // Die geschützte Menge, die roleHasProtectedKey tatsächlich abdeckt, ist genau die Config-Menge.
     const covered = [

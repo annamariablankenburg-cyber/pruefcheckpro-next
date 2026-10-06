@@ -88,3 +88,10 @@ Schritt 4 ist heute **nicht verdrahtet** – `config.ts` liest die Emulator-Vari
 - Keine Änderung an `client.ts`/`auth.ts`/`users.ts` (bestehende, funktionierende Auth-Anbindung).
 - Keine Security Rules (siehe `docs/database/permissions.md` für die geplante Rechte-Logik).
 - Keine echten Werte in `.env.local` (bleibt unverändert, enthält bereits Projektwerte).
+
+
+---
+
+## Server-Umgebung (Admin SDK)
+
+Die serverseitigen Mitglieder-Aktionen (`/api/member-actions/*`, siehe `docs/firebase/member-security-actions.md`) brauchen auf dem **Server** (nie im Client, nie committen) `FIREBASE_SERVICE_ACCOUNT_KEY` (JSON des Service-Accounts) **oder** `GOOGLE_APPLICATION_CREDENTIALS` sowie `FIREBASE_ADMIN_PROJECT_ID` (Fallback `NEXT_PUBLIC_FIREBASE_PROJECT_ID`). Ohne diese Konfiguration antwortet der Server mit `server-not-configured` (503). Lokal gegen den Emulator genügt `FIRESTORE_EMULATOR_HOST`. Diese Variablen haben **kein** `NEXT_PUBLIC_`-Präfix.

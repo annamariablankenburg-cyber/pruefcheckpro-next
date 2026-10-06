@@ -1,5 +1,7 @@
 # Security Foundations (Auth Membership + Firestore Rules)
 
+> **Update (serverseitige Mitglieder-Aktionen):** `userMemberships` bleibt client-read-only; Rolle und Status der Membership ändern jetzt die Server-Aktionen `assignRole`/`setMemberStatus` (Admin SDK, Route Handler, Employee + Membership atomar; Actor-Autorisierung, geschützte Rollen, Eigenänderung, letzter Administrator) – siehe `docs/firebase/member-security-actions.md`. Die Provisionierung (Einladung annehmen, Firma anlegen) fehlt weiterhin.
+
 > **Update (UI-Gating):** Die Oberfläche liest die effektiven Rechte (`usePermissions()`: Membership → Rolle → `permissions`) und blendet Tabs/Aktionen entsprechend aus (`docs/firebase/ui-permission-gating.md`). Das ist Komfort, keine Sicherheitsgrenze.
 
 > **Update (Rules Phase 1):** Für `roles`, `employees`, `invitations` und `locations` gilt jetzt eine rollenbasierte Durchsetzung (siehe `docs/firebase/role-permission-rules-phase1.md`; im Emulator getestet). Für die übrigen acht Company-Collections gilt weiterhin nur dieses Fundament.
@@ -135,7 +137,7 @@ isSignedIn()
 ## 8. Was noch nicht geschützt ist
 
 - **Rollenbasierte Durchsetzung nur in Phase 1:** `roles`, `employees`, `invitations`, `locations` prüfen Permissions (Phase 1). In den **acht übrigen** Collections (`customers`, `projects`, `devices`, `samples`, `testValues`, `reports`, `calendarEvents`, `laborbook`) darf jeder aktive Member der Firma weiterhin alles lesen und schreiben – unabhängig von `roleId`/`role`.
-- **Mitarbeiter-Sperre ≠ Membership-Sperre:** `Employee.status = "Gesperrt"` (UI-Verwaltung) setzt `userMemberships.status` **nicht** automatisch; das ist eine eigene Operation, die Server-Provisionierung braucht.
+- **Mitarbeiter-Sperre = Membership-Sperre (seit dem Server-Slice):** Sperren/Reaktivieren/Zugriff entziehen läuft über `setMemberStatus` und schreibt Mitarbeiter UND Membership atomar (`docs/firebase/member-security-actions.md`). Direkte Client-Writes auf `employees.status` sind verboten. Ältere Daten, bei denen beides auseinanderläuft, gleicht die nächste Aktion an.
 - **Profil:** `role`/`plan` sind für den Client nicht mehr änderbar (nur `lastLogin`), das Profil bleibt aber eine reine Anzeige-/Metadatenquelle. Bei der Registrierung setzt der Client selbst das Basisprofil (`role`/`plan` = `"azubi"`, von den Rules erzwungen); Planwechsel/Upgrades brauchen später eine Server-Komponente.
 - **Persönliche Subcollections** (`users/{uid}/aiChats`) haben noch keine Rules (bleiben per Fallback gesperrt).
 - Andere Collections ohne Rules (`companies/{companyId}` Stammdokument, `integrations`, `webhooks`, `auditLog`, `aiChats`) bleiben gesperrt.
@@ -149,7 +151,7 @@ Echte Provisionierung braucht eine **Server-Komponente mit Admin SDK** (z. B. Cl
 
 1. den Auth-Benutzer anlegt (Einladungs-Annahme),
 2. `userMemberships/{uid}` mit `companyId`, `employeeId`, `roleId`/`role`, `status` anlegt/ändert (umgeht die Rules),
-3. Sperren/Entsperren konsistent zwischen Mitarbeiter und Membership führt.
+3. Sperren/Entsperren konsistent zwischen Mitarbeiter und Membership führt *(für Rolle/Status inzwischen umgesetzt: `docs/firebase/member-security-actions.md`)*.
 
 Das ist hier **nicht** implementiert und nicht simuliert. Bis dahin legt man Memberships manuell in der Firebase-Konsole bzw. per Admin-Skript an.
 
@@ -174,6 +176,6 @@ Das ist hier **nicht** implementiert und nicht simuliert. Bis dahin legt man Mem
 - **Serverseitige Provisionierung** (Admin SDK) und Verknüpfung Einladung → Auth-Benutzer → Membership.
 - **Rollenbasierte Rules** (Claims oder Rollen-Lookup) in einem eigenen Slice; erst dann bekommen `roleId`/`role` Wirkung.
 - **Konsistenz Mitarbeiter-Sperre ↔ Membership-Sperre**.
-- **Rollenwechsel:** Wird `Employee.roleId` geändert, bleibt der Snapshot in der Membership alt, bis serverseitig synchronisiert wird.
+- **Rollenwechsel (erledigt):** `assignRole` ändert `Employee.roleId` und `Membership.roleId` atomar (`docs/firebase/member-security-actions.md`); der Client kann die Employee-Rolle nicht mehr allein ändern.
 - `aiChats`-Rules, App Check; Profil-Änderungen (Name, Sprache, Theme, E-Mail-Sync) müssen die `users/{uid}`-Update-Regel bewusst erweitern, sobald die UI sie schreibt.
 - Entfernen des Konfigurations-`console.log` in `client.ts`.

@@ -151,7 +151,7 @@ Beispiel-Custom-Roles: **Qualitätsmanager** = Prüfer-Rechte (22). **Baustellen
 **Weitere Policy-Regeln (für spätere Rules/Server):**
 - Niemand ändert die **eigene** Rolle oder Membership; niemand sperrt sich selbst aus.
 - Die Administrator-Rolle ist unveränderlich (Berechtigungen und Typ); Änderungen nur über Server/Operator.
-- Mindestens ein aktiver Administrator muss bleiben (Server-Invariante, nicht in Rules prüfbar).
+- Mindestens ein aktiver Administrator muss bleiben (Server-Invariante, nicht in Rules prüfbar) – umgesetzt in `assignRole`/`setMemberStatus`: aktiver Administrator = Membership „Aktiv“ mit `roleId == "admin"` (`docs/firebase/member-security-actions.md`).
 - Eine Rolle, die einen geschützten Schlüssel (Restricted oder Admin-only-Löschrecht) enthält, kann nur von einem Inhaber von `rollen.admin_verwalten` zugewiesen werden (sonst: Admin legt „Billing-Rolle“ an, Laborleiter weist sie sich selbst zu).
 
 ---
@@ -225,7 +225,7 @@ Für **jede** Domäne existiert Archiv/Status – endgültiges Löschen ist die 
 1. **„Azubis dürfen keine Proben löschen.“** → `proben.loeschen` nicht bei Azubi (Test).
 2. **„Admin und Laborleiter dürfen Mitarbeiter verwalten.“** → `administration.mitarbeiter_verwalten`, jetzt mit Begrenzungen (4.2).
 3. **„Gast hat nur eingeschränkte Leserechte.“** → ausschließlich `*.ansehen` und `dashboard.anzeigen` (Test).
-4. **„Mitarbeiter nicht hart löschen, sondern Zugriff entziehen.“** → Status `Gesperrt`; kein Delete-Schlüssel für Mitarbeiter. Die wirksame Sperre liegt in `userMemberships/{uid}.status` (serverseitig; siehe Security Foundations) – **noch nicht** an den Employee-Status gekoppelt.
+4. **„Mitarbeiter nicht hart löschen, sondern Zugriff entziehen.“** → Status `Gesperrt`; kein Delete-Schlüssel für Mitarbeiter. Die wirksame Sperre liegt in `userMemberships/{uid}.status` (serverseitig; siehe Security Foundations) – seit dem Server-Slice an den Employee-Status gekoppelt (`setMemberStatus` schreibt beides atomar, `docs/firebase/member-security-actions.md`).
 5. **Systemrollen-Schutz:** Systemrollen sind nicht löschbar/archivierbar, Name/Farbe/Beschreibung fest; die Administrator-Rolle ist komplett unveränderlich (heute nur Client-Regeln; Server-Durchsetzung folgt).
 
 ## 9. Durchsetzung: Stand und Plan
@@ -236,6 +236,6 @@ Für **jede** Domäne existiert Archiv/Status – endgültiges Löschen ist die 
 | UI-Marker (`Nur Administrator`/`Löschen` im Rollen-Editor) | ✅ nur Anzeige |
 | UI-Gating (Buttons/Seiten nach Rechten) | 🟡 Company-Verwaltung (Tabs, Mitarbeiter, Einladungen, Standorte, Rollen) und `AdminView`-Rollenübersicht über `usePermissions()` (`docs/firebase/ui-permission-gating.md`); Fachseiten (Kunden, Projekte, Geräte, …) noch nicht |
 | Firestore Rules (rollenbasiert) | 🟡 **Phase 1** für `roles`, `employees`, `invitations`, `locations` implementiert und im Emulator getestet (`docs/firebase/role-permission-rules-phase1.md`; lokal 711/711); die übrigen acht Collections nur Membership + Firma |
-| Server (Provisionierung, Rollenzuweisung, Letzter-Admin-Schutz) | ❌ noch nicht |
+| Server (Rollenzuweisung, Status, Letzter-Admin-Schutz) | ✅ `assignRole`/`setMemberStatus` (Admin SDK, `docs/firebase/member-security-actions.md`); Provisionierung (Einladung annehmen, Firma anlegen) ❌ noch nicht |
 
 Architektur der späteren Durchsetzung (Variante D/A im Audit): Membership (`roleId`, `status`) + Role-Dokument (`permissions`) live per `get()` in den Rules; Restricted-Schlüssel als feste Liste; Zuweisungen und Membership-Änderungen serverseitig.

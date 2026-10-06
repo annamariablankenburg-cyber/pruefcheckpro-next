@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { MemberActionClientError } from "@/lib/services/memberActionsClient";
 import type { Employee } from "@/types/employee";
 
 export interface EmployeeSelectOption {
@@ -76,8 +77,10 @@ function SelectFieldForm({
     try {
       await onConfirm(employee, value);
       onOpenChange(false);
-    } catch {
-      setError(errorMessage);
+    } catch (caught) {
+      // Serverseitige Ablehnungen (z. B. geschützte Rolle, letzter Administrator)
+      // haben eine verständliche deutsche Meldung.
+      setError(caught instanceof MemberActionClientError ? caught.message : errorMessage);
     } finally {
       onSubmittingChange(false);
     }

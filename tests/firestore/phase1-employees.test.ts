@@ -1,9 +1,10 @@
-// Phase 1: employees – eigenes Dokument lesen, Verwalten, Self-Promotion-Schutz
-// und Schutz von Administratoren/Restricted-Rollen.
+// Phase 1: employees – eigenes Dokument lesen, Verwalten unkritischer Felder und
+// Schutz von Administratoren/Restricted-Rollen.
 //
-// Hinweis: Diese Regeln betreffen nur das Mitarbeiter-DOKUMENT. Die wirksame
-// Rolle eines Users ist die seiner Membership (userMemberships/{uid}.roleId);
-// eine Änderung von employees.roleId ändert sie nicht (kein Server-Sync).
+// Rolle (roleId/role) und Status eines Mitarbeiters ändert der CLIENT nie: Das
+// geschieht ausschließlich serverseitig und gemeinsam mit der Membership
+// (docs/firebase/member-security-actions.md; Tests: member-actions.test.ts). Die
+// Rules verbieten diese Felder für alle Clients, auch für den Administrator.
 import { after, before, beforeEach, describe, it } from "node:test";
 
 import { assertFails, assertSucceeds, type RulesTestEnvironment } from "@firebase/rules-unit-testing";
@@ -41,6 +42,12 @@ describe("Phase 1: employees", () => {
   });
 
   const ref = (uid: string, id: string) => doc(asUser(env, uid), employees, id);
+
+  // Setzt den Status direkt (mit deaktivierten Rules), damit ein ECHTER Statuswechsel getestet wird.
+  const setStoredStatus = (id: string, status: string) =>
+    seed(env, async (firestore) => {
+      await updateDoc(doc(firestore, employees, id), { status });
+    });
 
   describe("lesen: eigenes Dokument über membership.employeeId", () => {
     it("Prüfer liest sein eigenes Dokument (ohne mitarbeiter.ansehen) → ALLOW", async () => {
@@ -83,25 +90,19 @@ describe("Phase 1: employees", () => {
     });
   });
 
-  describe("verwalten (administration.mitarbeiter_verwalten)", () => {
+  describe("verwalten (administration.mitarbeiter_verwalten): unkritische Felder", () => {
     it("Laborleiter ändert den Standort eines normalen Mitarbeiters → ALLOW", async () => {
       await assertSucceeds(updateDoc(ref(P.laborleiter, "emp-target"), { location: "Labor München", locationId: "loc-2", updatedAt: T }));
     });
 
-    it("Laborleiter sperrt einen normalen Mitarbeiter (status + Historie) → ALLOW", async () => {
+    it("Laborleiter ändert Kontaktdaten und hängt einen Historieneintrag an → ALLOW", async () => {
       await assertSucceeds(
         updateDoc(ref(P.laborleiter, "emp-target"), {
-          status: "Gesperrt",
-          history: [{ message: "Zugriff temporär gesperrt.", timestamp: "01.03.2026" }],
+          phone: "+49 711 0000",
+          history: [{ message: "Standort auf „Labor München“ geändert.", timestamp: "01.03.2026" }],
           updatedAt: T,
         })
       );
-    });
-
-    it("Laborleiter ändert die Rolle eines Prüfers auf Azubi / Baustellenleiter / HR (nicht restricted) → ALLOW", async () => {
-      await assertSucceeds(updateDoc(ref(P.laborleiter, "emp-target"), { role: "Azubi", roleId: "azubi", updatedAt: T }));
-      await assertSucceeds(updateDoc(ref(P.laborleiter, "emp-target"), { role: "Baustellenleiter", roleId: "baustellenleiter", updatedAt: T }));
-      await assertSucceeds(updateDoc(ref(P.laborleiter, "emp-target"), { role: "HR", roleId: HR_ROLE, updatedAt: T }));
     });
 
     it("Custom Role mit mitarbeiter_verwalten (ohne Admin-Schlüssel) ändert einen normalen Mitarbeiter → ALLOW", async () => {
@@ -126,171 +127,144 @@ describe("Phase 1: employees", () => {
     });
   });
 
-  describe("Administratoren und Restricted-Rollen sind für den Laborleiter tabu", () => {
+  // Rolle (roleId/role) und Status ändern ausschließlich der Server (Admin SDK):
+  // Mitarbeiter UND Membership werden gemeinsam geändert (docs/firebase/member-security-actions.md).
+  // Für den Client gilt das ausnahmslos – auch für den Administrator, auch am eigenen Dokument.
+  describe("Sicherheitsfelder roleId / role / status sind für ALLE Clients gesperrt", () => {
+    const ACTORS: Array<[string, string]> = [
+      ["Administrator", P.admin],
+      ["zweiter Administrator", P.admin2],
+      ["Laborleiter", P.laborleiter],
+      ["HR-Rolle (mitarbeiter_verwalten)", P.hr],
+      ["Legacy-Administrator (31 Schlüssel)", P.legacyAdmin],
+    ];
+
+    for (const [name, uid] of ACTORS) {
+      describe(name, () => {
+        it("ändert roleId eines normalen Mitarbeiters → DENY", async () => {
+          await assertFails(updateDoc(ref(uid, "emp-target"), { roleId: "azubi", updatedAt: T }));
+          await assertFails(updateDoc(ref(uid, "emp-target"), { role: "Azubi", roleId: "azubi", updatedAt: T }));
+        });
+
+        it("ändert nur den Rollen-Snapshot role → DENY", async () => {
+          await assertFails(updateDoc(ref(uid, "emp-target"), { role: "Administrator", updatedAt: T }));
+        });
+
+        it("entfernt roleId (deleteField) oder fügt sie bei Altdaten hinzu → DENY", async () => {
+          await assertFails(updateDoc(ref(uid, "emp-target"), { roleId: deleteField(), updatedAt: T }));
+          await assertFails(updateDoc(ref(uid, "emp-legacy-no-roleid"), { roleId: "pruefer", updatedAt: T }));
+        });
+
+        it("sperrt einen normalen Mitarbeiter (Aktiv → Gesperrt) → DENY", async () => {
+          await assertFails(updateDoc(ref(uid, "emp-target"), { status: "Gesperrt", updatedAt: T }));
+        });
+
+        it("reaktiviert einen gesperrten Mitarbeiter (Gesperrt → Aktiv) → DENY", async () => {
+          await setStoredStatus("emp-target", "Gesperrt");
+          await assertFails(updateDoc(ref(uid, "emp-target"), { status: "Aktiv", updatedAt: T }));
+        });
+
+        it("schmuggelt eine Rollen-/Statusänderung zusammen mit einem erlaubten Feld ein → DENY", async () => {
+          await assertFails(
+            updateDoc(ref(uid, "emp-target"), { location: "Labor München", locationId: "loc-2", status: "Gesperrt", updatedAt: T })
+          );
+          await assertFails(
+            updateDoc(ref(uid, "emp-target"), { location: "Labor München", locationId: "loc-2", roleId: "azubi", updatedAt: T })
+          );
+        });
+
+        it("schreibt Rolle/Status unverändert (kein Wechsel) zusammen mit einem erlaubten Feld → ALLOW (nichts ändert sich)", async () => {
+          await assertSucceeds(updateDoc(ref(uid, "emp-target"), { status: "Aktiv", roleId: "pruefer", location: "Labor München", locationId: "loc-2", updatedAt: T }));
+        });
+      });
+    }
+
+    it("Administrator ändert Rolle/Status eines ANDEREN Administrators → DENY (nur Server)", async () => {
+      await assertFails(updateDoc(ref(P.admin, "emp-admin-2"), { roleId: "laborleiter", updatedAt: T }));
+      await assertFails(updateDoc(ref(P.admin, "emp-admin-2"), { status: "Gesperrt", updatedAt: T }));
+    });
+
+    it("Administrator vergibt eine geschützte Rolle (Billing, Löscher, Administrator) → DENY (nur Server)", async () => {
+      await assertFails(updateDoc(ref(P.admin, "emp-target"), { role: "Administrator", roleId: "admin", updatedAt: T }));
+      await assertFails(updateDoc(ref(P.admin, "emp-target-2"), { roleId: BILLING_ROLE, updatedAt: T }));
+      for (const roleId of Object.values(PROTECTED_DELETE_ROLES)) {
+        await assertFails(updateDoc(ref(P.admin, "emp-target"), { role: roleId, roleId, updatedAt: T }));
+      }
+      await assertFails(updateDoc(ref(P.admin, "emp-target"), { roleId: ARCHIVED_ROLE, updatedAt: T }));
+    });
+
+    it("Laborleiter setzt eine unbekannte oder normale Rolle (HR, Proben-Löscher) → DENY (nur Server)", async () => {
+      await assertFails(updateDoc(ref(P.laborleiter, "emp-target"), { roleId: "ghost-role", updatedAt: T }));
+      await assertFails(updateDoc(ref(P.laborleiter, "emp-target"), { role: "HR", roleId: HR_ROLE, updatedAt: T }));
+      await assertFails(updateDoc(ref(P.laborleiter, "emp-target"), { role: "Proben-Löscher", roleId: NORMAL_DELETE_ROLE, updatedAt: T }));
+    });
+
+    it("Self-Promotion: Laborleiter ändert seine eigene roleId/role/status → DENY", async () => {
+      await assertFails(updateDoc(ref(P.laborleiter, "emp-laborleiter"), { role: "Administrator", roleId: "admin", updatedAt: T }));
+      await assertFails(updateDoc(ref(P.laborleiter, "emp-laborleiter"), { roleId: "azubi", updatedAt: T }));
+      await assertFails(updateDoc(ref(P.laborleiter, "emp-laborleiter"), { role: "Administrator", updatedAt: T }));
+      await assertFails(updateDoc(ref(P.laborleiter, "emp-laborleiter"), { status: "Gesperrt", updatedAt: T }));
+    });
+
+    it("Selbstsperre: Administrator ändert seine eigene Rolle oder seinen Status → DENY", async () => {
+      await assertFails(updateDoc(ref(P.admin, "emp-admin"), { roleId: "laborleiter", updatedAt: T }));
+      await assertFails(updateDoc(ref(P.admin, "emp-admin"), { role: "Laborleiter", updatedAt: T }));
+      await assertFails(updateDoc(ref(P.admin, "emp-admin"), { status: "Gesperrt", updatedAt: T }));
+    });
+
+    it("Entsperren des eigenen Dokuments (Gesperrt → Aktiv) → DENY", async () => {
+      await setStoredStatus("emp-laborleiter", "Gesperrt");
+      await assertFails(updateDoc(ref(P.laborleiter, "emp-laborleiter"), { status: "Aktiv", updatedAt: T }));
+      await setStoredStatus("emp-admin", "Gesperrt");
+      await assertFails(updateDoc(ref(P.admin, "emp-admin"), { status: "Aktiv", updatedAt: T }));
+    });
+
+    it("unkritische Felder des EIGENEN Dokuments (Standort, Kontaktdaten) → ALLOW", async () => {
+      await assertSucceeds(updateDoc(ref(P.laborleiter, "emp-laborleiter"), { location: "Labor München", locationId: "loc-2", updatedAt: T }));
+      await assertSucceeds(updateDoc(ref(P.laborleiter, "emp-laborleiter"), { phone: "+49 711 0000", updatedAt: T }));
+      await assertSucceeds(updateDoc(ref(P.admin, "emp-admin"), { location: "Labor München", locationId: "loc-2", updatedAt: T }));
+    });
+
+    it("eigenen, unveränderten Status schreiben (kein Wechsel) → ALLOW", async () => {
+      await assertSucceeds(updateDoc(ref(P.laborleiter, "emp-laborleiter"), { status: "Aktiv", updatedAt: T }));
+    });
+  });
+
+  describe("Administratoren und Mitarbeiter mit geschützter Rolle sind für den Laborleiter tabu (auch unkritische Felder)", () => {
     it("Laborleiter ändert einen Administrator (beliebiges Feld) → DENY", async () => {
       await assertFails(updateDoc(ref(P.laborleiter, "emp-admin-2"), { location: "x", updatedAt: T }));
-    });
-
-    it("Laborleiter sperrt einen Administrator → DENY", async () => {
-      await assertFails(updateDoc(ref(P.laborleiter, "emp-admin-2"), { status: "Gesperrt", updatedAt: T }));
-    });
-
-    it("Laborleiter setzt einen normalen Mitarbeiter auf die Administrator-Rolle → DENY", async () => {
-      await assertFails(updateDoc(ref(P.laborleiter, "emp-target"), { role: "Administrator", roleId: "admin", updatedAt: T }));
-    });
-
-    it("Laborleiter setzt einen Mitarbeiter auf eine Rolle mit Restricted-Schlüssel (Billing) → DENY", async () => {
-      await assertFails(updateDoc(ref(P.laborleiter, "emp-target"), { role: "Billing", roleId: BILLING_ROLE, updatedAt: T }));
-    });
-
-    it("Laborleiter setzt einen Mitarbeiter auf eine archivierte Rolle mit Restricted-Schlüsseln → DENY", async () => {
-      await assertFails(updateDoc(ref(P.laborleiter, "emp-target"), { roleId: ARCHIVED_ROLE, updatedAt: T }));
     });
 
     it("Laborleiter ändert einen Mitarbeiter, dessen aktuelle Rolle Restricted-Schlüssel enthält → DENY", async () => {
       await assertFails(updateDoc(ref(P.laborleiter, "emp-billing"), { location: "x", updatedAt: T }));
     });
 
-    it("Laborleiter setzt eine unbekannte Rolle → DENY (fail-closed)", async () => {
-      await assertFails(updateDoc(ref(P.laborleiter, "emp-target"), { roleId: "ghost-role", updatedAt: T }));
-    });
-
-    it("Laborleiter entfernt die roleId (deleteField) → DENY", async () => {
-      await assertFails(updateDoc(ref(P.laborleiter, "emp-target"), { roleId: deleteField(), updatedAt: T }));
+    it("Laborleiter ändert einen Mitarbeiter, dessen AKTUELLE Rolle Admin-only-Löschrechte enthält → DENY; Administrator → ALLOW", async () => {
+      await assertFails(updateDoc(ref(P.laborleiter, "emp-deleter"), { location: "x", updatedAt: T }));
+      await assertSucceeds(updateDoc(ref(P.admin, "emp-deleter"), { location: "x", updatedAt: T }));
     });
 
     it("Laborleiter ändert einen Mitarbeiter ohne roleId (Altdaten) → DENY (nicht auflösbar, fail-closed)", async () => {
       await assertFails(updateDoc(ref(P.laborleiter, "emp-legacy-no-roleid"), { location: "x", updatedAt: T }));
     });
 
-    it("Custom Role ohne Admin-Schlüssel (HR) ändert einen Administrator oder vergibt Admin → DENY", async () => {
+    it("Custom Role ohne Admin-Schlüssel (HR) ändert einen Administrator → DENY", async () => {
       await assertFails(updateDoc(ref(P.hr, "emp-admin-2"), { location: "x", updatedAt: T }));
-      await assertFails(updateDoc(ref(P.hr, "emp-target"), { roleId: "admin", updatedAt: T }));
     });
 
-    it("Administrator darf all das (hat rollen.admin_verwalten) → ALLOW", async () => {
+    it("Administrator (hat rollen.admin_verwalten) ändert unkritische Felder dieser Mitarbeiter → ALLOW", async () => {
       const admin = P.admin;
-      await assertSucceeds(updateDoc(ref(admin, "emp-target"), { role: "Administrator", roleId: "admin", updatedAt: T }));
-      await assertSucceeds(updateDoc(ref(admin, "emp-target-2"), { roleId: BILLING_ROLE, updatedAt: T }));
-      await assertSucceeds(updateDoc(ref(admin, "emp-admin-2"), { status: "Gesperrt", updatedAt: T }));
+      await assertSucceeds(updateDoc(ref(admin, "emp-admin-2"), { location: "x", updatedAt: T }));
       await assertSucceeds(updateDoc(ref(admin, "emp-billing"), { location: "x", updatedAt: T }));
-      await assertSucceeds(updateDoc(ref(admin, "emp-legacy-no-roleid"), { roleId: "admin", updatedAt: T }));
-    });
-  });
-
-  // Policy: Jede Rolle mit einem der 7 geschützten Schlüssel (4 Restricted + geraete./laborbuch./
-  // berichte.loeschen) ist nur mit rollen.admin_verwalten zuweisbar – egal ob System-, Custom- oder
-  // archivierte Rolle.
-  describe("Zuweisung geschützter Rollen (Restricted UND Admin-only-Löschrechte)", () => {
-    for (const [key, roleId] of Object.entries(PROTECTED_DELETE_ROLES)) {
-      it(`Laborleiter weist einem Mitarbeiter eine Rolle mit ${key} zu → DENY; Administrator → ALLOW`, async () => {
-        await assertFails(updateDoc(ref(P.laborleiter, "emp-target"), { role: roleId, roleId, updatedAt: T }));
-        await assertSucceeds(updateDoc(ref(P.admin, "emp-target"), { role: roleId, roleId, updatedAt: T }));
-      });
-    }
-
-    it("Laborleiter ändert einen Mitarbeiter, dessen AKTUELLE Rolle Admin-only-Löschrechte enthält → DENY; Administrator → ALLOW", async () => {
-      await assertFails(updateDoc(ref(P.laborleiter, "emp-deleter"), { location: "x", updatedAt: T }));
-      await assertSucceeds(updateDoc(ref(P.admin, "emp-deleter"), { location: "x", updatedAt: T }));
+      await assertSucceeds(updateDoc(ref(admin, "emp-legacy-no-roleid"), { location: "x", updatedAt: T }));
     });
 
-    it("Laborleiter weist eine Systemrolle zu, die (z. B. nach Admin-Konfiguration) ein Admin-only-Löschrecht enthält → DENY", async () => {
+    it("eine archivierte Rolle mit Restricted-Schlüsseln als aktuelle Rolle schützt den Mitarbeiter ebenfalls", async () => {
       await seed(env, async (firestore) => {
-        await setDoc(
-          doc(firestore, collectionPath("roles", COMPANY_A), "azubi"),
-          { permissions: { "berichte.loeschen": true } },
-          { merge: true }
-        );
+        await updateDoc(doc(firestore, employees, "emp-target"), { roleId: ARCHIVED_ROLE });
       });
-      await assertFails(updateDoc(ref(P.laborleiter, "emp-target"), { role: "Azubi", roleId: "azubi", updatedAt: T }));
-      await assertSucceeds(updateDoc(ref(P.admin, "emp-target"), { role: "Azubi", roleId: "azubi", updatedAt: T }));
-    });
-
-    it("Laborleiter weist eine normale Rolle zu (proben.loeschen ist NICHT geschützt) → ALLOW", async () => {
-      await assertSucceeds(updateDoc(ref(P.laborleiter, "emp-target"), { role: "Proben-Löscher", roleId: NORMAL_DELETE_ROLE, updatedAt: T }));
-    });
-
-    it("Laborleiter weist weiterhin normale Systemrollen ohne geschützte Schlüssel zu (Prüfer, Azubi, Gast) → ALLOW", async () => {
-      for (const roleId of ["pruefer", "azubi", "gast"]) {
-        await assertSucceeds(updateDoc(ref(P.laborleiter, "emp-target"), { roleId, updatedAt: T }));
-      }
-    });
-  });
-
-  describe("Self-Promotion und Selbstsperre", () => {
-    it("Laborleiter ändert seine eigene roleId auf einen Administrator → DENY", async () => {
-      await assertFails(updateDoc(ref(P.laborleiter, "emp-laborleiter"), { role: "Administrator", roleId: "admin", updatedAt: T }));
-    });
-
-    it("Laborleiter ändert seine eigene roleId auf eine harmlose Rolle → DENY (eigene Rolle nie ändern)", async () => {
-      await assertFails(updateDoc(ref(P.laborleiter, "emp-laborleiter"), { roleId: "azubi", updatedAt: T }));
-    });
-
-    it("Laborleiter ändert nur seinen eigenen Rollen-Snapshot (role) → DENY", async () => {
-      await assertFails(updateDoc(ref(P.laborleiter, "emp-laborleiter"), { role: "Administrator", updatedAt: T }));
-    });
-
-    // Hilfsfunktion: setzt den Status eines Mitarbeiter-Dokuments direkt (mit deaktivierten Rules),
-    // damit ein ECHTER Statuswechsel getestet wird. Ein Write mit dem bereits gespeicherten Wert ist
-    // kein Statuswechsel (diff().affectedKeys() enthält status dann nicht).
-    const setStoredStatus = (id: string, status: string) =>
-      seed(env, async (firestore) => {
-        await updateDoc(doc(firestore, employees, id), { status });
-      });
-
-    it("Laborleiter sperrt sich selbst (eigener Status Aktiv → Gesperrt) → DENY", async () => {
-      await assertFails(updateDoc(ref(P.laborleiter, "emp-laborleiter"), { status: "Gesperrt", updatedAt: T }));
-    });
-
-    it("Laborleiter entsperrt sich selbst (eigener Status Gesperrt → Aktiv) → DENY", async () => {
-      await setStoredStatus("emp-laborleiter", "Gesperrt");
-      await assertFails(updateDoc(ref(P.laborleiter, "emp-laborleiter"), { status: "Aktiv", updatedAt: T }));
-    });
-
-    it("Laborleiter schmuggelt den Statuswechsel zusammen mit einem erlaubten Feld ein → DENY", async () => {
-      await assertFails(
-        updateDoc(ref(P.laborleiter, "emp-laborleiter"), { location: "Labor München", locationId: "loc-2", status: "Gesperrt", updatedAt: T })
-      );
-    });
-
-    it("Laborleiter sperrt UND entsperrt einen normalen FREMDEN Mitarbeiter → ALLOW", async () => {
-      await assertSucceeds(updateDoc(ref(P.laborleiter, "emp-target"), { status: "Gesperrt", updatedAt: T }));
-      await assertSucceeds(updateDoc(ref(P.laborleiter, "emp-target"), { status: "Aktiv", updatedAt: T }));
-    });
-
-    it("Laborleiter entsperrt einen bereits gesperrten fremden Mitarbeiter (Gesperrt → Aktiv) → ALLOW", async () => {
-      await setStoredStatus("emp-target", "Gesperrt");
-      await assertSucceeds(updateDoc(ref(P.laborleiter, "emp-target"), { status: "Aktiv", updatedAt: T }));
-    });
-
-    it("Laborleiter ändert unkritische Felder seines eigenen Dokuments (Standort, Kontaktdaten) → ALLOW", async () => {
-      await assertSucceeds(updateDoc(ref(P.laborleiter, "emp-laborleiter"), { location: "Labor München", locationId: "loc-2", updatedAt: T }));
-      await assertSucceeds(updateDoc(ref(P.laborleiter, "emp-laborleiter"), { phone: "+49 711 0000", updatedAt: T }));
-    });
-
-    it("Laborleiter schreibt seinen eigenen, unveränderten Status (kein Wechsel) → ALLOW (kein Security-Zustand ändert sich)", async () => {
-      await assertSucceeds(updateDoc(ref(P.laborleiter, "emp-laborleiter"), { status: "Aktiv", updatedAt: T }));
-    });
-
-    it("Administrator ändert seine eigene Rolle oder seinen Status → DENY", async () => {
-      await assertFails(updateDoc(ref(P.admin, "emp-admin"), { roleId: "laborleiter", updatedAt: T }));
-      await assertFails(updateDoc(ref(P.admin, "emp-admin"), { role: "Laborleiter", updatedAt: T }));
-      await assertFails(updateDoc(ref(P.admin, "emp-admin"), { status: "Gesperrt", updatedAt: T }));
-    });
-
-    it("Administrator entsperrt sich selbst (eigener Status Gesperrt → Aktiv) → DENY", async () => {
-      await seed(env, async (firestore) => {
-        await updateDoc(doc(firestore, employees, "emp-admin"), { status: "Gesperrt" });
-      });
-      await assertFails(updateDoc(ref(P.admin, "emp-admin"), { status: "Aktiv", updatedAt: T }));
-    });
-
-    it("Administrator ändert unkritische Felder seines eigenen Dokuments → ALLOW", async () => {
-      await assertSucceeds(updateDoc(ref(P.admin, "emp-admin"), { location: "Labor München", locationId: "loc-2", updatedAt: T }));
-    });
-
-    it("Administrator ändert Rolle/Status eines ANDEREN Administrators → ALLOW (nicht „selbst“)", async () => {
-      await assertSucceeds(updateDoc(ref(P.admin, "emp-admin-2"), { roleId: "laborleiter", updatedAt: T }));
+      await assertFails(updateDoc(ref(P.laborleiter, "emp-target"), { location: "x", updatedAt: T }));
+      await assertSucceeds(updateDoc(ref(P.admin, "emp-target"), { location: "x", updatedAt: T }));
     });
   });
 

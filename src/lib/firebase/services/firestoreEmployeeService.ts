@@ -10,9 +10,13 @@ import type { Employee, EmployeeHistoryEntry } from "@/types/employee";
 // docs/firebase/employee-firestore-slice.md). Reine Datenzugriffsschicht ohne
 // React/UI-Imports; Fehler werden immer geworfen.
 //
-// Nur Metadaten: KEINE Firebase-Auth-Benutzer, kein Admin SDK, kein
-// Hard-Delete. Sperren/Reaktivieren/Zugriff entziehen ändern nur den Status
-// des Mitarbeiter-Dokuments.
+// Nur Metadaten: KEINE Firebase-Auth-Benutzer, kein Hard-Delete.
+//
+// Sicherheitsrelevante Felder (roleId, role, status) werden hier NICHT mehr
+// geschrieben: Rolle ändern, sperren, reaktivieren und Zugriff entziehen laufen
+// serverseitig (memberActionsClient -> /api/member-actions), weil Employee UND
+// Membership gemeinsam geändert werden müssen. Die Firestore Rules verbieten
+// dem Client diese Felder ohnehin.
 export class FirestoreEmployeeServiceError extends Error {
   constructor(
     message: string,
@@ -32,6 +36,9 @@ function employeesCollectionRef(companyId: string) {
 function rawEmployeeDocRef(companyId: string, employeeId: string) {
   return doc(db, companyCollectionPaths.employees(companyId), employeeId);
 }
+
+// Felder, die nur der Server ändern darf (siehe docs/firebase/member-security-actions.md).
+export const SERVER_ONLY_EMPLOYEE_FIELDS = ["roleId", "role", "status"] as const;
 
 export const firestoreEmployeeService = {
   async getEmployees(companyId: string): Promise<Employee[]> {
@@ -62,6 +69,14 @@ export const firestoreEmployeeService = {
     changes: Partial<Employee>,
     historyEntry?: EmployeeHistoryEntry
   ): Promise<Employee | undefined> {
+    // Programmierfehler früh und lesbar abfangen (die Rules würden es mit
+    // permission-denied ablehnen): Rolle/Status nur über den Server.
+    const forbidden = SERVER_ONLY_EMPLOYEE_FIELDS.filter((field) => field in changes);
+    if (forbidden.length > 0) {
+      throw new FirestoreEmployeeServiceError(
+        `Die Felder ${forbidden.join(", ")} werden nur serverseitig geändert (member-actions).`
+      );
+    }
     try {
       const ref = rawEmployeeDocRef(companyId, employeeId);
       await runTransaction(db, async (transaction) => {
@@ -79,18 +94,5 @@ export const firestoreEmployeeService = {
     } catch (error) {
       throw new FirestoreEmployeeServiceError("Mitarbeiter konnte nicht aktualisiert werden.", error);
     }
-  },
-
-  suspendEmployee(companyId: string, employeeId: string, historyEntry: EmployeeHistoryEntry) {
-    return this.updateEmployee(companyId, employeeId, { status: "Gesperrt" }, historyEntry);
-  },
-
-  reactivateEmployee(companyId: string, employeeId: string, historyEntry: EmployeeHistoryEntry) {
-    return this.updateEmployee(companyId, employeeId, { status: "Aktiv" }, historyEntry);
-  },
-
-  // Fachlich "Gesperrt" – der Datensatz bleibt samt Historie erhalten.
-  revokeAccess(companyId: string, employeeId: string, historyEntry: EmployeeHistoryEntry) {
-    return this.updateEmployee(companyId, employeeId, { status: "Gesperrt" }, historyEntry);
   },
 };

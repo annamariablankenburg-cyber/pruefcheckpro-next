@@ -33,6 +33,8 @@ import {
 } from "@/lib/permissions/gatingRules";
 import { isRoleActive, resolveRole } from "@/lib/roles/roleRules";
 import type { CompanyLocationDetail } from "@/types/location";
+import { isFirestoreDataSource } from "@/config/dataSource";
+import { memberActionErrorMessage } from "@/lib/services/memberActionsClient";
 import type { Employee } from "@/types/employee";
 import type { Role } from "@/types/role";
 
@@ -50,13 +52,17 @@ interface ConfirmConfig {
   failureMessage: string;
 }
 
-const AUTH_HINT =
-  "Die serverseitige Auth-Sperre (Login) folgt in einem späteren Backend-Slice.";
+// Firestore: Status und Rolle werden serverseitig für Mitarbeiter UND Zugang
+// (Membership) geändert; der Zugriff auf die Firmendaten wird tatsächlich gesperrt.
+// Die Firebase-Anmeldung selbst bleibt unberührt. Mock: nur Verwaltungsdaten.
+const AUTH_HINT = isFirestoreDataSource
+  ? "Der Zugang zu den Firmendaten wird sofort gesperrt bzw. wieder freigegeben. Die Firebase-Anmeldung selbst bleibt bestehen."
+  : "Im Demo-Modus ist das nur ein Verwaltungsdatum; es gibt keine echte Sperre.";
 
 const confirmConfigs: Record<ConfirmActionType, ConfirmConfig> = {
   suspend: {
     title: "Zugriff temporär sperren?",
-    description: `Der Mitarbeiter wird in PrüfCheckPro als gesperrt markiert, bis der Zugriff reaktiviert wird. ${AUTH_HINT}`,
+    description: `Der Mitarbeiter wird als gesperrt markiert, bis der Zugriff reaktiviert wird. ${AUTH_HINT}`,
     confirmLabel: "Sperren",
     confirmVariant: "destructive",
     successMessage: "Mitarbeiter als gesperrt markiert.",
@@ -64,14 +70,14 @@ const confirmConfigs: Record<ConfirmActionType, ConfirmConfig> = {
   },
   reactivate: {
     title: "Mitarbeiter reaktivieren?",
-    description: `Der Mitarbeiter wird in PrüfCheckPro wieder als aktiv markiert. ${AUTH_HINT}`,
+    description: `Der Mitarbeiter wird wieder als aktiv markiert. ${AUTH_HINT}`,
     confirmLabel: "Reaktivieren",
     successMessage: "Mitarbeiter reaktiviert.",
     failureMessage: "Mitarbeiter konnte nicht reaktiviert werden.",
   },
   revokeAccess: {
     title: "Zugriff entziehen?",
-    description: `Der Zugriff wird in PrüfCheckPro als gesperrt markiert. Der Datensatz und alle historischen Aktivitäten bleiben erhalten – es wird nichts gelöscht. ${AUTH_HINT}`,
+    description: `Der Zugriff wird als gesperrt markiert. Der Datensatz und alle historischen Aktivitäten bleiben erhalten – es wird nichts gelöscht. ${AUTH_HINT}`,
     confirmLabel: "Zugriff entziehen",
     confirmVariant: "destructive",
     successMessage: "Zugriff als entzogen (gesperrt) markiert.",
@@ -249,8 +255,10 @@ export function EmployeesView({
       }
       setConfirmAction(null);
       showFeedback(config.successMessage);
-    } catch {
-      showFeedback(config.failureMessage);
+    } catch (error) {
+      // Serverseitige Ablehnungen (z. B. letzter Administrator, geschützte Rolle,
+      // eigener Datensatz) haben eine verständliche Meldung.
+      showFeedback(memberActionErrorMessage(error, config.failureMessage));
     } finally {
       setActionPending(false);
     }
@@ -303,10 +311,9 @@ export function EmployeesView({
       <div className="flex items-start gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-2.5 text-sm text-primary">
         <Info className="mt-0.5 size-4 shrink-0" />
         <span>
-          Rollen, Standorte und Status sind Verwaltungsdaten in PrüfCheckPro. Die hier gepflegte Rolle
-          ändert die effektiven Zugriffsrechte des Nutzers nicht automatisch – die Zugriffsrolle wird
-          separat serverseitig zugeordnet. Eine echte Anmelde-Sperre und Passwort-Resets folgen mit der
-          serverseitigen Auth-Verwaltung.
+          {isFirestoreDataSource
+            ? "Rolle und Status werden serverseitig geprüft und gleichzeitig für den Zugang des Mitarbeiters übernommen; die Änderung gilt sofort für seine Rechte. Die eigene Rolle, der eigene Status und der letzte Administrator sind geschützt. Passwort-Resets und die Sperre der Firebase-Anmeldung folgen mit der Auth-Verwaltung."
+            : "Rollen, Standorte und Status sind im Demo-Modus reine Verwaltungsdaten. Echte Zugriffsrechte, Sperren und Passwort-Resets gibt es erst mit der Firebase-Anbindung."}
           {!access.employees.manage && " Du kannst Mitarbeiter ansehen, aber nicht verwalten."}
         </span>
       </div>
@@ -391,7 +398,11 @@ export function EmployeesView({
       <EmployeeSelectFieldDialog
         employee={roleEmployee}
         title="Rolle ändern"
-        description="Passe die Rolle dieses Mitarbeiters an. Die Rolle ist ein Verwaltungsdatum des Mitarbeiters und ändert die effektiven Zugriffsrechte des Nutzers nicht automatisch; die Zugriffsrolle wird separat serverseitig zugeordnet."
+        description={
+          isFirestoreDataSource
+            ? "Passe die Rolle dieses Mitarbeiters an. Die Rolle wird serverseitig für den Mitarbeiter und seinen Zugang übernommen und gilt sofort für seine Rechte."
+            : "Passe die Rolle dieses Mitarbeiters an. Im Demo-Modus ist die Rolle ein reines Verwaltungsdatum."
+        }
         fieldLabel="Rolle auswählen"
         options={roleOptions}
         getInitialValue={(employee) => {

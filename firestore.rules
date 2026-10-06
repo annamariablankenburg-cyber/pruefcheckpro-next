@@ -225,6 +225,7 @@ service cloud.firestore {
     }
 
     // Eigenes Dokument über die Membership-Verknüpfung (nie über Name/E-Mail).
+    // (Nur zum Lesen; das Ändern von Rolle/Status ist für alle Clients gesperrt.)
     function isOwnEmployee(companyId, employeeId) {
       return hasActiveMembership(companyId) &&
         employeeId != "" &&
@@ -237,11 +238,15 @@ service cloud.firestore {
         currentRoleId() == roleId;
     }
 
-    // Verhindert Self-Promotion/Selbstsperre: am EIGENEN Mitarbeiter-Dokument
-    // dürfen roleId, role und status nicht geändert werden.
-    function changesOwnSecurityFields(companyId, employeeId) {
-      return isOwnEmployee(companyId, employeeId) &&
-        request.resource.data.diff(resource.data).affectedKeys().hasAny(["roleId", "role", "status"]);
+    // Sicherheitsrelevante Felder eines Mitarbeiters: roleId, role (Namens-Snapshot)
+    // und status. Sie dürfen vom CLIENT NIE geändert werden (auch nicht vom
+    // Administrator und nicht am eigenen Dokument): Die Änderung muss Mitarbeiter UND
+    // Membership gemeinsam betreffen und läuft deshalb ausschließlich serverseitig
+    // (Admin SDK, siehe docs/firebase/member-security-actions.md; das Admin SDK
+    // umgeht die Rules). Erfasst werden auch Hinzufügen und Entfernen
+    // (deleteField) der Felder.
+    function changesServerOnlyEmployeeFields() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasAny(["roleId", "role", "status"]);
     }
 
     // Form-Prüfung für Rollen-Updates (ohne die Berechtigungsprüfung): type und
@@ -260,8 +265,10 @@ service cloud.firestore {
     // Membership-Dokument: der eigene Nutzer darf es LESEN (einzelnes Dokument,
     // kein Auflisten). Es gibt KEINEN Client-Write (create/update/delete): die
     // Zuordnung zu Firma/Mitarbeiter/Rolle/Status wird nicht von der App
-    // gesetzt. Provisionierung braucht eine Server-Komponente (Admin SDK), die
-    // die Rules umgeht – hier nicht implementiert. Im lokalen Emulator seeden
+    // gesetzt. Rolle und Status ändert ausschließlich der Server (Admin SDK, umgeht
+    // die Rules): assignRole/setMemberStatus, siehe
+    // docs/firebase/member-security-actions.md. Provisionierung (Einladung annehmen,
+    // Firma anlegen) ist noch nicht implementiert. Im lokalen Emulator seeden
     // siehe scripts/seedUserMemberships.ts.
     match /userMemberships/{uid} {
       allow get: if isSignedIn() && request.auth.uid == uid;
@@ -435,18 +442,18 @@ service cloud.firestore {
       allow delete: if false;
 
       // Ändern: administration.mitarbeiter_verwalten, aber
-      //  - nie die eigene Rolle (roleId/role) oder den eigenen Status,
-      //  - nie ein Mitarbeiter, dessen aktuelle ODER neue Rolle die
-      //    Administrator-Rolle / eine Rolle mit geschütztem Schlüssel (Restricted
-      //    oder Admin-only-Löschrecht) / nicht
-      //    auflösbar ist, ohne zusätzlich rollen.admin_verwalten.
-      // HINWEIS: Das ändert nur das Mitarbeiter-Dokument. Die wirksame Rolle ist
-      // die der Membership; sie wird nicht automatisch synchronisiert.
+      //  - NIE die sicherheitsrelevanten Felder roleId, role und status: Rolle ändern,
+      //    sperren und reaktivieren laufen ausschließlich serverseitig (Employee +
+      //    Membership atomar, mit Prüfung von geschützten Rollen, Eigenänderung und
+      //    letztem Administrator). Das gilt für ALLE Clients, auch den Administrator.
+      //  - nie ein Mitarbeiter, dessen aktuelle Rolle die Administrator-Rolle / eine
+      //    Rolle mit geschütztem Schlüssel (Restricted oder Admin-only-Löschrecht) /
+      //    nicht auflösbar ist, ohne zusätzlich rollen.admin_verwalten.
+      // Erlaubt bleiben unkritische Felder (Standort, Kontaktdaten, Historie …).
       allow update: if hasPermission(companyId, "administration.mitarbeiter_verwalten") &&
-        !changesOwnSecurityFields(companyId, employeeId) &&
+        !changesServerOnlyEmployeeFields() &&
         (hasPermission(companyId, "rollen.admin_verwalten") ||
-          (!roleIdIsProtected(companyId, resource.data.get("roleId", "")) &&
-           !roleIdIsProtected(companyId, request.resource.data.get("roleId", ""))));
+          !roleIdIsProtected(companyId, resource.data.get("roleId", "")));
     }
 
     match /companies/{companyId}/invitations/{invitationId} {

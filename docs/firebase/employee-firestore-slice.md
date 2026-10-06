@@ -2,6 +2,8 @@
 
 Status: **Zehnter Vertical Slice mit echter Firestore-Anbindung.** Beschreibt die Mitarbeiterverwaltung in `/company?tab=mitarbeiter`. Analog zu `docs/firebase/location-firestore-slice.md`.
 
+> **Update (serverseitige Mitglieder-Aktionen):** Rolle ändern, Sperren, Reaktivieren und Zugriff entziehen schreiben im Firestore-Modus **nicht mehr direkt** ins Mitarbeiter-Dokument, sondern laufen über den Server (`/api/member-actions`, Employee + Membership atomar; Rechte, geschützte Rollen, Eigenänderung, letzter Administrator) – siehe `docs/firebase/member-security-actions.md`. `firestoreEmployeeService.updateEmployee` lehnt `roleId`, `role` und `status` ab, die Rules verbieten sie dem Client. Standort und Kontaktdaten bleiben normale Client-Writes. Die folgenden Abschnitte beschreiben den Stand vor diesem Update, soweit sie Rolle/Status betreffen.
+
 > **Wichtig:** Die Collection `employees` ist ausschließlich die **fachliche Verwaltungsebene (Metadaten)**. Firebase Auth ist **nicht** Teil dieses Slices. Es werden keine Auth-Benutzer angelegt, gelöscht oder gesperrt, es gibt kein Admin SDK, keine Cloud Function und keine E-Mails.
 
 ---
@@ -129,7 +131,7 @@ Ausführen (Emulator vorher starten): `npx tsx scripts/seedEmployees.ts`.
 - **Einladungen/Widerruf** folgen im Invitations-Slice (Zustand „widerrufen“ fehlt im Modell).
 - **Keine Zugriffskontrolle** über die Rolle; Rules prüfen nur „angemeldet + eigene companyId“.
 - **Standortname ist ein Snapshot:** wird ein Standort umbenannt, aktualisiert sich `employee.location` nicht automatisch; die Beziehung läuft über `locationId`.
-- **Letzter Admin:** Es gibt keine Schutzregel gegen das Sperren des letzten aktiven Admins (bewusst keine Business-Engine).
+- **Letzter Admin (erledigt):** `assignRole`/`setMemberStatus` verhindern das Absetzen/Sperren des letzten aktiven Administrators serverseitig (`docs/firebase/member-security-actions.md`).
 - **Verbleibende Mock-/Snapshot-Werte außerhalb des Mitarbeiter-Tabs:** `companyProfile.employeesCount`, `employeeCount` je Standort, die Mitarbeiterliste der Company-Übersicht (`companyEmployees`), `AdminView`, `settings.ts` (liest `employees`/`locationNames` aus der Config) und `NewDeviceDialog` (`locationNames`) sind weiter Config-Daten und spiegeln Firestore-Änderungen nicht.
 - **`lastLogin`** ist ein Anzeigewert, kein Auth-Datum.
 - **Kein Realtime-Sync**, kein globales Audit-Log.

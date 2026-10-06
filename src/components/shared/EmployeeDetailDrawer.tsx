@@ -13,6 +13,7 @@ import { EmployeeRoleBadge } from "@/components/shared/EmployeeRoleBadge";
 import { EmployeeStatusBadge } from "@/components/shared/EmployeeStatusBadge";
 import { useRoleList } from "@/components/shared/RolesContext";
 import { getRoleDisplayName, resolveRole, summarizePermissions } from "@/lib/roles/roleRules";
+import { isFirestoreDataSource } from "@/config/dataSource";
 import type { EmployeeActionPolicy } from "@/lib/permissions/gatingRules";
 import type { Employee } from "@/types/employee";
 
@@ -121,8 +122,10 @@ export function EmployeeDetailDrawer({
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground/70">
-                  Berechtigungen ergeben sich aus der Rolle (gewährt/gesamt je Modul). Die Rolle ist ein
-                  Verwaltungsdatum – die serverseitige Durchsetzung folgt in einem späteren Security-Slice.
+                  Berechtigungen ergeben sich aus der Rolle (gewährt/gesamt je Modul).{" "}
+                  {isFirestoreDataSource
+                    ? "Rollenänderungen werden serverseitig auch für den Zugang des Mitarbeiters übernommen."
+                    : "Im Demo-Modus ist die Rolle nur ein Verwaltungsdatum."}
                 </p>
               </div>
 

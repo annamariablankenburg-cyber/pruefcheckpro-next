@@ -20,7 +20,9 @@ import type { Role } from "@/types/role";
 // verschluckt, sondern an die UI weitergereicht.
 //
 // Kein Löschen: Mitarbeiter bleiben samt Historie erhalten. "Sperren" und
-// "Zugriff entziehen" sind fachliche Statusänderungen – keine Auth-Sperre.
+// "Zugriff entziehen" setzen den Status auf "Gesperrt" – im Firestore-Modus
+// serverseitig für Mitarbeiter UND Membership (keine Firebase-Auth-Sperre).
+// Rolle ändern und Status ändern laufen über employeeService -> /api/member-actions.
 //
 // `roles` ist die gemeinsame Rollenliste der Company-Seite (eine useRoles()-
 // Instanz). Sie wird nur zum Auflösen der Rollennamen für Suche und Filter
@@ -100,11 +102,19 @@ export function useEmployees(roles: Role[], enabled = true) {
     if (!target || target.status !== "Aktiv") {
       throw new Error("Rolle nicht verfügbar.");
     }
-    return updateEmployee(
+    return assignRole(id, { id: target.id, name: target.name });
+  }
+
+  // Rolle zuweisen: Firestore über den Server (Employee + Membership atomar, Namen und
+  // Historie bestimmt der Server), Mock direkt im Repository.
+  async function assignRole(id: string, role: { id: string; name: string }) {
+    const updated = await employeeService.assignRole(
       id,
-      { role: target.name, roleId: target.id },
-      employeeHistoryMessages.roleChanged(target.name)
+      role,
+      buildEmployeeHistoryEntry(employeeHistoryMessages.roleChanged(role.name))
     );
+    replaceEmployee(updated);
+    return updated;
   }
 
   // Speichert Name UND ID, damit die Beziehung stabil über locationId läuft,

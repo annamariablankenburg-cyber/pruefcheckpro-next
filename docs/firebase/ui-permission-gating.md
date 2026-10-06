@@ -3,6 +3,8 @@
 Status: **Implementiert.** Die Oberfläche lädt die effektiven Rechte des eingeloggten Users und passt sich an (Tabs, Listen, Aktionen, Rollen-Editor). Das ist **Komfort/UX, keine Sicherheit** – die Firestore Rules (Phase 1: `roles`, `employees`, `invitations`, `locations`) bleiben die Sicherheitsgrenze. Siehe `docs/firebase/role-permission-rules-phase1.md`.
 
 > **Nicht Teil dieses Slices:** Änderungen an `firestore.rules`, Rules Phase 2 (die acht Fach-Collections), Membership-Schreiblogik, Admin SDK, Membership↔Employee-Synchronisierung.
+>
+> **Update (Server-Slice):** Die Membership↔Employee-Synchronisierung ist inzwischen umgesetzt (`docs/firebase/member-security-actions.md`): Rolle ändern, sperren, reaktivieren und Zugriff entziehen laufen über den Server. Die Aktions-Policy der UI (`getEmployeeActionPolicy`) bleibt unverändert – der Server prüft zusätzlich selbst.
 
 ---
 
@@ -121,7 +123,7 @@ Lädt Rollen nur mit `rollen.ansehen`; sonst Hinweis „Für deinen Zugang ist d
 
 ## 9. Membership ⇄ Employee (unverändert)
 
-`Employee.roleId` und `Membership.roleId` laufen weiter auseinander; es gibt keine Synchronisierung (kein Admin SDK). Die UI richtet sich ausschließlich nach der **Membership**-Rolle des eingeloggten Users. Texte zu „Rolle ändern“/Sperren weisen darauf hin, dass der Employee-Datensatz die Anmelde-Rechte nicht ändert.
+*(Historisch, vor dem Server-Slice:)* `Employee.roleId` und `Membership.roleId` liefen auseinander. **Inzwischen** gleichen `assignRole`/`setMemberStatus` beide atomar an (`docs/firebase/member-security-actions.md`); bei Altdaten mit Divergenz gilt weiter die **Membership**. Die UI richtet sich ausschließlich nach der **Membership**-Rolle des eingeloggten Users. Texte zu „Rolle ändern“/Sperren weisen darauf hin, dass der Employee-Datensatz die Anmelde-Rechte nicht ändert.
 
 ## 10. UI ≠ Security
 
