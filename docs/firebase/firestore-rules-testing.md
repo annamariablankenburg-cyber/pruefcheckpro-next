@@ -81,9 +81,11 @@ tests/firestore/
 
 **Ablauf je Test:** Daten werden mit `withSecurityRulesDisabled` angelegt (Setup); die Assertions laufen mit `authenticatedContext(uid)` bzw. `unauthenticatedContext()` und `assertSucceeds`/`assertFails`. Vor jedem Test setzt `clearFirestore()` die Daten zurück.
 
-### Testfall-Kategorien (793 Testfälle nach dem Server-Slice; 711 nach Phase 1; vor Phase 1: 189)
+> **Rules Phase 2:** `phase2-matrix.test.ts` (880 Tests: 22 Personas × 8 Fach-Collections × get/list/create/update/delete, Erwartung aus `permissions[Schlüssel] === true`) und `phase2-permissions.test.ts` (gezielte Fälle: Einzelschlüssel, Read-only, Legacy 31, geschützte Löschrechte, Berichte-Export, `sampleId`, Tenant, Bulk, Service-Abläufe, Snapshots); `company-collections`/`company-isolation` laufen mit Membership + Rolle `admin`; `rules-config-sync` prüft Schlüssel je Operation gegen `allPermissionKeys`. Details und Gesamtzahl: `docs/firebase/role-permission-rules-phase2.md`.
 
-> **Server-Slice:** `tests/firestore/member-actions.test.ts` (65 Tests) nutzt zusätzlich das **Admin SDK** gegen denselben Firestore-Emulator (Transaktionen, Atomizität, HTTP-Schicht; `docs/firebase/member-security-actions.md`). Die Employee-Tests in `phase1-employees.test.ts` wurden auf das Client-Verbot von `roleId`/`role`/`status` umgestellt.
+### Testfall-Kategorien (1786 Testfälle nach Rules Phase 2, alle grün; 797 nach Server-Slice inkl. Last-Admin-Race; 711 nach Phase 1; vor Phase 1: 189)
+
+> **Server-Slice:** `tests/firestore/member-actions.test.ts` (69 Tests, inkl. der Last-Admin-Race-Tests) nutzt zusätzlich das **Admin SDK** gegen denselben Firestore-Emulator (Transaktionen, Atomizität, HTTP-Schicht; `docs/firebase/member-security-actions.md`). Die Employee-Tests in `phase1-employees.test.ts` wurden auf das Client-Verbot von `roleId`/`role`/`status` umgestellt.
 
 1. **Membership (`userMemberships/{uid}`)** – eigene lesen (inkl. fehlend/gesperrt: für die App-Zustände nötig), fremde/anonym/Liste/gefilterte Query verboten; Create (auch Selbst-Zuweisung), Update (`companyId`, `roleId`, `role`, `status`, Selbst-Entsperren, Überschreiben, fremde), Delete – jeweils DENY; abgelehnte Writes lassen das Dokument unverändert.
 2. **Tenant-Isolation** (Beispiel `customers`) – richtige Firma ALLOW (Ist-Stand: auch Schreiben/Löschen), falsche Firma, gesperrt, ohne Membership, anonym: DENY.

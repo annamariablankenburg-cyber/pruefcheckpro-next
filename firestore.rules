@@ -1,14 +1,11 @@
 rules_version = '2';
 
-// Security Rules für die bereits real angebundenen Vertical Slices (siehe
-// docs/firebase/customer-firestore-slice.md,
-// docs/firebase/project-firestore-slice.md,
-// docs/firebase/device-firestore-slice.md,
-// docs/firebase/sample-firestore-slice.md und
-// docs/firebase/test-values-firestore-slice.md). Bewusst restriktiv: nur
-// Collections mit echter Firestore-Anbindung werden geöffnet, alles andere
-// bleibt per Fallback gesperrt. Kein "allow read, write: if true" irgendwo
-// in diesem Projekt.
+// Security Rules für die real angebundenen Vertical Slices (Kunden, Projekte,
+// Geräte, Proben, Prüfwerte, Berichte, Kalender, Laborbuch, Standorte,
+// Mitarbeiter, Einladungen, Rollen; siehe docs/firebase/*-firestore-slice.md).
+// Bewusst restriktiv: nur Collections mit echter Firestore-Anbindung werden
+// geöffnet, alles andere bleibt per Fallback gesperrt. Kein
+// "allow read, write: if true" irgendwo in diesem Projekt.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -28,10 +25,14 @@ service cloud.firestore {
     // einem Fehler mit Fallback. Das Membership-Dokument wird pro Request nur
     // einmal gelesen (wiederholte get() auf dasselbe Dokument zählen einmal).
     //
-    // Rollenbasierte Durchsetzung, PHASE 1 (siehe
-    // docs/firebase/role-permission-rules-phase1.md): nur für roles, employees,
-    // invitations und locations. Alle anderen Company-Collections prüfen weiter
-    // NUR belongsToCompany (aktive Membership der richtigen Firma).
+    // Rollenbasierte Durchsetzung für ALLE zwölf Company-Collections:
+    //  - PHASE 1 (docs/firebase/role-permission-rules-phase1.md): roles,
+    //    employees, invitations, locations,
+    //  - PHASE 2 (docs/firebase/role-permission-rules-phase2.md): die acht
+    //    Fach-Collections customers, projects, devices, samples, testValues,
+    //    reports, calendarEvents, laborbook (je *.ansehen / *.erstellen /
+    //    *.bearbeiten / *.loeschen).
+    // Es gibt keine Collection mehr, die nur "aktive Membership der Firma" prüft.
     //
     // Autorisierung: ausschließlich userMemberships/{uid}.roleId -> das
     // Role-Dokument companies/{companyId}/roles/{roleId} -> permissions[key].
@@ -58,11 +59,6 @@ service cloud.firestore {
         exists(membershipPath()) &&
         currentMembership().get("companyId", "") == companyId &&
         currentMembership().get("status", "") == "Aktiv";
-    }
-
-    // Unverändertes Verhalten für die noch nicht rollenbasierten Collections.
-    function belongsToCompany(companyId) {
-      return hasActiveMembership(companyId);
     }
 
     function rolePath(companyId, roleId) {
@@ -238,6 +234,18 @@ service cloud.firestore {
         currentRoleId() == roleId;
     }
 
+    // Berichte: Export-Status (Spiegel von ReportStatus in src/types/report.ts).
+    function reportIsExported(reportData) {
+      return reportData.get("status", "") in ["PDF exportiert", "Excel exportiert"];
+    }
+
+    // Ein Update setzt den Bericht NEU in einen Export-Status (Wechsel, nicht jede
+    // Änderung an einem bereits exportierten Bericht).
+    function reportExportStatusEntered() {
+      return reportIsExported(request.resource.data) &&
+        request.resource.data.get("status", "") != resource.data.get("status", "");
+    }
+
     // Sicherheitsrelevante Felder eines Mitarbeiters: roleId, role (Namens-Snapshot)
     // und status. Sie dürfen vom CLIENT NIE geändert werden (auch nicht vom
     // Administrator und nicht am eigenen Dokument): Die Änderung muss Mitarbeiter UND
@@ -320,103 +328,101 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // --- Fach-Collections (PHASE 2, docs/firebase/role-permission-rules-phase2.md) ---
+    //
+    // Jede Operation prüft hasPermission(companyId, <Schlüssel>): aktive Membership
+    // der Firma im Pfad (Tenant-Isolation) -> membership.roleId -> Rolle derselben
+    // Firma mit status "Aktiv" -> permissions[<Schlüssel>] == true. Fehlt ein
+    // Glied der Kette oder der Schlüssel (z. B. in Rollen vor der 31->45-Migration),
+    // ist das Ergebnis DENY. Die Schlüssel stammen ausschließlich aus
+    // src/config/roles.ts (Test: tests/firestore/rules-config-sync.test.ts).
+    //
+    // Einheitliches Muster je Collection:
+    //   get, list  -> <bereich>.ansehen
+    //   create     -> <bereich>.erstellen   (Kalender: kalender.termine_erstellen)
+    //   update     -> <bereich>.bearbeiten  (Statuswechsel/Archivieren/Deaktivieren
+    //                                        sind Updates: es gibt kein eigenes Recht)
+    //   delete     -> <bereich>.loeschen    (eigenständig, nie aus bearbeiten abgeleitet)
+    // geraete.loeschen, laborbuch.loeschen und berichte.loeschen sind Admin-only-
+    // Löschrechte: ihre Vergabe ist in den Rollen-Rules geschützt, hier wird nur
+    // der gespeicherte Wert über hasPermission() ausgewertet.
+    //
+    // Es gibt KEINE zusätzliche Lese-Pflicht für Schreibvorgänge: ein Recht zum
+    // Erstellen/Bearbeiten verlangt die Rules nicht auch *.ansehen (der Client-
+    // Service liest allerdings vor/nach dem Schreiben, siehe Doku).
+    // Referenzfelder (customerId, projectId, sampleId, deviceId, locationId, ...) sind
+    // reine Firmen-IDs ohne Pfad: sie werden nur innerhalb von companies/{companyId}
+    // aufgelöst, eine Fremd-Referenz legt nichts offen. Es gibt deshalb bewusst keine
+    // exists()-Prüfungen (Details in der Doku); die einzige strukturelle Prüfung ist
+    // sampleId == Dokument-ID bei testValues.
+
     match /companies/{companyId}/customers/{customerId} {
-      // Angemeldet + eigene companyId. Keine rollenabhängige Einschränkung
-      // (Admin/Laborleiter vs. Prüfer/Azubi/Gast, siehe
-      // docs/database/permissions.md Abschnitt 3 "Kunden erstellen/bearbeiten/
-      // löschen") – dafür fehlen heute noch die Custom Claims. Bis dahin
-      // bewusst restriktiv auf "eigene Firma", nicht auf "jeder darf alles"
-      // (siehe docs/firebase/customer-firestore-slice.md, "Bekannte offene
-      // Punkte").
-      allow read, write: if belongsToCompany(companyId);
+      allow get, list: if hasPermission(companyId, "kunden.ansehen");
+      allow create: if hasPermission(companyId, "kunden.erstellen");
+      allow update: if hasPermission(companyId, "kunden.bearbeiten");
+      allow delete: if hasPermission(companyId, "kunden.loeschen");
     }
 
     match /companies/{companyId}/projects/{projectId} {
-      // Gleiches Muster wie companies/{companyId}/customers: angemeldet +
-      // eigene companyId. Lesen ist für alle Unternehmensmitglieder gedacht
-      // (siehe docs/database/permissions.md, "Projekte ansehen" ist bei allen
-      // 5 Kernrollen erlaubt); Schreiben ist heute ebenfalls für jeden
-      // angemeldeten Nutzer der eigenen Firma offen, da noch keine Custom
-      // Claims für eine rollenabhängige Einschränkung existieren (nur
-      // Admin/Laborleiter dürften laut Rechte-Matrix erstellen/bearbeiten/
-      // löschen). Bis dahin bewusst restriktiv auf "eigene Firma", nicht auf
-      // "jeder darf alles" (siehe docs/firebase/project-firestore-slice.md,
-      // "Bekannte offene Punkte").
-      allow read, write: if belongsToCompany(companyId);
+      allow get, list: if hasPermission(companyId, "projekte.ansehen");
+      allow create: if hasPermission(companyId, "projekte.erstellen");
+      allow update: if hasPermission(companyId, "projekte.bearbeiten");
+      allow delete: if hasPermission(companyId, "projekte.loeschen");
     }
 
     match /companies/{companyId}/devices/{deviceId} {
-      // Gleiches companyId-Muster wie companies/{companyId}/customers und
-      // .../projects: angemeldet + eigene companyId. Lesen ist für alle
-      // Unternehmensmitglieder gedacht (siehe docs/database/permissions.md,
-      // "Geräte ansehen" ist bei allen 5 Kernrollen erlaubt); Schreiben ist
-      // heute ebenfalls für jeden angemeldeten Nutzer der eigenen Firma
-      // offen, da noch keine Custom Claims für eine rollenabhängige
-      // Einschränkung existieren (nur Admin/Laborleiter dürften laut
-      // Rechte-Matrix Geräte bearbeiten). Bis dahin bewusst restriktiv auf
-      // "eigene Firma", nicht auf "jeder darf alles" (siehe
-      // docs/firebase/device-firestore-slice.md, "Bekannte offene Punkte").
-      allow read, write: if belongsToCompany(companyId);
+      allow get, list: if hasPermission(companyId, "geraete.ansehen");
+      allow create: if hasPermission(companyId, "geraete.erstellen");
+      allow update: if hasPermission(companyId, "geraete.bearbeiten");
+      allow delete: if hasPermission(companyId, "geraete.loeschen");
     }
 
     match /companies/{companyId}/samples/{sampleId} {
-      // Gleiches companyId-Muster wie customers/projects/devices: angemeldet
-      // + eigene companyId. Lesen ist für alle Unternehmensmitglieder gedacht
-      // (siehe docs/database/permissions.md, "Proben ansehen" ist bei allen
-      // 5 Kernrollen erlaubt); Schreiben ist heute ebenfalls für jeden
-      // angemeldeten Nutzer der eigenen Firma offen, da noch keine Custom
-      // Claims für eine rollenabhängige Einschränkung existieren. Laut
-      // Rechte-Matrix dürfen Proben zwar von (fast) allen Rollen erstellt/
-      // bearbeitet werden, aber laut Sprint-Vorgabe NICHT von der Azubi-Rolle
-      // endgültig gelöscht werden (siehe docs/database/permissions.md,
-      // Regel 1) – diese feingranulare Durchsetzung ist ohne Custom Claims
-      // (Rolle im Auth-Token) in Security Rules nicht möglich und daher noch
-      // nicht umgesetzt (siehe docs/firebase/sample-firestore-slice.md,
-      // "Bekannte offene Punkte"). Bis dahin bewusst restriktiv auf "eigene
-      // Firma", nicht auf "jeder darf alles".
-      allow read, write: if belongsToCompany(companyId);
+      allow get, list: if hasPermission(companyId, "proben.ansehen");
+      allow create: if hasPermission(companyId, "proben.erstellen");
+      allow update: if hasPermission(companyId, "proben.bearbeiten");
+      allow delete: if hasPermission(companyId, "proben.loeschen");
     }
 
+    // Prüfwerte gehören zu den Prüfungen (pruefungen.*). Die Dokument-ID ist die
+    // Probennummer (createTestEntry schreibt unter sampleId): das Feld sampleId
+    // muss beim Anlegen der Dokument-ID entsprechen und ist danach unveränderlich.
+    // Damit lässt sich keine abweichende Probenreferenz einschleusen.
     match /companies/{companyId}/testValues/{testValueId} {
-      // Gleiches companyId-Muster wie customers/projects/devices/samples:
-      // angemeldet + eigene companyId. Lesen ist für alle
-      // Unternehmensmitglieder gedacht (siehe docs/database/permissions.md,
-      // "Prüfungen ansehen/erstellen/bearbeiten" ist bei Admin/Laborleiter/
-      // Prüfer erlaubt, Azubi/Gast nur ansehen); Schreiben ist heute
-      // ebenfalls für jeden angemeldeten Nutzer der eigenen Firma offen, da
-      // noch keine Custom Claims für eine rollenabhängige Einschränkung
-      // existieren. Bis dahin bewusst restriktiv auf "eigene Firma", nicht
-      // auf "jeder darf alles" (siehe
-      // docs/firebase/test-values-firestore-slice.md, "Bekannte offene
-      // Punkte").
-      allow read, write: if belongsToCompany(companyId);
+      allow get, list: if hasPermission(companyId, "pruefungen.ansehen");
+      allow create: if hasPermission(companyId, "pruefungen.erstellen") &&
+        request.resource.data.get("sampleId", "") == testValueId;
+      allow update: if hasPermission(companyId, "pruefungen.bearbeiten") &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(["sampleId"]);
+      allow delete: if hasPermission(companyId, "pruefungen.loeschen");
     }
 
+    // Berichte: Der Wechsel in einen Export-Status ("PDF exportiert", "Excel
+    // exportiert") ist die Aktion "exportieren" und verlangt zusätzlich
+    // pdf.exportieren (Policy: docs/database/permissions.md, Abschnitt 5). Das gilt
+    // auch beim Anlegen mit einem Export-Status.
     match /companies/{companyId}/reports/{reportId} {
-      // Gleiches companyId-Muster wie customers/projects/devices/samples/
-      // testValues: angemeldet + eigene companyId. Lesen ist für alle
-      // Unternehmensmitglieder gedacht; Schreiben ist heute ebenfalls für
-      // jeden angemeldeten Nutzer der eigenen Firma offen, da noch keine
-      // Custom Claims für eine rollenabhängige Einschränkung existieren.
-      // Bis dahin bewusst restriktiv auf "eigene Firma", nicht auf "jeder
-      // darf alles" (siehe docs/firebase/report-firestore-slice.md,
-      // "Bekannte offene Punkte").
-      allow read, write: if belongsToCompany(companyId);
+      allow get, list: if hasPermission(companyId, "berichte.ansehen");
+      allow create: if hasPermission(companyId, "berichte.erstellen") &&
+        (!reportIsExported(request.resource.data) || hasPermission(companyId, "pdf.exportieren"));
+      allow update: if hasPermission(companyId, "berichte.bearbeiten") &&
+        (!reportExportStatusEntered() || hasPermission(companyId, "pdf.exportieren"));
+      allow delete: if hasPermission(companyId, "berichte.loeschen");
     }
 
+    // Kalender: der Schlüssel zum Anlegen heißt (Legacy-Name) kalender.termine_erstellen.
     match /companies/{companyId}/calendarEvents/{eventId} {
-      // Gleiches companyId-Muster wie customers/projects/devices/samples/
-      // testValues/reports: angemeldet + eigene companyId. Keine Rollen- oder
-      // Claims-Logik (siehe docs/firebase/calendar-firestore-slice.md,
-      // "Offene Punkte").
-      allow read, write: if belongsToCompany(companyId);
+      allow get, list: if hasPermission(companyId, "kalender.ansehen");
+      allow create: if hasPermission(companyId, "kalender.termine_erstellen");
+      allow update: if hasPermission(companyId, "kalender.bearbeiten");
+      allow delete: if hasPermission(companyId, "kalender.loeschen");
     }
 
     match /companies/{companyId}/laborbook/{entryId} {
-      // Gleiches companyId-Muster wie die übrigen Slices: angemeldet + eigene
-      // companyId. Keine Rollen- oder Claims-Logik (siehe
-      // docs/firebase/laborbook-firestore-slice.md, "Offene Punkte").
-      allow read, write: if belongsToCompany(companyId);
+      allow get, list: if hasPermission(companyId, "laborbuch.ansehen");
+      allow create: if hasPermission(companyId, "laborbuch.erstellen");
+      allow update: if hasPermission(companyId, "laborbuch.bearbeiten");
+      allow delete: if hasPermission(companyId, "laborbuch.loeschen");
     }
 
     match /companies/{companyId}/locations/{locationId} {

@@ -1,5 +1,7 @@
 # Security Foundations (Auth Membership + Firestore Rules)
 
+> **Update (Rules Phase 2):** Auch die acht Fach-Collections (`customers`, `projects`, `devices`, `samples`, `testValues`, `reports`, `calendarEvents`, `laborbook`) prüfen jetzt Permissions (`*.ansehen/erstellen/bearbeiten/loeschen`) auf Basis dieser Membership-Kette; `belongsToCompany` ist entfernt – siehe `docs/firebase/role-permission-rules-phase2.md`.
+
 > **Update (serverseitige Mitglieder-Aktionen):** `userMemberships` bleibt client-read-only; Rolle und Status der Membership ändern jetzt die Server-Aktionen `assignRole`/`setMemberStatus` (Admin SDK, Route Handler, Employee + Membership atomar; Actor-Autorisierung, geschützte Rollen, Eigenänderung, letzter Administrator) – siehe `docs/firebase/member-security-actions.md`. Die Provisionierung (Einladung annehmen, Firma anlegen) fehlt weiterhin.
 
 > **Update (UI-Gating):** Die Oberfläche liest die effektiven Rechte (`usePermissions()`: Membership → Rolle → `permissions`) und blendet Tabs/Aktionen entsprechend aus (`docs/firebase/ui-permission-gating.md`). Das ist Komfort, keine Sicherheitsgrenze.
@@ -136,7 +138,7 @@ isSignedIn()
 
 ## 8. Was noch nicht geschützt ist
 
-- **Rollenbasierte Durchsetzung nur in Phase 1:** `roles`, `employees`, `invitations`, `locations` prüfen Permissions (Phase 1). In den **acht übrigen** Collections (`customers`, `projects`, `devices`, `samples`, `testValues`, `reports`, `calendarEvents`, `laborbook`) darf jeder aktive Member der Firma weiterhin alles lesen und schreiben – unabhängig von `roleId`/`role`.
+- **(Überholt durch Rules Phase 2 – alle zwölf Company-Collections sind rollenbasiert.)** *Ursprünglich:* Rollenbasierte Durchsetzung nur in Phase 1: `roles`, `employees`, `invitations`, `locations` prüfen Permissions (Phase 1). In den **acht übrigen** Collections (`customers`, `projects`, `devices`, `samples`, `testValues`, `reports`, `calendarEvents`, `laborbook`) darf jeder aktive Member der Firma weiterhin alles lesen und schreiben – unabhängig von `roleId`/`role`.
 - **Mitarbeiter-Sperre = Membership-Sperre (seit dem Server-Slice):** Sperren/Reaktivieren/Zugriff entziehen läuft über `setMemberStatus` und schreibt Mitarbeiter UND Membership atomar (`docs/firebase/member-security-actions.md`). Direkte Client-Writes auf `employees.status` sind verboten. Ältere Daten, bei denen beides auseinanderläuft, gleicht die nächste Aktion an.
 - **Profil:** `role`/`plan` sind für den Client nicht mehr änderbar (nur `lastLogin`), das Profil bleibt aber eine reine Anzeige-/Metadatenquelle. Bei der Registrierung setzt der Client selbst das Basisprofil (`role`/`plan` = `"azubi"`, von den Rules erzwungen); Planwechsel/Upgrades brauchen später eine Server-Komponente.
 - **Persönliche Subcollections** (`users/{uid}/aiChats`) haben noch keine Rules (bleiben per Fallback gesperrt).

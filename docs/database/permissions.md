@@ -1,6 +1,6 @@
 # Rollen & Rechte (Policy)
 
-Status: **Policy ist in `src/config/roles.ts` umgesetzt (Taxonomie + Systemrollen-Matrix) – eine serverseitige Durchsetzung gibt es noch nicht.** Rollen und Berechtigungen steuern heute Verwaltungslogik und Darstellung; die Firestore Rules erlauben jedem aktiven Mitglied der Firma noch alles (siehe `docs/firebase/security-foundations.md`, `docs/firebase/role-security-audit.md`). Dieses Dokument ist die gemeinsame Policy für Config, Rules (später) und UI.
+Status: **Policy ist in `src/config/roles.ts` umgesetzt (Taxonomie + Systemrollen-Matrix) und wird in den Firestore Rules serverseitig durchgesetzt** – Phase 1 für `roles`, `employees`, `invitations`, `locations` und Phase 2 für die acht Fach-Collections (Abschnitt 5, `docs/firebase/role-permission-rules-phase1.md`, `docs/firebase/role-permission-rules-phase2.md`). Noch **nicht deployt**. Das UI-Gating der Fachseiten folgt. Dieses Dokument ist die gemeinsame Policy für Config, Rules und UI (siehe auch `docs/firebase/security-foundations.md`, `docs/firebase/role-security-audit.md`).
 
 Konfiguration und Tests: `src/config/roles.ts`, `tests/config/permissions.test.ts` (`npm run test:permissions`).
 
@@ -158,7 +158,7 @@ Beispiel-Custom-Roles: **Qualitätsmanager** = Prüfer-Rechte (22). **Baustellen
 
 ## 5. Zuordnung Collection ↔ Permission (Soll für spätere Rules)
 
-Noch **nicht durchgesetzt**. Jede Collection hat ein eigenes Lese- und Schreibmodell; alle Lücken des Audits sind geschlossen.
+**Durchgesetzt:** Phase 1 (`locations`, `employees`, `invitations`, `roles`) und Phase 2 (`customers`, `projects`, `devices`, `samples`, `testValues`, `reports`, `calendarEvents`, `laborbook`; `docs/firebase/role-permission-rules-phase2.md`). Jede Collection hat ein eigenes Lese- und Schreibmodell; alle Lücken des Audits sind geschlossen. Zusatz in den Rules: Berichte-Statuswechsel in „PDF exportiert“/„Excel exportiert“ verlangt `pdf.exportieren`; `testValues.sampleId` == Dokument-ID.
 
 | Collection | Read | Create | Update | Delete |
 |---|---|---|---|---|
@@ -234,8 +234,8 @@ Für **jede** Domäne existiert Archiv/Status – endgültiges Löschen ist die 
 |---|---|
 | Config (Taxonomie, Matrix, Risikoklassen) | ✅ umgesetzt und getestet (`npm run test:permissions`) |
 | UI-Marker (`Nur Administrator`/`Löschen` im Rollen-Editor) | ✅ nur Anzeige |
-| UI-Gating (Buttons/Seiten nach Rechten) | 🟡 Company-Verwaltung (Tabs, Mitarbeiter, Einladungen, Standorte, Rollen) und `AdminView`-Rollenübersicht über `usePermissions()` (`docs/firebase/ui-permission-gating.md`); Fachseiten (Kunden, Projekte, Geräte, …) noch nicht |
-| Firestore Rules (rollenbasiert) | 🟡 **Phase 1** für `roles`, `employees`, `invitations`, `locations` implementiert und im Emulator getestet (`docs/firebase/role-permission-rules-phase1.md`; lokal 711/711); die übrigen acht Collections nur Membership + Firma |
+| UI-Gating (Buttons/Seiten nach Rechten) | 🟡 (Fachseiten: nächster Slice „UI Permission Gating Phase 2“) Company-Verwaltung (Tabs, Mitarbeiter, Einladungen, Standorte, Rollen) und `AdminView`-Rollenübersicht über `usePermissions()` (`docs/firebase/ui-permission-gating.md`); Fachseiten (Kunden, Projekte, Geräte, …) noch nicht |
+| Firestore Rules (rollenbasiert) | ✅ **Phase 1** (`roles`, `employees`, `invitations`, `locations`) und **Phase 2** (die acht Fach-Collections) implementiert und im Emulator getestet (`docs/firebase/role-permission-rules-phase1.md`, `docs/firebase/role-permission-rules-phase2.md`); **nicht deployt** – vorher Rollen-Migration 31→45 (Abschnitt 7) |
 | Server (Rollenzuweisung, Status, Letzter-Admin-Schutz) | ✅ `assignRole`/`setMemberStatus` (Admin SDK, `docs/firebase/member-security-actions.md`); Provisionierung (Einladung annehmen, Firma anlegen) ❌ noch nicht |
 
 Architektur der späteren Durchsetzung (Variante D/A im Audit): Membership (`roleId`, `status`) + Role-Dokument (`permissions`) live per `get()` in den Rules; Restricted-Schlüssel als feste Liste; Zuweisungen und Membership-Änderungen serverseitig.

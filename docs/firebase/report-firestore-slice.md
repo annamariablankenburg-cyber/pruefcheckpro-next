@@ -1,5 +1,7 @@
 # Report-Firestore-Slice (Berichte & Exporte)
 
+> **Update (Rules Phase 2):** `reports` prüft serverseitig nicht mehr nur die Membership, sondern berichte.ansehen / .erstellen / .bearbeiten / .loeschen (Tabelle, Tenant-Isolation, Service-Abhängigkeiten und Deployment-Hinweise: `docs/firebase/role-permission-rules-phase2.md`). Der Wechsel in „PDF exportiert“/„Excel exportiert“ braucht zusätzlich `pdf.exportieren`; `berichte.loeschen` ist ein Admin-only-Löschrecht. Aussagen unten, dass „jedes aktive Mitglied alles darf“, gelten nicht mehr.
+
 Status: **Sechster vollständiger Vertical Slice mit echter Firestore-Anbindung (Firestore Phase 6).** Beschreibt, wie `/pdf-export` heute Daten liest und schreibt, wie Berichte aus Proben abgeleitet werden, und welche Punkte bewusst noch offen sind. Analog zu `docs/firebase/customer-firestore-slice.md`, `docs/firebase/project-firestore-slice.md`, `docs/firebase/device-firestore-slice.md`, `docs/firebase/sample-firestore-slice.md` und `docs/firebase/test-values-firestore-slice.md` (erster bis fünfter Slice).
 
 ---

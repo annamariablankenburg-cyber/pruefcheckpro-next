@@ -107,9 +107,9 @@ Nicht vereinfacht zu „Laborleiter darf alles“: die Logik wurde vollständig 
 
 Die gespeicherten Rollen-Dokumente kennen die 14 neuen Schlüssel nicht (fehlend = `false`). Mit diesen Rules hätte ein **nicht migrierter Administrator** u. a. kein `standorte.ansehen`, `mitarbeiter.ansehen`, `rollen.ansehen`, `rollen.admin_verwalten` und sperrt sich aus. **Vor dem Deployment** müssen die echten Systemrollen-Dokumente aller Firmen auf die 45-Schlüssel-Matrix (`src/config/roles.ts`) migriert sein (Operator-Skript/Konsole; keine automatische Client-Migration). Außerdem müssen **alle Memberships** eine gültige `roleId` besitzen (kein Zugriff ohne), und Mitarbeiter/Einladungen sollten `roleId` tragen (sonst nur Admin-änderbar). Die Rules-Tests seeden die Rollen explizit mit der vollständigen Matrix; ein Test (`Migration: Rolle vor der Migration`) zeigt das Teilsperr-Verhalten einer 31-Schlüssel-Rolle.
 
-## 7. Noch nicht rollenbasiert (bleiben bei `belongsToCompany`)
+## 7. Noch nicht rollenbasiert
 
-`customers`, `projects`, `devices`, `samples`, `testValues`, `reports`, `calendarEvents`, `laborbook` – jedes aktive Mitglied darf dort weiterhin alles. Außerdem ungeschützt/offen: Firmen-Stammdokument, `integrations`, `webhooks`, `auditLog`, `aiChats` (per Deny-Fallback komplett gesperrt, kein Service).
+> **Überholt:** Die acht Fach-Collections (`customers`, `projects`, `devices`, `samples`, `testValues`, `reports`, `calendarEvents`, `laborbook`) sind seit **Rules Phase 2** rollenbasiert (`docs/firebase/role-permission-rules-phase2.md`); `belongsToCompany` gibt es nicht mehr. *Stand dieses Dokuments (Phase 1):* jedes aktive Mitglied durfte dort alles. Außerdem ungeschützt/offen: Firmen-Stammdokument, `integrations`, `webhooks`, `auditLog`, `aiChats` (per Deny-Fallback komplett gesperrt, kein Service).
 
 ## 8. Tests
 

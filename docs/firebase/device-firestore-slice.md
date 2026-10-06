@@ -1,5 +1,7 @@
 # Device-Firestore-Slice
 
+> **Update (Rules Phase 2):** `devices` prüft serverseitig nicht mehr nur die Membership, sondern geraete.ansehen / .erstellen / .bearbeiten / .loeschen (Tabelle, Tenant-Isolation, Service-Abhängigkeiten und Deployment-Hinweise: `docs/firebase/role-permission-rules-phase2.md`). Archivieren ist ein Update (`geraete.bearbeiten`); `geraete.loeschen` ist ein Admin-only-Löschrecht (Laborleiter darf nicht löschen). Aussagen unten, dass „jedes aktive Mitglied alles darf“, gelten nicht mehr.
+
 Status: **Dritter vollständiger Vertical Slice mit echter Firestore-Anbindung (Firestore Phase 3).** Beschreibt, wie `/geraete` heute Daten liest und schreibt, wie zwischen Mock- und Firestore-Modus umgeschaltet wird, und welche Punkte bewusst noch offen sind. Analog zu `docs/firebase/customer-firestore-slice.md` und `docs/firebase/project-firestore-slice.md` (erster und zweiter Slice).
 
 ---

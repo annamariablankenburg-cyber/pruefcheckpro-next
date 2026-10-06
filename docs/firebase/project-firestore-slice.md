@@ -1,5 +1,7 @@
 # Project-Firestore-Slice
 
+> **Update (Rules Phase 2):** `projects` prüft serverseitig nicht mehr nur die Membership, sondern projekte.ansehen / .erstellen / .bearbeiten / .loeschen (Tabelle, Tenant-Isolation, Service-Abhängigkeiten und Deployment-Hinweise: `docs/firebase/role-permission-rules-phase2.md`). Pausieren/Abschließen/Archivieren sind Updates (`projekte.bearbeiten`). `NewSampleDialog` und `NewLaborbookEntryDialog` laden Projekte; `NewProjectDialog` lädt Kunden (`kunden.ansehen`). Aussagen unten, dass „jedes aktive Mitglied alles darf“, gelten nicht mehr.
+
 Status: **Zweiter vollständiger Vertical Slice mit echter Firestore-Anbindung (Firestore Phase 2).** Beschreibt, wie `/projekte` heute Daten liest und schreibt, wie zwischen Mock- und Firestore-Modus umgeschaltet wird, wie die Kundenreferenz funktioniert, und welche Punkte bewusst noch offen sind. Analog zu `docs/firebase/customer-firestore-slice.md` (erster Slice).
 
 ---

@@ -37,12 +37,55 @@ export const COMPANY_COLLECTIONS = [
 
 export type CompanyCollection = (typeof COMPANY_COLLECTIONS)[number];
 
-// Collections mit rollenbasierten Rules (Phase 1). Alle anderen Company-
-// Collections prüfen weiterhin nur belongsToCompany().
+// Collections mit rollenbasierten Rules, Phase 1 (Verwaltungsdaten) ...
 export const PHASE1_COLLECTIONS = ["roles", "employees", "invitations", "locations"] as const;
-export const LEGACY_COLLECTIONS: CompanyCollection[] = COMPANY_COLLECTIONS.filter(
-  (name) => !(PHASE1_COLLECTIONS as readonly string[]).includes(name)
-);
+
+// ... und Phase 2 (Fach-Collections). Die Zuordnung Operation -> Permission-Schlüssel
+// ist die ERWARTUNG der Tests und steht bewusst getrennt von den Rules: rules-config-sync
+// prüft, dass beide übereinstimmen und dass jeder Schlüssel in allPermissionKeys existiert.
+// Quelle: docs/database/permissions.md (Abschnitt 5) und src/config/roles.ts.
+export const PHASE2_PERMISSIONS = {
+  customers: { read: "kunden.ansehen", create: "kunden.erstellen", update: "kunden.bearbeiten", delete: "kunden.loeschen" },
+  projects: { read: "projekte.ansehen", create: "projekte.erstellen", update: "projekte.bearbeiten", delete: "projekte.loeschen" },
+  devices: { read: "geraete.ansehen", create: "geraete.erstellen", update: "geraete.bearbeiten", delete: "geraete.loeschen" },
+  samples: { read: "proben.ansehen", create: "proben.erstellen", update: "proben.bearbeiten", delete: "proben.loeschen" },
+  testValues: {
+    read: "pruefungen.ansehen",
+    create: "pruefungen.erstellen",
+    update: "pruefungen.bearbeiten",
+    delete: "pruefungen.loeschen",
+  },
+  reports: { read: "berichte.ansehen", create: "berichte.erstellen", update: "berichte.bearbeiten", delete: "berichte.loeschen" },
+  calendarEvents: {
+    read: "kalender.ansehen",
+    create: "kalender.termine_erstellen",
+    update: "kalender.bearbeiten",
+    delete: "kalender.loeschen",
+  },
+  laborbook: {
+    read: "laborbuch.ansehen",
+    create: "laborbuch.erstellen",
+    update: "laborbuch.bearbeiten",
+    delete: "laborbuch.loeschen",
+  },
+} as const satisfies Record<string, { read: string; create: string; update: string; delete: string }>;
+
+export type Phase2Collection = keyof typeof PHASE2_PERMISSIONS;
+export type Phase2Operation = "read" | "create" | "update" | "delete";
+export const PHASE2_COLLECTIONS = Object.keys(PHASE2_PERMISSIONS) as Phase2Collection[];
+
+// Dokumentinhalt für Fach-Collections in den Tests. Mit `sampleId` == Dokument-ID bei
+// testValues (die Rules verlangen das beim Anlegen) und Status "Entwurf" bei Berichten.
+export function phase2DocData(collection: Phase2Collection, id: string, extra: Record<string, unknown> = {}) {
+  const data: Record<string, unknown> = {
+    name: `${collection}-${id}`,
+    status: collection === "reports" ? "Entwurf" : "Aktiv",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+    ...extra,
+  };
+  if (collection === "testValues") data.sampleId = id;
+  return data;
+}
 
 export function collectionPath(collection: CompanyCollection, companyId: string): string {
   return companyCollectionPaths[collection](companyId);
@@ -55,8 +98,10 @@ export function membershipData(companyId: string, status: string) {
   return {
     companyId,
     employeeId: "emp-test",
-    roleId: "pruefer",
-    role: "Prüfer",
+    // Administrator: die Collection-Tests (Tenant-Isolation, Membership-Defekte) brauchen
+    // eine Rolle, die in der eigenen Firma alles darf. Der Name im Snapshot ist ohne Bedeutung.
+    roleId: "admin",
+    role: "Administrator",
     status,
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
@@ -70,10 +115,17 @@ export async function seedMembership(env: RulesTestEnvironment, uid: string, dat
 }
 
 // Standard-Welt: drei Memberships (activeA, activeB, blockedA; noMembership hat
-// absichtlich keine) und in beiden Firmen je ein bestehendes Dokument in jeder
-// der 12 Collections.
+// absichtlich keine), die Systemrollen der Konfiguration in beiden Firmen (die
+// Memberships zeigen auf "admin") und in beiden Firmen je ein bestehendes Dokument
+// in jeder der 12 Collections.
 export async function seedWorld(env: RulesTestEnvironment) {
   await seed(env, async (firestore) => {
+    for (const companyId of [COMPANY_A, COMPANY_B]) {
+      for (const role of configRoles) {
+        await setDoc(doc(firestore, companyCollectionPaths.roles(companyId), role.id), configRoleData(role));
+      }
+    }
+
     await setDoc(doc(firestore, COLLECTIONS.USER_MEMBERSHIPS, USERS.activeA), membershipData(COMPANY_A, "Aktiv"));
     await setDoc(doc(firestore, COLLECTIONS.USER_MEMBERSHIPS, USERS.activeB), membershipData(COMPANY_B, "Aktiv"));
     await setDoc(doc(firestore, COLLECTIONS.USER_MEMBERSHIPS, USERS.blockedA), membershipData(COMPANY_A, "Gesperrt"));
@@ -357,6 +409,22 @@ export async function seedPhase1World(env: RulesTestEnvironment) {
 
     // --- Standorte ---
     await put(collectionPath("locations", COMPANY_A), "loc-1", locationData());
+  });
+}
+
+// Phase-1-Welt + je Fach-Collection die Dokumente `existing` und `del-<name>` (für jeden Namen
+// in `deleteTargets`; so kann jede Persona/Rolle ein EIGENES Dokument löschen, ohne dass sich
+// Tests gegenseitig die Daten wegnehmen) in company-a; `existing` auch in company-b.
+export async function seedPhase2World(env: RulesTestEnvironment, deleteTargets: readonly string[] = []) {
+  await seedPhase1World(env);
+  await seed(env, async (firestore) => {
+    for (const collection of PHASE2_COLLECTIONS) {
+      const ids = [EXISTING_DOC_ID, ...deleteTargets.map((name) => `del-${name}`)];
+      for (const id of ids) {
+        await setDoc(doc(firestore, collectionPath(collection, COMPANY_A), id), phase2DocData(collection, id));
+      }
+      await setDoc(doc(firestore, collectionPath(collection, COMPANY_B), EXISTING_DOC_ID), phase2DocData(collection, EXISTING_DOC_ID));
+    }
   });
 }
 

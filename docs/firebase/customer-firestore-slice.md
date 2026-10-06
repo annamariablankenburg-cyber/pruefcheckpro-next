@@ -1,5 +1,7 @@
 # Customer-Firestore-Slice
 
+> **Update (Rules Phase 2):** `customers` prüft serverseitig nicht mehr nur die Membership, sondern kunden.ansehen / .erstellen / .bearbeiten / .loeschen (Tabelle, Tenant-Isolation, Service-Abhängigkeiten und Deployment-Hinweise: `docs/firebase/role-permission-rules-phase2.md`). Archivieren/Deaktivieren sind Updates (`kunden.bearbeiten`). `NewProjectDialog` und `NewSampleDialog` laden Kunden und brauchen `kunden.ansehen`. Aussagen unten, dass „jedes aktive Mitglied alles darf“, gelten nicht mehr.
+
 Status: **Erster vollständiger Vertical Slice mit echter Firestore-Anbindung.** Beschreibt, wie `/kunden` heute Daten liest und schreibt, wie zwischen Mock- und Firestore-Modus umgeschaltet wird, und welche Punkte bewusst noch offen sind.
 
 ---

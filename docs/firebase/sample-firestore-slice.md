@@ -1,5 +1,7 @@
 # Sample-Firestore-Slice
 
+> **Update (Rules Phase 2):** `samples` prüft serverseitig nicht mehr nur die Membership, sondern proben.ansehen / .erstellen / .bearbeiten / .loeschen (Tabelle, Tenant-Isolation, Service-Abhängigkeiten und Deployment-Hinweise: `docs/firebase/role-permission-rules-phase2.md`). Starten/Abschließen/Archivieren und Bulk-Archivieren sind Updates (`proben.bearbeiten`), Duplizieren ein Create (`proben.erstellen`, der Service liest vorher), Bulk-Löschen `proben.loeschen`. Azubi/Gast dürfen nicht löschen. Aussagen unten, dass „jedes aktive Mitglied alles darf“, gelten nicht mehr.
+
 Status: **Vierter vollständiger Vertical Slice mit echter Firestore-Anbindung (Firestore Phase 4).** Beschreibt, wie `/probekoerper` (Probenmanager) heute Daten liest und schreibt, wie zwischen Mock- und Firestore-Modus umgeschaltet wird, und welche Punkte bewusst noch offen sind. Analog zu `docs/firebase/customer-firestore-slice.md`, `docs/firebase/project-firestore-slice.md` und `docs/firebase/device-firestore-slice.md` (erster bis dritter Slice).
 
 ---

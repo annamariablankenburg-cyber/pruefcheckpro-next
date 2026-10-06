@@ -1,5 +1,7 @@
 # Laborbook-Firestore-Slice (Laborbuch)
 
+> **Update (Rules Phase 2):** `laborbook` prüft serverseitig nicht mehr nur die Membership, sondern laborbuch.ansehen / .erstellen / .bearbeiten / .loeschen (Tabelle, Tenant-Isolation, Service-Abhängigkeiten und Deployment-Hinweise: `docs/firebase/role-permission-rules-phase2.md`). Archivieren/Wiederherstellen laufen in einer Transaktion mit `transaction.get` (braucht zusätzlich `laborbuch.ansehen`); `laborbuch.loeschen` ist ein Admin-only-Löschrecht. `NewLaborbookEntryDialog` lädt Proben, Projekte, Kunden und Geräte. Aussagen unten, dass „jedes aktive Mitglied alles darf“, gelten nicht mehr.
+
 Status: **Achter vollständiger Vertical Slice mit echter Firestore-Anbindung.** Beschreibt, wie `/laborbuch` Einträge liest und schreibt, welche Verknüpfungen gelten, wie Updates und Löschungen Felder behandeln, und welche Punkte bewusst offen sind. Analog zu `docs/firebase/calendar-firestore-slice.md`.
 
 ---

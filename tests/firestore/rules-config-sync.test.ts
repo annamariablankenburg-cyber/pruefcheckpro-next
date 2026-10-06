@@ -14,7 +14,7 @@ import {
   allPermissionKeys,
   roles as configRoles,
 } from "../../src/config/roles";
-import { LEGACY_COLLECTIONS, PHASE1_COLLECTIONS } from "./helpers/fixtures";
+import { PHASE1_COLLECTIONS, PHASE2_COLLECTIONS, PHASE2_PERMISSIONS } from "./helpers/fixtures";
 import { RULES_PATH } from "./helpers/testEnv";
 
 const rules = readFileSync(RULES_PATH, "utf8").replace(/\r\n/g, "\n");
@@ -150,13 +150,60 @@ describe("firestore.rules ↔ src/config/roles.ts", () => {
     }
   });
 
-  it("die acht übrigen Company-Collections prüfen unverändert nur belongsToCompany (kein hasPermission)", () => {
-    assert.equal(LEGACY_COLLECTIONS.length, 8);
-    for (const name of LEGACY_COLLECTIONS) {
+  it("die acht Fach-Collections (Phase 2) nutzen hasPermission und hängen NICHT mehr im alten belongsToCompany-Only-Block", () => {
+    assert.equal(PHASE2_COLLECTIONS.length, 8);
+    for (const name of PHASE2_COLLECTIONS) {
       const block = matchBlock(name);
-      assert.ok(block.includes("belongsToCompany(companyId)"), `${name}: belongsToCompany fehlt`);
-      assert.ok(!block.includes("hasPermission("), `${name}: gehört noch nicht zu Phase 1`);
+      assert.ok(block.includes("hasPermission(companyId"), `${name}: hasPermission fehlt`);
+      assert.ok(!block.includes("belongsToCompany"), `${name}: darf nicht mehr nur belongsToCompany nutzen`);
+      assert.ok(!/allow\s+(read|write)\b/.test(block), `${name}: allow read/write (zu grob) – get/list/create/update/delete getrennt`);
     }
+    assert.ok(!/belongsToCompany/.test(code), "belongsToCompany darf nirgends mehr verwendet oder definiert sein");
+  });
+
+  // Die Erwartung der Tests (PHASE2_PERMISSIONS) und die Rules müssen exakt dieselben
+  // Schlüssel je Operation verwenden; jeder Schlüssel muss in der Config existieren.
+  it("Phase 2: Operation -> Permission-Schlüssel in den Rules entspricht der Tabelle der Tests und existiert in allPermissionKeys", () => {
+    const operations = {
+      read: /allow get, list: if hasPermission\(companyId, "([^"]+)"\)/,
+      create: /allow create: if hasPermission\(companyId, "([^"]+)"\)/,
+      update: /allow update: if hasPermission\(companyId, "([^"]+)"\)/,
+      delete: /allow delete: if hasPermission\(companyId, "([^"]+)"\)/,
+    } as const;
+    for (const name of PHASE2_COLLECTIONS) {
+      const block = matchBlock(name);
+      for (const [operation, pattern] of Object.entries(operations)) {
+        const match = block.match(pattern);
+        assert.ok(match, `${name}.${operation}: Regel nicht im erwarteten Format`);
+        const expected = PHASE2_PERMISSIONS[name][operation as keyof typeof operations];
+        assert.equal(match[1], expected, `${name}.${operation}`);
+        assert.ok(allPermissionKeys.includes(match[1]), `${name}.${operation}: ${match[1]} existiert nicht in allPermissionKeys`);
+      }
+      // Genau vier allow-Regeln je Collection (keine Zusatzfreigabe).
+      assert.equal((block.match(/allow /g) ?? []).length, 4, `${name}: unerwartete Anzahl allow-Regeln`);
+    }
+  });
+
+  it("Phase 2: die geschützten Admin-only-Löschrechte stehen als einziger Schlüssel am delete von Geräten, Laborbuch und Berichten", () => {
+    assert.equal(PHASE2_PERMISSIONS.devices.delete, "geraete.loeschen");
+    assert.equal(PHASE2_PERMISSIONS.laborbook.delete, "laborbuch.loeschen");
+    assert.equal(PHASE2_PERMISSIONS.reports.delete, "berichte.loeschen");
+    for (const key of ADMIN_ONLY_DELETE_PERMISSION_KEYS) {
+      assert.ok(Object.values(PHASE2_PERMISSIONS).some((table) => table.delete === key), key);
+    }
+    // Delete hängt nie an bearbeiten/verwalten: jede delete-Regel nutzt genau einen *.loeschen-Schlüssel.
+    for (const name of PHASE2_COLLECTIONS) {
+      const deleteRule = matchBlock(name).match(/allow delete: ([^;]+);/);
+      assert.ok(deleteRule, name);
+      assert.deepEqual(stringLiterals(deleteRule[1]).filter((literal) => literal.includes(".")), [PHASE2_PERMISSIONS[name].delete]);
+      assert.match(PHASE2_PERMISSIONS[name].delete, /\.loeschen$/);
+    }
+  });
+
+  it("Phase 2: Kalender-Erstellen nutzt den Legacy-Schlüssel kalender.termine_erstellen (kein kalender.erstellen)", () => {
+    assert.equal(PHASE2_PERMISSIONS.calendarEvents.create, "kalender.termine_erstellen");
+    assert.ok(!allPermissionKeys.includes("kalender.erstellen"));
+    assert.ok(!code.includes("kalender.erstellen"));
   });
 
   it("Löschen ist in allen vier Phase-1-Collections verboten", () => {

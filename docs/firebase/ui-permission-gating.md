@@ -129,7 +129,7 @@ Lädt Rollen nur mit `rollen.ansehen`; sonst Hinweis „Für deinen Zugang ist d
 
 - Ein manipulierter Client umgeht das Gating – nur die Rules schützen.
 - Eine Rollenänderung/Archivierung wirkt live, aber nur, wenn die Membership die Rolle referenziert.
-- **Rules Phase 2 fehlt:** `customers`, `projects`, `devices`, `samples`, `testValues`, `reports`, `calendarEvents`, `laborbook` prüfen serverseitig weiter nur `belongsToCompany`. Das Gating dieser Fachseiten (Kunden, Projekte, Geräte, …) ist nicht Teil dieses Slices.
+- **Rules Phase 2 ist inzwischen umgesetzt** (`docs/firebase/role-permission-rules-phase2.md`): `customers`, `projects`, `devices`, `samples`, `testValues`, `reports`, `calendarEvents`, `laborbook` prüfen `*.ansehen/erstellen/bearbeiten/loeschen`. Das **UI-Gating dieser Fachseiten** (Kunden, Projekte, Geräte, …) ist weiterhin nicht umgesetzt (nächster Slice „UI Permission Gating Phase 2“; offene Stellen in Abschnitt 8 der Phase-2-Doku).
 
 ## 11. Tests
 

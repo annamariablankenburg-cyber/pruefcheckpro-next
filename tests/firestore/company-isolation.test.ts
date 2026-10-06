@@ -1,12 +1,11 @@
-// Tenant-Isolation und Membership-Auswertung (belongsToCompany) am Beispiel
+// Tenant-Isolation und Membership-Auswertung am Beispiel
 // companies/{companyId}/customers sowie defensive Fälle mit kaputten
 // Membership-Dokumenten. Die Abdeckung ALLER Company-Collections steht in
-// company-collections.test.ts.
+// company-collections.test.ts, die Rollenmatrix in phase2-*.test.ts.
 //
-// Wichtig: Der Test bildet den IST-Stand ab. Aktive Mitglieder der richtigen
-// Firma dürfen heute ALLES (read + write) – es gibt noch keine
-// rollenbasierte Durchsetzung. Wenn spätere Slices Rechte einschränken, müssen
-// die ALLOW-Erwartungen dort bewusst angepasst werden.
+// Das Test-Mitglied (activeA) hat die Rolle "admin" (alle Rechte). Ein aktiver
+// Zugang der richtigen Firma allein genügt NICHT mehr: Entscheidend sind Membership
+// UND Rolle (Phase 2).
 import { after, before, beforeEach, describe, it } from "node:test";
 
 import { assertFails, assertSucceeds, type RulesTestEnvironment } from "@firebase/rules-unit-testing";
@@ -49,7 +48,7 @@ describe("Tenant-Isolation (companies/{companyId}/customers)", () => {
       await assertSucceeds(getDocs(collection(asUser(env, USERS.activeA), customers(COMPANY_A))));
     });
 
-    it("erstellen / ändern / löschen → ALLOW (Ist-Stand: noch keine rollenbasierte Einschränkung)", async () => {
+    it("erstellen / ändern / löschen → ALLOW (Rolle admin hat alle Kunden-Rechte)", async () => {
       const db = asUser(env, USERS.activeA);
       await assertSucceeds(setDoc(doc(db, customers(COMPANY_A), "new-customer"), { name: "Neu" }));
       await assertSucceeds(updateDoc(doc(db, customers(COMPANY_A), EXISTING_DOC_ID), { name: "Geändert" }));

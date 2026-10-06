@@ -1,17 +1,14 @@
-// Smoke-Tests für die Company-Collections OHNE rollenbasierte Rules. Jede
-// Collection hat in firestore.rules einen eigenen match-Block, daher wird jede
-// einzeln geprüft (nicht nur ein Beispiel).
+// Membership- und Tenant-Isolation-Tests für die acht Fach-Collections (Phase 2:
+// customers, projects, devices, samples, testValues, reports, calendarEvents,
+// laborbook). Jede Collection hat in firestore.rules einen eigenen match-Block,
+// daher wird jede einzeln geprüft (nicht nur ein Beispiel).
 //
-// IST-Stand dieser acht Collections (customers, projects, devices, samples,
-// testValues, reports, calendarEvents, laborbook): aktive Mitglieder der
-// richtigen Firma dürfen lesen, auflisten, erstellen, ändern und löschen – hier
-// gibt es noch keine rollenbasierte Durchsetzung. Wenn ein späterer Slice z. B.
-// Löschen einschränkt, wird die jeweilige ALLOW-Erwartung hier bewusst
-// angepasst.
-//
-// Die vier Collections mit rollenbasierten Rules (Phase 1: roles, employees,
-// invitations, locations) werden in phase1-*.test.ts getestet; eine bloße
-// Membership reicht dort NICHT mehr.
+// Hier wird NICHT die Rollenmatrix getestet, sondern die Voraussetzungen jeder
+// Operation: angemeldet, aktive Membership der Firma im Pfad. Dafür hat das
+// Test-Mitglied (activeA) die Rolle "admin" mit allen Rechten – eine bloße
+// Membership reicht NICHT mehr, der Positivfall zeigt nur, dass der Zugriff mit
+// passender Rolle möglich ist. Die Persona × Collection × Operation-Matrix steht in
+// phase2-matrix.test.ts, gezielte Fälle in phase2-permissions.test.ts.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { after, before, beforeEach, describe, it } from "node:test";
@@ -24,7 +21,8 @@ import {
   COMPANY_B,
   COMPANY_COLLECTIONS,
   EXISTING_DOC_ID,
-  LEGACY_COLLECTIONS,
+  PHASE2_COLLECTIONS,
+  phase2DocData,
   USERS,
   collectionPath,
   seedWorld,
@@ -50,10 +48,10 @@ describe("Abdeckung der Company-Collections", () => {
   });
 });
 
-describe("Company-Collections ohne Rollen-Rules: Membership und Tenant-Isolation", () => {
-  it("es sind genau die acht noch nicht rollenbasierten Collections", () => {
+describe("Fach-Collections (Phase 2): Membership und Tenant-Isolation", () => {
+  it("es sind genau die acht Phase-2-Collections", () => {
     assert.deepEqual(
-      [...LEGACY_COLLECTIONS].sort(),
+      [...PHASE2_COLLECTIONS].sort(),
       ["calendarEvents", "customers", "devices", "laborbook", "projects", "reports", "samples", "testValues"]
     );
   });
@@ -71,16 +69,16 @@ describe("Company-Collections ohne Rollen-Rules: Membership und Tenant-Isolation
     await seedWorld(env);
   });
 
-  for (const name of LEGACY_COLLECTIONS) {
+  for (const name of PHASE2_COLLECTIONS) {
     describe(name, () => {
       const pathA = collectionPath(name, COMPANY_A);
       const pathB = collectionPath(name, COMPANY_B);
 
-      it("aktives Mitglied der richtigen Firma: lesen, auflisten, erstellen, ändern, löschen → ALLOW (Ist-Stand)", async () => {
+      it("aktives Mitglied der richtigen Firma mit Rolle admin: lesen, auflisten, erstellen, ändern, löschen → ALLOW", async () => {
         const db = asUser(env, USERS.activeA);
         await assertSucceeds(getDoc(doc(db, pathA, EXISTING_DOC_ID)));
         await assertSucceeds(getDocs(collection(db, pathA)));
-        await assertSucceeds(setDoc(doc(db, pathA, "new-doc"), { name: "neu" }));
+        await assertSucceeds(setDoc(doc(db, pathA, "new-doc"), phase2DocData(name, "new-doc")));
         await assertSucceeds(updateDoc(doc(db, pathA, EXISTING_DOC_ID), { name: "geändert" }));
         await assertSucceeds(deleteDoc(doc(db, pathA, EXISTING_DOC_ID)));
       });
@@ -89,7 +87,7 @@ describe("Company-Collections ohne Rollen-Rules: Membership und Tenant-Isolation
         const db = asUser(env, USERS.activeB);
         await assertFails(getDoc(doc(db, pathA, EXISTING_DOC_ID)));
         await assertFails(getDocs(collection(db, pathA)));
-        await assertFails(setDoc(doc(db, pathA, "new-doc"), { name: "neu" }));
+        await assertFails(setDoc(doc(db, pathA, "new-doc"), phase2DocData(name, "new-doc")));
         await assertFails(updateDoc(doc(db, pathA, EXISTING_DOC_ID), { name: "x" }));
         await assertFails(deleteDoc(doc(db, pathA, EXISTING_DOC_ID)));
       });
@@ -97,14 +95,14 @@ describe("Company-Collections ohne Rollen-Rules: Membership und Tenant-Isolation
       it("Mitglied von company-a greift auf company-b zu → DENY", async () => {
         const db = asUser(env, USERS.activeA);
         await assertFails(getDoc(doc(db, pathB, EXISTING_DOC_ID)));
-        await assertFails(setDoc(doc(db, pathB, "new-doc"), { name: "neu" }));
+        await assertFails(setDoc(doc(db, pathB, "new-doc"), phase2DocData(name, "new-doc")));
       });
 
       it("gesperrtes Mitglied: lesen, auflisten, schreiben → DENY", async () => {
         const db = asUser(env, USERS.blockedA);
         await assertFails(getDoc(doc(db, pathA, EXISTING_DOC_ID)));
         await assertFails(getDocs(collection(db, pathA)));
-        await assertFails(setDoc(doc(db, pathA, "new-doc"), { name: "neu" }));
+        await assertFails(setDoc(doc(db, pathA, "new-doc"), phase2DocData(name, "new-doc")));
         await assertFails(updateDoc(doc(db, pathA, EXISTING_DOC_ID), { name: "x" }));
         await assertFails(deleteDoc(doc(db, pathA, EXISTING_DOC_ID)));
       });
@@ -113,7 +111,7 @@ describe("Company-Collections ohne Rollen-Rules: Membership und Tenant-Isolation
         const db = asUser(env, USERS.noMembership);
         await assertFails(getDoc(doc(db, pathA, EXISTING_DOC_ID)));
         await assertFails(getDocs(collection(db, pathA)));
-        await assertFails(setDoc(doc(db, pathA, "new-doc"), { name: "neu" }));
+        await assertFails(setDoc(doc(db, pathA, "new-doc"), phase2DocData(name, "new-doc")));
         await assertFails(deleteDoc(doc(db, pathA, EXISTING_DOC_ID)));
       });
 
@@ -121,7 +119,7 @@ describe("Company-Collections ohne Rollen-Rules: Membership und Tenant-Isolation
         const db = asAnonymous(env);
         await assertFails(getDoc(doc(db, pathA, EXISTING_DOC_ID)));
         await assertFails(getDocs(collection(db, pathA)));
-        await assertFails(setDoc(doc(db, pathA, "new-doc"), { name: "neu" }));
+        await assertFails(setDoc(doc(db, pathA, "new-doc"), phase2DocData(name, "new-doc")));
         await assertFails(deleteDoc(doc(db, pathA, EXISTING_DOC_ID)));
       });
     });

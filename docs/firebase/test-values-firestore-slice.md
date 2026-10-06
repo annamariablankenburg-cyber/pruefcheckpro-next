@@ -1,5 +1,7 @@
 # Test-Values-Firestore-Slice (Prüfwerte/Prüfungen)
 
+> **Update (Rules Phase 2):** `testValues` prüft serverseitig nicht mehr nur die Membership, sondern pruefungen.ansehen / .erstellen / .bearbeiten / .loeschen (Tabelle, Tenant-Isolation, Service-Abhängigkeiten und Deployment-Hinweise: `docs/firebase/role-permission-rules-phase2.md`). Prüfwerte gehören zu den Prüfungen (`pruefungen.*`). Das Prüfwert-Dokument liegt unter der Probennummer: beim Anlegen muss `sampleId` der Dokument-ID entsprechen, danach ist es unveränderlich (kein Cross-Read). Aussagen unten, dass „jedes aktive Mitglied alles darf“, gelten nicht mehr.
+
 Status: **Fünfter vollständiger Vertical Slice mit echter Firestore-Anbindung (Firestore Phase 5).** Beschreibt, wie `/pruefungen` heute Daten liest und schreibt, wie Messreihen/Entwürfe/Ergebnisse persistiert werden, und welche Punkte bewusst noch offen sind. Analog zu `docs/firebase/customer-firestore-slice.md`, `docs/firebase/project-firestore-slice.md`, `docs/firebase/device-firestore-slice.md` und `docs/firebase/sample-firestore-slice.md` (erster bis vierter Slice).
 
 ---
