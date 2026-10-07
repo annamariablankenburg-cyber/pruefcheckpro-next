@@ -30,7 +30,8 @@ export const emptyAdvancedFilters: SampleAdvancedFilters = {
 // Massenerfassung) lebt ebenfalls hier, damit sie nach Archivieren/Löschen
 // zentral bereinigt werden kann, statt das in jeder aufrufenden Komponente
 // separat nachzuziehen.
-export function useSamples() {
+// `enabled` (Standard true): nur mit Leserecht (*.ansehen) wird geladen, sonst keine Abfrage.
+export function useSamples(enabled = true) {
   const [samples, setSamples] = useState<Sample[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,10 +54,11 @@ export function useSamples() {
   }, []);
 
   useEffect(() => {
+    if (!enabled) return;
     // Lädt die Probenliste beim ersten Mount vom Service (Mock oder Firestore).
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshSamples();
-  }, [refreshSamples]);
+  }, [enabled, refreshSamples]);
 
   const activeSamples = useMemo(
     () => samples.filter((sample) => sample.status !== "Archiviert"),
@@ -246,8 +248,11 @@ export function useSamples() {
     activeSamples,
     selectedSamples,
     selectedIds,
-    loading,
-    error,
+    // false, wenn der Bereich nicht gelesen werden darf: dann wurde NICHT abgefragt (kein erwarteter
+    // permission-denied), die Daten sind leer, kein Ladezustand/Fehler.
+    enabled,
+    loading: enabled && loading,
+    error: enabled ? error : null,
     refreshSamples,
     search,
     setSearch,

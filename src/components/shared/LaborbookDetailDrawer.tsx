@@ -11,10 +11,12 @@ import {
 import { LaborbookStatusBadge } from "@/components/shared/LaborbookStatusBadge";
 import { LaborbookTypeBadge } from "@/components/shared/LaborbookTypeBadge";
 import { RecordList } from "@/components/shared/RecordList";
+import type { LaborbookUiAccess } from "@/lib/permissions/domainAccess";
 import type { LaborbookEntry } from "@/types/laborbook";
 
 interface LaborbookDetailDrawerProps {
   entry: LaborbookEntry | null;
+  access: LaborbookUiAccess;
   onOpenChange: (open: boolean) => void;
   onEdit: (entry: LaborbookEntry) => void;
   onArchive: (entry: LaborbookEntry) => void;
@@ -48,6 +50,7 @@ export function LaborbookDetailDrawer({
   onDelete,
   onAddPhoto,
   onAddDocument,
+  access,
 }: LaborbookDetailDrawerProps) {
   const canArchive = entry?.status !== "Archiviert";
   const canReactivate = entry?.status === "Archiviert";
@@ -97,7 +100,7 @@ export function LaborbookDetailDrawer({
                 icon={ImageIcon}
                 items={entry.fotos}
                 addLabel="Foto hinzufügen"
-                onAdd={() => onAddPhoto(entry)}
+                onAdd={access.edit ? () => onAddPhoto(entry) : undefined}
                 emptyLabel="Noch keine Fotos hinterlegt."
               />
 
@@ -106,7 +109,7 @@ export function LaborbookDetailDrawer({
                 icon={FileText}
                 items={entry.dokumente}
                 addLabel="Dokument hochladen"
-                onAdd={() => onAddDocument(entry)}
+                onAdd={access.edit ? () => onAddDocument(entry) : undefined}
                 emptyLabel="Noch keine Dokumente hinterlegt."
               />
 
@@ -137,31 +140,35 @@ export function LaborbookDetailDrawer({
 
             <div className="flex flex-col gap-2 border-t border-border px-6 py-4">
               <div className="grid grid-cols-2 gap-2">
-                <Button type="button" variant="outline" onClick={() => onEdit(entry)}>
-                  <Pencil className="size-4" />
-                  Bearbeiten
-                </Button>
-                {canArchive && (
+                {access.edit && (
+                  <Button type="button" variant="outline" onClick={() => onEdit(entry)}>
+                    <Pencil className="size-4" />
+                    Bearbeiten
+                  </Button>
+                )}
+                {access.edit && canArchive && (
                   <Button type="button" variant="outline" onClick={() => onArchive(entry)}>
                     <Archive className="size-4" />
                     Archivieren
                   </Button>
                 )}
-                {canReactivate && (
+                {access.edit && canReactivate && (
                   <Button type="button" variant="outline" onClick={() => onReactivate(entry)}>
                     <ArchiveRestore className="size-4" />
                     Reaktivieren
                   </Button>
                 )}
-                <Button
-                  type="button"
-                  variant="destructive"
-                  className="col-span-2"
-                  onClick={() => onDelete(entry)}
-                >
-                  <Trash2 className="size-4" />
-                  Löschen
-                </Button>
+                {access.delete && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    className="col-span-2"
+                    onClick={() => onDelete(entry)}
+                  >
+                    <Trash2 className="size-4" />
+                    Löschen
+                  </Button>
+                )}
               </div>
             </div>
           </>

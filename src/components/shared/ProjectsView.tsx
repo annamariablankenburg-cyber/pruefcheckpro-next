@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
+import { DomainAccessGate } from "@/components/shared/DomainAccessGate";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { NewProjectDialog } from "@/components/shared/NewProjectDialog";
 import { ProjectDetailDrawer } from "@/components/shared/ProjectDetailDrawer";
@@ -21,6 +22,7 @@ import { ProjectFilters } from "@/components/shared/ProjectFilters";
 import { ProjectTable } from "@/components/shared/ProjectTable";
 import { StatCard } from "@/components/shared/StatCard";
 import { useProjects } from "@/hooks/useProjects";
+import { getProjectUiAccess, type ProjectUiAccess } from "@/lib/permissions/domainAccess";
 import type { Project } from "@/types/project";
 
 type ConfirmActionType = "pause" | "resume" | "complete" | "reopen" | "archive" | "reactivate";
@@ -74,7 +76,18 @@ const confirmCopy: Record<
 
 type ProjectDialogState = { mode: "create" } | { mode: "edit"; project: Project } | null;
 
+// Sperrt die Seite ohne projekte.ansehen (auch bei direktem URL-Aufruf); erst danach werden die
+// Projekte geladen. Statuswechsel = projekte.bearbeiten; der Anlegen-/Bearbeiten-Dialog braucht
+// zusätzlich kunden.ansehen (Pflichtfeld Kunde). Ein Projekt-Löschen gibt es in der UI nicht.
 export function ProjectsView() {
+  return (
+    <DomainAccessGate domain="projects" label="Projekte">
+      {(_actions, permissions) => <ProjectsContent access={getProjectUiAccess(permissions)} />}
+    </DomainAccessGate>
+  );
+}
+
+function ProjectsContent({ access }: { access: ProjectUiAccess }) {
   const router = useRouter();
   const {
     projects,
@@ -124,6 +137,7 @@ export function ProjectsView() {
   }
 
   async function handleConfirmAction(project: Project) {
+    if (!access.edit) return;
     if (!confirmAction || actionPending) return;
     setActionPending(true);
     try {
@@ -159,10 +173,12 @@ export function ProjectsView() {
   }
 
   function openConfirm(project: Project, type: ConfirmActionType) {
+    if (!access.edit) return;
     setConfirmAction({ project, type });
   }
 
   function openEditDialog(project: Project) {
+    if (!access.editDialog) return;
     setProjectDialog({ mode: "edit", project });
   }
 
@@ -179,14 +195,16 @@ export function ProjectsView() {
             Verwalte Baustellen, Aufträge, Proben und Projektfortschritte.
           </p>
         </div>
-        <Button
-          type="button"
-          onClick={() => setProjectDialog({ mode: "create" })}
-          disabled={hasBlockingState}
-        >
-          <Plus className="size-4" />
-          Neues Projekt
-        </Button>
+        {access.create && (
+          <Button
+            type="button"
+            onClick={() => setProjectDialog({ mode: "create" })}
+            disabled={hasBlockingState}
+          >
+            <Plus className="size-4" />
+            Neues Projekt
+          </Button>
+        )}
       </div>
 
       {loading ? (
@@ -226,6 +244,7 @@ export function ProjectsView() {
           />
 
           <ProjectTable
+            access={access}
             projects={filteredProjects}
             onResetFilters={resetFilters}
             onViewDetails={setDetailProject}
@@ -245,6 +264,7 @@ export function ProjectsView() {
       )}
 
       <ProjectDetailDrawer
+        access={access}
         project={detailProject}
         onOpenChange={(open) => !open && setDetailProject(null)}
         onEdit={openEditDialog}

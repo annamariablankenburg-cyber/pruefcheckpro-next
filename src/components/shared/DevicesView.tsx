@@ -9,10 +9,12 @@ import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 import { DeviceDetailDrawer } from "@/components/shared/DeviceDetailDrawer";
 import { DeviceFilters } from "@/components/shared/DeviceFilters";
 import { DeviceTable } from "@/components/shared/DeviceTable";
+import { DomainAccessGate } from "@/components/shared/DomainAccessGate";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { NewDeviceDialog } from "@/components/shared/NewDeviceDialog";
 import { StatCard } from "@/components/shared/StatCard";
 import { useDevices } from "@/hooks/useDevices";
+import type { DomainActions } from "@/lib/permissions/domainAccess";
 import type { Device } from "@/types/device";
 
 type ConfirmActionType = "deactivate" | "reactivate" | "archive";
@@ -45,7 +47,19 @@ const confirmCopy: Record<
 
 type DeviceDialogState = { mode: "create" } | { mode: "edit"; device: Device } | null;
 
+// Sperrt die Seite ohne geraete.ansehen (auch bei direktem URL-Aufruf); erst danach werden die
+// Geräte geladen. Anlegen = geraete.erstellen; Bearbeiten, Außer Betrieb, Archivieren und
+// Reaktivieren sind Updates = geraete.bearbeiten. Ein Geräte-Löschen (geraete.loeschen, Admin-only)
+// gibt es in der UI nicht.
 export function DevicesView() {
+  return (
+    <DomainAccessGate domain="devices" label="Geräte">
+      {(actions) => <DevicesContent actions={actions} />}
+    </DomainAccessGate>
+  );
+}
+
+function DevicesContent({ actions }: { actions: DomainActions }) {
   const {
     devices,
     activeDevices,
@@ -90,6 +104,7 @@ export function DevicesView() {
   }
 
   async function handleConfirmAction(device: Device) {
+    if (!actions.edit) return;
     if (!confirmAction || actionPending) return;
     setActionPending(true);
     try {
@@ -112,10 +127,12 @@ export function DevicesView() {
   }
 
   function openConfirm(device: Device, type: ConfirmActionType) {
+    if (!actions.edit) return;
     setConfirmAction({ device, type });
   }
 
   function openEditDialog(device: Device) {
+    if (!actions.edit) return;
     setDeviceDialog({ mode: "edit", device });
   }
 
@@ -132,14 +149,16 @@ export function DevicesView() {
             Verwalte Prüfgeräte, Kalibrierungen und Wartungen.
           </p>
         </div>
-        <Button
-          type="button"
-          onClick={() => setDeviceDialog({ mode: "create" })}
-          disabled={hasBlockingState}
-        >
-          <Cpu className="size-4" />
-          Neues Gerät
-        </Button>
+        {actions.create && (
+          <Button
+            type="button"
+            onClick={() => setDeviceDialog({ mode: "create" })}
+            disabled={hasBlockingState}
+          >
+            <Cpu className="size-4" />
+            Neues Gerät
+          </Button>
+        )}
       </div>
 
       {loading ? (
@@ -184,6 +203,7 @@ export function DevicesView() {
           />
 
           <DeviceTable
+            canEdit={actions.edit}
             devices={filteredDevices}
             onResetFilters={resetFilters}
             onViewDetails={setDetailDevice}
@@ -199,6 +219,7 @@ export function DevicesView() {
       )}
 
       <DeviceDetailDrawer
+        canEdit={actions.edit}
         device={detailDevice}
         onOpenChange={(open) => !open && setDetailDevice(null)}
         onEdit={openEditDialog}

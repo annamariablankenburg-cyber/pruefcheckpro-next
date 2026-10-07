@@ -25,9 +25,11 @@ import { Progress } from "@/components/ui/progress";
 import { DeliveryNoteList } from "@/components/shared/DeliveryNoteList";
 import { ProjectFieldBadge } from "@/components/shared/ProjectFieldBadge";
 import { ProjectStatusBadge } from "@/components/shared/ProjectStatusBadge";
+import type { ProjectUiAccess } from "@/lib/permissions/domainAccess";
 import type { Project } from "@/types/project";
 
 interface ProjectDetailDrawerProps {
+  access: ProjectUiAccess;
   project: Project | null;
   onOpenChange: (open: boolean) => void;
   onEdit: (project: Project) => void;
@@ -61,6 +63,7 @@ function SectionTitle({ children }: { children: string }) {
 }
 
 export function ProjectDetailDrawer({
+  access,
   project,
   onOpenChange,
   onEdit,
@@ -152,7 +155,7 @@ export function ProjectDetailDrawer({
 
               <DeliveryNoteList
                 notes={project.deliveryNotes}
-                onAdd={() => onAddDeliveryNote(project)}
+                onAdd={access.edit ? () => onAddDeliveryNote(project) : undefined}
               />
 
               <div className="flex flex-col gap-2">
@@ -184,47 +187,55 @@ export function ProjectDetailDrawer({
 
             <div className="flex flex-col gap-2 border-t border-border px-6 py-4">
               <div className="grid grid-cols-2 gap-2">
-                <Button type="button" variant="outline" onClick={() => onEdit(project)}>
-                  <Pencil className="size-4" />
-                  Bearbeiten
-                </Button>
-                <Button type="button" variant="outline" onClick={() => onViewSamples(project)}>
-                  <FlaskConical className="size-4" />
-                  Proben anzeigen
-                </Button>
-                <Button type="button" variant="outline" onClick={() => onNewSample(project)}>
-                  <Plus className="size-4" />
-                  Neue Probe
-                </Button>
-                <Button type="button" variant="outline" onClick={() => onOpenCustomer(project)}>
-                  <Users className="size-4" />
-                  Kunden öffnen
-                </Button>
-                {canPause && (
+                {access.editDialog && (
+                  <Button type="button" variant="outline" onClick={() => onEdit(project)}>
+                    <Pencil className="size-4" />
+                    Bearbeiten
+                  </Button>
+                )}
+                {access.viewSamples && (
+                  <Button type="button" variant="outline" onClick={() => onViewSamples(project)}>
+                    <FlaskConical className="size-4" />
+                    Proben anzeigen
+                  </Button>
+                )}
+                {access.newSample && (
+                  <Button type="button" variant="outline" onClick={() => onNewSample(project)}>
+                    <Plus className="size-4" />
+                    Neue Probe
+                  </Button>
+                )}
+                {access.openCustomer && (
+                  <Button type="button" variant="outline" onClick={() => onOpenCustomer(project)}>
+                    <Users className="size-4" />
+                    Kunden öffnen
+                  </Button>
+                )}
+                {access.edit && canPause && (
                   <Button type="button" variant="outline" onClick={() => onPause(project)}>
                     <Pause className="size-4" />
                     Pausieren
                   </Button>
                 )}
-                {canResume && (
+                {access.edit && canResume && (
                   <Button type="button" variant="outline" onClick={() => onResume(project)}>
                     <Play className="size-4" />
                     Projekt fortsetzen
                   </Button>
                 )}
-                {canComplete && (
+                {access.edit && canComplete && (
                   <Button type="button" variant="outline" onClick={() => onComplete(project)}>
                     <CheckCircle2 className="size-4" />
                     Abschließen
                   </Button>
                 )}
-                {canReopen && (
+                {access.edit && canReopen && (
                   <Button type="button" variant="outline" onClick={() => onReopen(project)}>
                     <RotateCcw className="size-4" />
                     Wieder öffnen
                   </Button>
                 )}
-                {canArchive && (
+                {access.edit && canArchive && (
                   <Button
                     type="button"
                     variant="destructive"
@@ -235,7 +246,7 @@ export function ProjectDetailDrawer({
                     Archivieren
                   </Button>
                 )}
-                {canReactivate && (
+                {access.edit && canReactivate && (
                   <Button
                     type="button"
                     variant="outline"

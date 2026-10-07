@@ -15,7 +15,8 @@ interface RecordListProps {
   icon: LucideIcon;
   items: RecordListItem[];
   addLabel: string;
-  onAdd: () => void;
+  // Ohne onAdd (fehlendes Bearbeiten-Recht) wird die Schaltfläche nicht angeboten.
+  onAdd?: () => void;
   emptyLabel: string;
   iconClassName?: string;
 }
@@ -37,10 +38,12 @@ export function RecordList({
         <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
           {title}
         </p>
-        <Button type="button" variant="outline" size="sm" onClick={onAdd}>
-          <Plus className="size-3.5" />
-          {addLabel}
-        </Button>
+        {onAdd && (
+          <Button type="button" variant="outline" size="sm" onClick={onAdd}>
+            <Plus className="size-3.5" />
+            {addLabel}
+          </Button>
+        )}
       </div>
 
       {items.length > 0 ? (

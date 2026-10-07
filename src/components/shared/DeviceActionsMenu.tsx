@@ -22,6 +22,8 @@ import type { Device } from "@/types/device";
 
 interface DeviceActionsMenuProps {
   device: Device;
+  // geraete.bearbeiten (Bearbeiten, Status/Archiv, Kalibrierung/Wartung/Dokumente). Löschen gibt es in der UI nicht.
+  canEdit: boolean;
   onViewDetails: () => void;
   onEdit: () => void;
   onDocumentCalibration: () => void;
@@ -34,6 +36,7 @@ interface DeviceActionsMenuProps {
 
 export function DeviceActionsMenu({
   device,
+  canEdit,
   onViewDetails,
   onEdit,
   onDocumentCalibration,
@@ -65,45 +68,49 @@ export function DeviceActionsMenu({
           <Eye />
           Details öffnen
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onEdit}>
-          <Pencil />
-          Bearbeiten
-        </DropdownMenuItem>
+        {canEdit && (
+          <>
+            <DropdownMenuItem onSelect={onEdit}>
+              <Pencil />
+              Bearbeiten
+            </DropdownMenuItem>
 
-        <DropdownMenuSeparator />
+            <DropdownMenuSeparator />
 
-        <DropdownMenuItem onSelect={onDocumentCalibration}>
-          <Gauge />
-          Kalibrierung dokumentieren
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onDocumentMaintenance}>
-          <Wrench />
-          Wartung dokumentieren
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onUploadDocument}>
-          <Upload />
-          Dokument hochladen
-        </DropdownMenuItem>
+            <DropdownMenuItem onSelect={onDocumentCalibration}>
+              <Gauge />
+              Kalibrierung dokumentieren
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={onDocumentMaintenance}>
+              <Wrench />
+              Wartung dokumentieren
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={onUploadDocument}>
+              <Upload />
+              Dokument hochladen
+            </DropdownMenuItem>
 
-        <DropdownMenuSeparator />
+            <DropdownMenuSeparator />
 
-        {canDeactivate && (
-          <DropdownMenuItem onSelect={onDeactivate}>
-            <PowerOff />
-            Außer Betrieb setzen
-          </DropdownMenuItem>
-        )}
-        {canReactivate && (
-          <DropdownMenuItem onSelect={onReactivate}>
-            <Power />
-            Reaktivieren
-          </DropdownMenuItem>
-        )}
-        {canArchive && (
-          <DropdownMenuItem onSelect={onArchive}>
-            <Archive />
-            Archivieren
-          </DropdownMenuItem>
+            {canDeactivate && (
+              <DropdownMenuItem onSelect={onDeactivate}>
+                <PowerOff />
+                Außer Betrieb setzen
+              </DropdownMenuItem>
+            )}
+            {canReactivate && (
+              <DropdownMenuItem onSelect={onReactivate}>
+                <Power />
+                Reaktivieren
+              </DropdownMenuItem>
+            )}
+            {canArchive && (
+              <DropdownMenuItem onSelect={onArchive}>
+                <Archive />
+                Archivieren
+              </DropdownMenuItem>
+            )}
+          </>
         )}
       </DropdownMenuContent>
     </DropdownMenu>

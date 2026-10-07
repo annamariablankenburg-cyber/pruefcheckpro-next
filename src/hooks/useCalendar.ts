@@ -14,7 +14,8 @@ import type { CalendarEvent } from "@/types/calendarEvent";
 // als lokalen State. Mutationen übernehmen erst dann lokal, wenn der Service
 // ein Ergebnis bestätigt hat – fehlgeschlagene Mutationen verändern nichts
 // und werden an die UI weitergereicht.
-export function useCalendar() {
+// `enabled` (Standard true): nur mit Leserecht (*.ansehen) wird geladen, sonst keine Abfrage.
+export function useCalendar(enabled = true) {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,10 +36,11 @@ export function useCalendar() {
   }, []);
 
   useEffect(() => {
+    if (!enabled) return;
     // Lädt die Termine beim ersten Mount vom Service (Mock oder Firestore).
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshCalendarEvents();
-  }, [refreshCalendarEvents]);
+  }, [enabled, refreshCalendarEvents]);
 
   async function createEvent(input: NewCalendarEventInput): Promise<CalendarEvent> {
     const created = await calendarService.createCalendarEvent(input);
@@ -92,8 +94,11 @@ export function useCalendar() {
     todaysEvents,
     eventsForDate,
     referenceDate,
-    loading,
-    error,
+    // false, wenn der Bereich nicht gelesen werden darf: dann wurde NICHT abgefragt (kein erwarteter
+    // permission-denied), die Daten sind leer, kein Ladezustand/Fehler.
+    enabled,
+    loading: enabled && loading,
+    error: enabled ? error : null,
     refreshCalendarEvents,
     createEvent,
     updateEvent,

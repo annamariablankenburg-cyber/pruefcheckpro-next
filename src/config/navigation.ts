@@ -24,10 +24,15 @@ import {
   Users,
 } from "lucide-react";
 
+import { DOMAIN_PERMISSION_KEYS } from "@/lib/permissions/domainAccess";
+
 export interface NavItem {
   label: string;
   href: string;
   icon: LucideIcon;
+  // Ohne dieses Recht erscheint der Punkt nicht in der Navigation (UX; die Seite sperrt sich bei
+  // direktem Aufruf selbst, die Firestore Rules bleiben die Sicherheitsgrenze).
+  requiredPermission?: string;
 }
 
 export interface NavGroup {
@@ -48,7 +53,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: "Lernen", href: "/lernen", icon: BookOpen },
       { label: "Quiz", href: "/quiz", icon: Target },
-      { label: "Prüfungen", href: "/pruefungen", icon: FlaskConical },
+      { label: "Prüfungen", href: "/pruefungen", icon: FlaskConical, requiredPermission: DOMAIN_PERMISSION_KEYS.testValues.view },
     ],
   },
   {
@@ -62,15 +67,15 @@ export const navGroups: NavGroup[] = [
   {
     label: "Verwaltung",
     items: [
-      { label: "Probenmanager", href: "/probekoerper", icon: Package },
+      { label: "Probenmanager", href: "/probekoerper", icon: Package, requiredPermission: DOMAIN_PERMISSION_KEYS.samples.view },
       { label: "Baustellenmodus", href: "/baustellenmodus", icon: HardHat },
-      { label: "Kalender", href: "/kalender", icon: CalendarDays },
-      { label: "Projekte", href: "/projekte", icon: FolderKanban },
-      { label: "Kunden", href: "/kunden", icon: Contact },
-      { label: "Geräte", href: "/geraete", icon: Cpu },
+      { label: "Kalender", href: "/kalender", icon: CalendarDays, requiredPermission: DOMAIN_PERMISSION_KEYS.calendarEvents.view },
+      { label: "Projekte", href: "/projekte", icon: FolderKanban, requiredPermission: DOMAIN_PERMISSION_KEYS.projects.view },
+      { label: "Kunden", href: "/kunden", icon: Contact, requiredPermission: DOMAIN_PERMISSION_KEYS.customers.view },
+      { label: "Geräte", href: "/geraete", icon: Cpu, requiredPermission: DOMAIN_PERMISSION_KEYS.devices.view },
       { label: "Statistiken", href: "/statistiken", icon: BarChart3 },
-      { label: "PDF-Export", href: "/pdf-export", icon: FileDown },
-      { label: "Laborbuch", href: "/laborbuch", icon: NotebookText },
+      { label: "PDF-Export", href: "/pdf-export", icon: FileDown, requiredPermission: DOMAIN_PERMISSION_KEYS.reports.view },
+      { label: "Laborbuch", href: "/laborbuch", icon: NotebookText, requiredPermission: DOMAIN_PERMISSION_KEYS.laborbook.view },
     ],
   },
   {

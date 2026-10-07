@@ -13,15 +13,29 @@ import { CalendarLegend } from "@/components/shared/CalendarLegend";
 import { CalendarMoveDialog } from "@/components/shared/CalendarMoveDialog";
 import { CalendarToolbar, type CalendarViewMode } from "@/components/shared/CalendarToolbar";
 import { CalendarView } from "@/components/shared/CalendarView";
+import { DomainAccessGate } from "@/components/shared/DomainAccessGate";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { NewCalendarTaskDialog } from "@/components/shared/NewCalendarTaskDialog";
 import { weekDayLabels } from "@/config/calendarEvents";
 import { buildWeekDays, formatDateDE, formatRangeLabel, getWeekDates } from "@/lib/calendar/calendarDates";
 import { useCalendar } from "@/hooks/useCalendar";
+import { getCalendarUiAccess, type CalendarUiAccess } from "@/lib/permissions/domainAccess";
 import type { NewCalendarEventInput } from "@/lib/interfaces/ICalendarService";
 import type { CalendarEvent } from "@/types/calendarEvent";
 
+// Sperrt die Seite ohne kalender.ansehen (auch bei direktem URL-Aufruf); erst danach werden die Termine
+// geladen. Anlegen/Duplizieren = kalender.termine_erstellen (Legacy-Name), Bearbeiten/Verschieben =
+// kalender.bearbeiten, Löschen = kalender.loeschen. Die Probenauswahl im Termin ist optional und
+// erscheint nur mit proben.ansehen.
 export default function KalenderPage() {
+  return (
+    <DomainAccessGate domain="calendarEvents" label="Smart-Kalender">
+      {(_actions, permissions) => <KalenderContent access={getCalendarUiAccess(permissions)} />}
+    </DomainAccessGate>
+  );
+}
+
+function KalenderContent({ access }: { access: CalendarUiAccess }) {
   const router = useRouter();
   const {
     events: calendarEvents,
@@ -55,11 +69,13 @@ export default function KalenderPage() {
   const isPreparing = loading || referenceDate === null;
 
   function openNewTask() {
+    if (!access.create) return;
     setEditingEvent(null);
     setIsNewTaskOpen(true);
   }
 
   function openEdit(event: CalendarEvent) {
+    if (!access.edit) return;
     setSelectedEvent(null);
     setEditingEvent(event);
     setIsNewTaskOpen(true);
@@ -73,6 +89,7 @@ export default function KalenderPage() {
   // Liefert true nur bei bestätigtem Service-Ergebnis; sonst bleibt der Dialog
   // offen und zeigt selbst einen Hinweis.
   async function handleSaveEvent(input: NewCalendarEventInput): Promise<boolean> {
+    if (editingEvent ? !access.edit : !access.create) return false;
     try {
       if (editingEvent) {
         const updated = await updateEvent(editingEvent.id, input);
@@ -89,6 +106,7 @@ export default function KalenderPage() {
   }
 
   async function handleMove(event: CalendarEvent, date: string, time: string): Promise<boolean> {
+    if (!access.move) return false;
     try {
       const updated = await updateEvent(event.id, { date, time });
       if (!updated) return false;
@@ -100,6 +118,7 @@ export default function KalenderPage() {
   }
 
   async function handleDuplicate(event: CalendarEvent) {
+    if (!access.duplicate) return;
     try {
       const copy = await duplicateEvent(event);
       showFeedback(`Termin „${copy.title}“ dupliziert.`);
@@ -109,6 +128,7 @@ export default function KalenderPage() {
   }
 
   async function handleDelete(event: CalendarEvent): Promise<boolean> {
+    if (!access.delete) return false;
     try {
       const removed = await removeEvent(event.id);
       showFeedback(removed ? "Kalendereintrag gelöscht." : "Kalendereintrag konnte nicht gelöscht werden.");
@@ -135,7 +155,7 @@ export default function KalenderPage() {
         activeView={view}
         onViewChange={setView}
         onToday={() => setView("woche")}
-        onNewTask={openNewTask}
+        onNewTask={access.create ? openNewTask : undefined}
       />
 
       <CalendarLegend />
@@ -231,6 +251,7 @@ export default function KalenderPage() {
         open={isNewTaskOpen}
         onOpenChange={handleNewTaskOpenChange}
         editingEvent={editingEvent}
+        canSelectSample={access.sampleSelect}
         defaultDate={defaultDate}
         onSubmit={handleSaveEvent}
       />
@@ -242,6 +263,7 @@ export default function KalenderPage() {
       />
 
       <CalendarEventDrawer
+        access={access}
         event={selectedEvent}
         onOpenChange={(open) => !open && setSelectedEvent(null)}
         onOpenSample={() => router.push("/probekoerper")}

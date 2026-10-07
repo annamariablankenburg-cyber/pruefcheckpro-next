@@ -30,9 +30,11 @@ import {
 import { EmployeeAvatar } from "@/components/shared/EmployeeAvatar";
 import { RecordList } from "@/components/shared/RecordList";
 import { SampleStatusBadge } from "@/components/shared/SampleStatusBadge";
+import type { SampleUiAccess } from "@/lib/permissions/domainAccess";
 import type { Sample, SamplePruefungStatus } from "@/types/sample";
 
 interface SampleDetailDrawerProps {
+  access: SampleUiAccess;
   sample: Sample | null;
   onOpenChange: (open: boolean) => void;
   onEdit: (sample: Sample) => void;
@@ -73,6 +75,7 @@ function SectionTitle({ children }: { children: string }) {
 }
 
 export function SampleDetailDrawer({
+  access,
   sample,
   onOpenChange,
   onEdit,
@@ -180,12 +183,14 @@ export function SampleDetailDrawer({
                           >
                             {pruefung.status}
                           </Badge>
-                          <Button type="button" variant="outline" size="sm" asChild>
-                            <Link href="/pruefungen" onClick={() => onEnterValues(sample)}>
-                              Prüfwerte eintragen
-                              <ArrowRight className="size-3.5" />
-                            </Link>
-                          </Button>
+                          {access.enterValues && (
+                            <Button type="button" variant="outline" size="sm" asChild>
+                              <Link href="/pruefungen" onClick={() => onEnterValues(sample)}>
+                                Prüfwerte eintragen
+                                <ArrowRight className="size-3.5" />
+                              </Link>
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -205,7 +210,7 @@ export function SampleDetailDrawer({
                 icon={ImageIcon}
                 items={sample.anhaenge}
                 addLabel="Anhang hinzufügen"
-                onAdd={() => onAddAttachment(sample)}
+                onAdd={access.edit ? () => onAddAttachment(sample) : undefined}
                 emptyLabel="Noch keine Anhänge hinterlegt."
               />
 
@@ -214,7 +219,7 @@ export function SampleDetailDrawer({
                 icon={FileText}
                 items={sample.dokumente}
                 addLabel="Dokument hochladen"
-                onAdd={() => onAddDocument(sample)}
+                onAdd={access.edit ? () => onAddDocument(sample) : undefined}
                 emptyLabel="Noch keine Dokumente hinterlegt."
               />
 
@@ -223,7 +228,7 @@ export function SampleDetailDrawer({
                 icon={Truck}
                 items={sample.lieferscheine}
                 addLabel="Lieferschein hinzufügen"
-                onAdd={() => onAddDeliveryNote(sample)}
+                onAdd={access.edit ? () => onAddDeliveryNote(sample) : undefined}
                 emptyLabel="Noch keine Lieferscheine hinterlegt."
               />
 
@@ -256,59 +261,67 @@ export function SampleDetailDrawer({
 
             <div className="flex flex-col gap-2 border-t border-border px-6 py-4">
               <div className="grid grid-cols-2 gap-2">
-                <Button type="button" variant="outline" onClick={() => onEdit(sample)}>
-                  <Pencil className="size-4" />
-                  Bearbeiten
-                </Button>
-                <Button type="button" variant="outline" asChild>
-                  <Link href="/pruefungen" onClick={() => onEnterValues(sample)}>
-                    <TestTubeDiagonal className="size-4" />
-                    Prüfwerte eintragen
-                  </Link>
-                </Button>
-                {canStart && (
+                {access.editDialog && (
+                  <Button type="button" variant="outline" onClick={() => onEdit(sample)}>
+                    <Pencil className="size-4" />
+                    Bearbeiten
+                  </Button>
+                )}
+                {access.enterValues && (
+                  <Button type="button" variant="outline" asChild>
+                    <Link href="/pruefungen" onClick={() => onEnterValues(sample)}>
+                      <TestTubeDiagonal className="size-4" />
+                      Prüfwerte eintragen
+                    </Link>
+                  </Button>
+                )}
+                {access.edit && canStart && (
                   <Button type="button" variant="outline" onClick={() => onStart(sample)}>
                     <PlayCircle className="size-4" />
                     In Prüfung starten
                   </Button>
                 )}
-                {canComplete && (
+                {access.edit && canComplete && (
                   <Button type="button" variant="outline" onClick={() => onComplete(sample)}>
                     <CheckCircle2 className="size-4" />
                     Abschließen
                   </Button>
                 )}
-                {canReopen && (
+                {access.edit && canReopen && (
                   <Button type="button" variant="outline" onClick={() => onReopen(sample)}>
                     <RotateCcw className="size-4" />
                     Wieder öffnen
                   </Button>
                 )}
-                {canArchive && (
+                {access.edit && canArchive && (
                   <Button type="button" variant="outline" onClick={() => onArchive(sample)}>
                     <Archive className="size-4" />
                     Archivieren
                   </Button>
                 )}
-                {canReactivate && (
+                {access.edit && canReactivate && (
                   <Button type="button" variant="outline" onClick={() => onReactivate(sample)}>
                     <ArchiveRestore className="size-4" />
                     Reaktivieren
                   </Button>
                 )}
-                <Button type="button" variant="outline" onClick={() => onDuplicate(sample)}>
-                  <Copy className="size-4" />
-                  Duplizieren
-                </Button>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  className="col-span-2"
-                  onClick={() => onDelete(sample)}
-                >
-                  <Trash2 className="size-4" />
-                  Löschen
-                </Button>
+                {access.duplicate && (
+                  <Button type="button" variant="outline" onClick={() => onDuplicate(sample)}>
+                    <Copy className="size-4" />
+                    Duplizieren
+                  </Button>
+                )}
+                {access.delete && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    className="col-span-2"
+                    onClick={() => onDelete(sample)}
+                  >
+                    <Trash2 className="size-4" />
+                    Löschen
+                  </Button>
+                )}
               </div>
             </div>
           </>

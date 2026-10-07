@@ -22,6 +22,8 @@ interface MeasurementTableProps {
   onDuplicateRow: (rowId: string) => void;
   onDeleteRow: (rowId: string) => void;
   outlierRowIds?: Set<string>;
+  // Ohne pruefungen.bearbeiten: Werte nur ansehen (keine Eingabe, keine Zeilenaktionen).
+  readOnly?: boolean;
 }
 
 const fillStateBadge: Record<RowFillState, string> = {
@@ -48,6 +50,7 @@ export function MeasurementTable({
   onDuplicateRow,
   onDeleteRow,
   outlierRowIds,
+  readOnly = false,
 }: MeasurementTableProps) {
   const visibleFields = def.fields.filter((field) => field.kind !== "status");
   const inputKeys = def.fields.filter((field) => field.kind === "input").map((field) => field.key);
@@ -122,6 +125,7 @@ export function MeasurementTable({
                     <td key={field.key} className="px-3 py-2 align-top">
                       <Input
                         value={rawValue}
+                        readOnly={readOnly}
                         inputMode="decimal"
                         onFocus={() => onFieldFocus(row.id, field.key)}
                         onChange={(event) => onFieldChange(row.id, field.key, event.target.value)}
@@ -138,11 +142,13 @@ export function MeasurementTable({
                   );
                 })}
                 <td className="px-3 py-2 align-top text-right">
-                  <MeasurementRowActions
-                    rowLabel={row.label}
-                    onDuplicate={() => onDuplicateRow(row.id)}
-                    onDelete={() => onDeleteRow(row.id)}
-                  />
+                  {!readOnly && (
+                    <MeasurementRowActions
+                      rowLabel={row.label}
+                      onDuplicate={() => onDuplicateRow(row.id)}
+                      onDelete={() => onDeleteRow(row.id)}
+                    />
+                  )}
                 </td>
               </tr>
             );

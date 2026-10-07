@@ -20,10 +20,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { SampleUiAccess } from "@/lib/permissions/domainAccess";
 import type { Sample } from "@/types/sample";
 
 interface SampleActionsMenuProps {
   sample: Sample;
+  // Rechte des Nutzers (UX-Gating; die Firestore Rules bleiben die Sicherheitsgrenze).
+  access: SampleUiAccess;
   onViewDetails: () => void;
   onEdit: () => void;
   onEnterValues: () => void;
@@ -38,6 +41,7 @@ interface SampleActionsMenuProps {
 
 export function SampleActionsMenu({
   sample,
+  access,
   onViewDetails,
   onEdit,
   onEnterValues,
@@ -73,57 +77,67 @@ export function SampleActionsMenu({
           <Eye />
           Details öffnen
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onEdit}>
-          <Pencil />
-          Bearbeiten
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onEnterValues}>
-          <TestTubeDiagonal />
-          Prüfwerte eintragen
-        </DropdownMenuItem>
+        {access.editDialog && (
+          <DropdownMenuItem onSelect={onEdit}>
+            <Pencil />
+            Bearbeiten
+          </DropdownMenuItem>
+        )}
+        {access.enterValues && (
+          <DropdownMenuItem onSelect={onEnterValues}>
+            <TestTubeDiagonal />
+            Prüfwerte eintragen
+          </DropdownMenuItem>
+        )}
 
-        <DropdownMenuSeparator />
+        {(access.edit || access.duplicate) && <DropdownMenuSeparator />}
 
-        {canStart && (
+        {access.edit && canStart && (
           <DropdownMenuItem onSelect={onStart}>
             <PlayCircle />
             In Prüfung starten
           </DropdownMenuItem>
         )}
-        {canComplete && (
+        {access.edit && canComplete && (
           <DropdownMenuItem onSelect={onComplete}>
             <CheckCircle2 />
             Abschließen
           </DropdownMenuItem>
         )}
-        {canReopen && (
+        {access.edit && canReopen && (
           <DropdownMenuItem onSelect={onReopen}>
             <RotateCcw />
             Wieder öffnen
           </DropdownMenuItem>
         )}
-        {canArchive && (
+        {access.edit && canArchive && (
           <DropdownMenuItem onSelect={onArchive}>
             <Archive />
             Archivieren
           </DropdownMenuItem>
         )}
-        {canReactivate && (
+        {access.edit && canReactivate && (
           <DropdownMenuItem onSelect={onReactivate}>
             <ArchiveRestore />
             Reaktivieren
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem onSelect={onDuplicate}>
-          <Copy />
-          Duplizieren
-        </DropdownMenuItem>
+        {access.duplicate && (
+          <DropdownMenuItem onSelect={onDuplicate}>
+            <Copy />
+            Duplizieren
+          </DropdownMenuItem>
+        )}
 
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onSelect={onDelete}>
-          <Trash2 />
-          Löschen
-        </DropdownMenuItem>
+        {access.delete && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onSelect={onDelete}>
+              <Trash2 />
+              Löschen
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

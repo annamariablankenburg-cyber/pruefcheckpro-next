@@ -2,6 +2,8 @@
 
 Status: **Implementiert.** Die Oberfläche lädt die effektiven Rechte des eingeloggten Users und passt sich an (Tabs, Listen, Aktionen, Rollen-Editor). Das ist **Komfort/UX, keine Sicherheit** – die Firestore Rules (Phase 1: `roles`, `employees`, `invitations`, `locations`) bleiben die Sicherheitsgrenze. Siehe `docs/firebase/role-permission-rules-phase1.md`.
 
+> **Fachseiten:** Das Gating der acht Fachbereiche (Kunden, Projekte, Geräte, Proben, Prüfungen, Berichte, Kalender, Laborbuch), die Navigation und das Dashboard stehen in `docs/firebase/ui-permission-gating-phase2.md`.
+>
 > **Nicht Teil dieses Slices:** Änderungen an `firestore.rules`, Rules Phase 2 (die acht Fach-Collections), Membership-Schreiblogik, Admin SDK, Membership↔Employee-Synchronisierung.
 >
 > **Update (Server-Slice):** Die Membership↔Employee-Synchronisierung ist inzwischen umgesetzt (`docs/firebase/member-security-actions.md`): Rolle ändern, sperren, reaktivieren und Zugriff entziehen laufen über den Server. Die Aktions-Policy der UI (`getEmployeeActionPolicy`) bleibt unverändert – der Server prüft zusätzlich selbst.
@@ -129,7 +131,7 @@ Lädt Rollen nur mit `rollen.ansehen`; sonst Hinweis „Für deinen Zugang ist d
 
 - Ein manipulierter Client umgeht das Gating – nur die Rules schützen.
 - Eine Rollenänderung/Archivierung wirkt live, aber nur, wenn die Membership die Rolle referenziert.
-- **Rules Phase 2 ist inzwischen umgesetzt** (`docs/firebase/role-permission-rules-phase2.md`): `customers`, `projects`, `devices`, `samples`, `testValues`, `reports`, `calendarEvents`, `laborbook` prüfen `*.ansehen/erstellen/bearbeiten/loeschen`. Das **UI-Gating dieser Fachseiten** (Kunden, Projekte, Geräte, …) ist weiterhin nicht umgesetzt (nächster Slice „UI Permission Gating Phase 2“; offene Stellen in Abschnitt 8 der Phase-2-Doku).
+- **Rules Phase 2 ist inzwischen umgesetzt** (`docs/firebase/role-permission-rules-phase2.md`): `customers`, `projects`, `devices`, `samples`, `testValues`, `reports`, `calendarEvents`, `laborbook` prüfen `*.ansehen/erstellen/bearbeiten/loeschen`. Das **UI-Gating dieser Fachseiten** (Kunden, Projekte, Geräte, …) ist inzwischen umgesetzt: `docs/firebase/ui-permission-gating-phase2.md`.
 
 ## 11. Tests
 

@@ -20,7 +20,8 @@ function defaultCategoryFor(report: Report): (typeof datenkategorien)[number] {
 
 interface ExcelPreviewPanelProps {
   report: Report;
-  onExport: () => void;
+  // Ohne onExport (kein pdf.exportieren) wird der Export-Button nicht angeboten.
+  onExport?: () => void;
 }
 
 export function ExcelPreviewPanel({ report, onExport }: ExcelPreviewPanelProps) {
@@ -98,10 +99,12 @@ export function ExcelPreviewPanel({ report, onExport }: ExcelPreviewPanelProps) 
         </div>
       </div>
 
-      <Button type="button" onClick={onExport} className="w-fit">
-        <Download className="size-4" />
-        Excel exportieren
-      </Button>
+      {onExport && (
+        <Button type="button" onClick={onExport} className="w-fit">
+          <Download className="size-4" />
+          Excel exportieren
+        </Button>
+      )}
     </div>
   );
 }

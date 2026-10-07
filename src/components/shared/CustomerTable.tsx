@@ -7,6 +7,9 @@ import { EmployeeAvatar } from "@/components/shared/EmployeeAvatar";
 import type { Customer } from "@/types/customer";
 
 interface CustomerTableActionHandlers {
+  // Rechte des Nutzers (UX-Gating, Rules bleiben die Grenze).
+  canEdit: boolean;
+  canCreateProject: boolean;
   onViewDetails: (customer: Customer) => void;
   onEdit: (customer: Customer) => void;
   onCreateProject: (customer: Customer) => void;
@@ -108,6 +111,8 @@ export function CustomerTable({ customers, onResetFilters, ...handlers }: Custom
                   <td className="px-4 py-3 text-right whitespace-nowrap">
                     <CustomerActionsMenu
                       customer={customer}
+                      canEdit={handlers.canEdit}
+                      canCreateProject={handlers.canCreateProject}
                       onViewDetails={() => handlers.onViewDetails(customer)}
                       onEdit={() => handlers.onEdit(customer)}
                       onCreateProject={() => handlers.onCreateProject(customer)}
@@ -146,6 +151,8 @@ export function CustomerTable({ customers, onResetFilters, ...handlers }: Custom
                   <CustomerStatusBadge status={customer.status} />
                   <CustomerActionsMenu
                     customer={customer}
+                    canEdit={handlers.canEdit}
+                    canCreateProject={handlers.canCreateProject}
                     onViewDetails={() => handlers.onViewDetails(customer)}
                     onEdit={() => handlers.onEdit(customer)}
                     onCreateProject={() => handlers.onCreateProject(customer)}

@@ -16,7 +16,8 @@ interface CalendarToolbarProps {
   activeView: CalendarViewMode;
   onViewChange: (view: CalendarViewMode) => void;
   onToday: () => void;
-  onNewTask: () => void;
+  // Ohne kalender.termine_erstellen wird "Neue Aufgabe" nicht angeboten.
+  onNewTask?: () => void;
 }
 
 export function CalendarToolbar({
@@ -54,10 +55,12 @@ export function CalendarToolbar({
           ))}
         </div>
 
-        <Button type="button" onClick={onNewTask}>
-          <Plus className="size-4" />
-          Neue Aufgabe
-        </Button>
+        {onNewTask && (
+          <Button type="button" onClick={onNewTask}>
+            <Plus className="size-4" />
+            Neue Aufgabe
+          </Button>
+        )}
       </div>
     </div>
   );

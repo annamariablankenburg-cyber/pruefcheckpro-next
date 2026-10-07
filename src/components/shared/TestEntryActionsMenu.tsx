@@ -17,10 +17,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { TestEntryReportAction, TestEntryUiAccess } from "@/lib/permissions/domainAccess";
 import type { TestEntry } from "@/types/testValue";
 
 interface TestEntryActionsMenuProps {
   entry: TestEntry;
+  // Rechte des Nutzers (UX-Gating; die Firestore Rules bleiben die Sicherheitsgrenze).
+  access: TestEntryUiAccess;
+  // "öffnen" (Bericht existiert, berichte.ansehen), "erstellen" (kein Bericht, Berichtsformular-Rechte) oder null.
+  reportAction: TestEntryReportAction;
   onOpenWorkspace: () => void;
   onStart: () => void;
   onComplete: () => void;
@@ -32,6 +37,8 @@ interface TestEntryActionsMenuProps {
 
 export function TestEntryActionsMenu({
   entry,
+  access,
+  reportAction,
   onOpenWorkspace,
   onStart,
   onComplete,
@@ -63,43 +70,55 @@ export function TestEntryActionsMenu({
           Prüfwerte eintragen
         </DropdownMenuItem>
 
-        <DropdownMenuSeparator />
+        {access.edit && (
+          <>
+            <DropdownMenuSeparator />
 
-        {canStart && (
-          <DropdownMenuItem onSelect={onStart}>
-            <PlayCircle />
-            In Bearbeitung starten
+            {canStart && (
+              <DropdownMenuItem onSelect={onStart}>
+                <PlayCircle />
+                In Bearbeitung starten
+              </DropdownMenuItem>
+            )}
+            {canComplete && (
+              <DropdownMenuItem onSelect={onComplete}>
+                <CheckCircle2 />
+                Als abgeschlossen markieren
+              </DropdownMenuItem>
+            )}
+            {canReopen && (
+              <DropdownMenuItem onSelect={onReopen}>
+                <RotateCcw />
+                Wieder öffnen
+              </DropdownMenuItem>
+            )}
+          </>
+        )}
+
+        {(reportAction !== null || access.export) && <DropdownMenuSeparator />}
+
+        {reportAction !== null && (
+          <DropdownMenuItem onSelect={onCreateReport}>
+            <FileText />
+            {reportAction === "open" ? "Bericht öffnen" : "Bericht erstellen"}
           </DropdownMenuItem>
         )}
-        {canComplete && (
-          <DropdownMenuItem onSelect={onComplete}>
-            <CheckCircle2 />
-            Als abgeschlossen markieren
-          </DropdownMenuItem>
-        )}
-        {canReopen && (
-          <DropdownMenuItem onSelect={onReopen}>
-            <RotateCcw />
-            Wieder öffnen
+        {access.export && (
+          <DropdownMenuItem onSelect={onExportExcel}>
+            <Download />
+            Excel exportieren
           </DropdownMenuItem>
         )}
 
-        <DropdownMenuSeparator />
-
-        <DropdownMenuItem onSelect={onCreateReport}>
-          <FileText />
-          Bericht erstellen
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onExportExcel}>
-          <Download />
-          Excel exportieren
-        </DropdownMenuItem>
-
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onSelect={onDelete}>
-          <Trash2 />
-          Löschen
-        </DropdownMenuItem>
+        {access.delete && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onSelect={onDelete}>
+              <Trash2 />
+              Löschen
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

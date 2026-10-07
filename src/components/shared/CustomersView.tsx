@@ -10,10 +10,12 @@ import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 import { CustomerDetailDrawer } from "@/components/shared/CustomerDetailDrawer";
 import { CustomerFilters } from "@/components/shared/CustomerFilters";
 import { CustomerTable } from "@/components/shared/CustomerTable";
+import { DomainAccessGate } from "@/components/shared/DomainAccessGate";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { NewCustomerDialog } from "@/components/shared/NewCustomerDialog";
 import { StatCard } from "@/components/shared/StatCard";
 import { useCustomers } from "@/hooks/useCustomers";
+import { getProjectFormAccess, type DomainActions } from "@/lib/permissions/domainAccess";
 import type { Customer } from "@/types/customer";
 
 type ConfirmActionType = "deactivate" | "reactivate" | "archive";
@@ -46,7 +48,20 @@ const confirmCopy: Record<
 
 type CustomerDialogState = { mode: "create" } | { mode: "edit"; customer: Customer } | null;
 
+// Sperrt die Seite ohne kunden.ansehen (auch bei direktem URL-Aufruf); erst danach werden die
+// Kunden geladen. Aktionen je nach kunden.erstellen/-bearbeiten (Archivieren, Deaktivieren und
+// Reaktivieren sind Updates). Ein Kunden-Löschen gibt es in der UI nicht (kunden.loeschen).
 export function CustomersView() {
+  return (
+    <DomainAccessGate domain="customers" label="Kunden">
+      {(actions, permissions) => (
+        <CustomersContent actions={actions} canCreateProject={getProjectFormAccess(permissions).create} />
+      )}
+    </DomainAccessGate>
+  );
+}
+
+function CustomersContent({ actions, canCreateProject }: { actions: DomainActions; canCreateProject: boolean }) {
   const router = useRouter();
   const {
     customers,
@@ -96,6 +111,7 @@ export function CustomersView() {
   }
 
   async function handleConfirmAction(customer: Customer) {
+    if (!actions.edit) return;
     if (!confirmAction || actionPending) return;
     setActionPending(true);
     try {
@@ -121,10 +137,12 @@ export function CustomersView() {
   }
 
   function openConfirm(customer: Customer, type: ConfirmActionType) {
+    if (!actions.edit) return;
     setConfirmAction({ customer, type });
   }
 
   function openEditDialog(customer: Customer) {
+    if (!actions.edit) return;
     setCustomerDialog({ mode: "edit", customer });
   }
 
@@ -141,14 +159,16 @@ export function CustomersView() {
             Verwalte Auftraggeber, Ansprechpartner, Projekte, Rechnungen und Lieferscheine.
           </p>
         </div>
-        <Button
-          type="button"
-          onClick={() => setCustomerDialog({ mode: "create" })}
-          disabled={hasBlockingState}
-        >
-          <Plus className="size-4" />
-          Neuer Kunde
-        </Button>
+        {actions.create && (
+          <Button
+            type="button"
+            onClick={() => setCustomerDialog({ mode: "create" })}
+            disabled={hasBlockingState}
+          >
+            <Plus className="size-4" />
+            Neuer Kunde
+          </Button>
+        )}
       </div>
 
       {loading ? (
@@ -193,6 +213,8 @@ export function CustomersView() {
           />
 
           <CustomerTable
+            canEdit={actions.edit}
+            canCreateProject={canCreateProject}
             customers={filteredCustomers}
             onResetFilters={resetFilters}
             onViewDetails={setDetailCustomer}
@@ -209,6 +231,8 @@ export function CustomersView() {
       )}
 
       <CustomerDetailDrawer
+        canEdit={actions.edit}
+        canCreateProject={canCreateProject}
         customer={detailCustomer}
         onOpenChange={(open) => !open && setDetailCustomer(null)}
         onEdit={openEditDialog}

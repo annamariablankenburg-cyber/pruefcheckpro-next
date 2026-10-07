@@ -2,6 +2,8 @@
 
 > **Update (Rules Phase 2):** `customers` prüft serverseitig nicht mehr nur die Membership, sondern kunden.ansehen / .erstellen / .bearbeiten / .loeschen (Tabelle, Tenant-Isolation, Service-Abhängigkeiten und Deployment-Hinweise: `docs/firebase/role-permission-rules-phase2.md`). Archivieren/Deaktivieren sind Updates (`kunden.bearbeiten`). `NewProjectDialog` und `NewSampleDialog` laden Kunden und brauchen `kunden.ansehen`. Aussagen unten, dass „jedes aktive Mitglied alles darf“, gelten nicht mehr.
 
+> **Update (UI Gating Phase 2):** `/kunden` ist ohne `kunden.ansehen` gesperrt (keine Abfrage); „Neuer Kunde“ nur mit `kunden.erstellen`, Bearbeiten/Status/Archiv nur mit `kunden.bearbeiten`. Die UI hat kein Kunden-Löschen. Details: `docs/firebase/ui-permission-gating-phase2.md`.
+
 Status: **Erster vollständiger Vertical Slice mit echter Firestore-Anbindung.** Beschreibt, wie `/kunden` heute Daten liest und schreibt, wie zwischen Mock- und Firestore-Modus umgeschaltet wird, und welche Punkte bewusst noch offen sind.
 
 ---

@@ -1,11 +1,13 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/shared/EmptyState";
+import type { SampleUiAccess } from "@/lib/permissions/domainAccess";
 import { SampleActionsMenu } from "@/components/shared/SampleActionsMenu";
 import { SampleStatusBadge } from "@/components/shared/SampleStatusBadge";
 import type { Sample } from "@/types/sample";
 
 interface SampleTableActionHandlers {
+  access: SampleUiAccess;
   onViewDetails: (sample: Sample) => void;
   onEdit: (sample: Sample) => void;
   onEnterValues: (sample: Sample) => void;
@@ -67,13 +69,15 @@ export function SampleTable({
           <table className="w-full min-w-[1240px] text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/40 text-left text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                <th className="w-10 px-4 py-3">
-                  <Checkbox
-                    checked={allSelected}
-                    onCheckedChange={() => onToggleSelectAll(samples)}
-                    aria-label={allSelected ? "Alle Proben abwählen" : "Alle Proben auswählen"}
-                  />
-                </th>
+                {handlers.access.selectable && (
+                  <th className="w-10 px-4 py-3">
+                    <Checkbox
+                      checked={allSelected}
+                      onCheckedChange={() => onToggleSelectAll(samples)}
+                      aria-label={allSelected ? "Alle Proben abwählen" : "Alle Proben auswählen"}
+                    />
+                  </th>
+                )}
                 {columns.map((column) => (
                   <th key={column} className="px-4 py-3 whitespace-nowrap">
                     {column}
@@ -93,13 +97,15 @@ export function SampleTable({
                         : "border-b border-border last:border-0 hover:bg-muted/30"
                     }
                   >
-                    <td className="px-4 py-3">
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={() => onToggleSelect(sample)}
-                        aria-label={`${sample.id} auswählen`}
-                      />
-                    </td>
+                    {handlers.access.selectable && (
+                      <td className="px-4 py-3">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => onToggleSelect(sample)}
+                          aria-label={`${sample.id} auswählen`}
+                        />
+                      </td>
+                    )}
                     <td className="px-4 py-3 whitespace-nowrap">
                       <button
                         type="button"
@@ -141,6 +147,7 @@ export function SampleTable({
                     </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
                       <SampleActionsMenu
+                        access={handlers.access}
                         sample={sample}
                         onViewDetails={() => handlers.onViewDetails(sample)}
                         onEdit={() => handlers.onEdit(sample)}
@@ -171,12 +178,14 @@ export function SampleTable({
               <CardContent className="flex flex-col gap-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-start gap-2.5">
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={() => onToggleSelect(sample)}
-                      aria-label={`${sample.id} auswählen`}
-                      className="mt-0.5"
-                    />
+                    {handlers.access.selectable && (
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => onToggleSelect(sample)}
+                        aria-label={`${sample.id} auswählen`}
+                        className="mt-0.5"
+                      />
+                    )}
                     <button
                       type="button"
                       onClick={() => handlers.onViewDetails(sample)}
@@ -193,6 +202,7 @@ export function SampleTable({
                   <div className="flex shrink-0 items-center gap-1">
                     <SampleStatusBadge status={sample.status} />
                     <SampleActionsMenu
+                      access={handlers.access}
                       sample={sample}
                       onViewDetails={() => handlers.onViewDetails(sample)}
                       onEdit={() => handlers.onEdit(sample)}

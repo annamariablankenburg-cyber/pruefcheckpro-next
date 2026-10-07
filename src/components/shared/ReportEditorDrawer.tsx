@@ -49,6 +49,7 @@ import { RecordList } from "@/components/shared/RecordList";
 import { ReportPreview, type ReportPreviewSettings } from "@/components/shared/ReportPreview";
 import { ReportStatusBadge } from "@/components/shared/ReportStatusBadge";
 import { cn } from "@/lib/utils";
+import type { ReportUiAccess } from "@/lib/permissions/domainAccess";
 import type {
   Report,
   ReportEmailHistoryEntry,
@@ -59,6 +60,7 @@ import type {
 
 interface ReportEditorDrawerProps {
   report: Report | null;
+  access: ReportUiAccess;
   initialSection?: Section;
   onOpenChange: (open: boolean) => void;
   onSave: (report: Report) => Promise<Report | undefined>;
@@ -120,6 +122,7 @@ function SectionTitle({ children }: { children: string }) {
 
 interface WorkspaceProps {
   report: Report;
+  access: ReportUiAccess;
   initialSection?: Section;
   onSave: (report: Report) => Promise<Report | undefined>;
   onSaveDraft: (report: Report) => void;
@@ -140,6 +143,7 @@ interface WorkspaceProps {
 
 function ReportEditorWorkspace({
   report,
+  access,
   initialSection,
   onSave,
   onSaveDraft,
@@ -242,14 +246,18 @@ function ReportEditorWorkspace({
               <Eye className="size-4" />
               Vorschau
             </Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => onSendEmail(buildSnapshot())}>
-              <Mail className="size-4" />
-              Per E-Mail senden
-            </Button>
-            <Button type="button" variant="outline" size="sm" onClick={handleSave} disabled={isSaving}>
-              {isSaving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-              Speichern
-            </Button>
+            {access.edit && (
+              <Button type="button" variant="outline" size="sm" onClick={() => onSendEmail(buildSnapshot())}>
+                <Mail className="size-4" />
+                Per E-Mail senden
+              </Button>
+            )}
+            {access.edit && (
+              <Button type="button" variant="outline" size="sm" onClick={handleSave} disabled={isSaving}>
+                {isSaving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+                Speichern
+              </Button>
+            )}
           </div>
         </div>
 
@@ -346,9 +354,11 @@ function ReportEditorWorkspace({
                       Kunden- und Ansprechpartnerdaten, die im Bericht erscheinen.
                     </p>
                   </div>
-                  <Button type="button" variant="outline" size="sm" onClick={() => onOpenCustomer(report)}>
-                    Kunde öffnen
-                  </Button>
+                  {access.openCustomer && (
+                    <Button type="button" variant="outline" size="sm" onClick={() => onOpenCustomer(report)}>
+                      Kunde öffnen
+                    </Button>
+                  )}
                 </div>
                 <CustomerContactPreview
                   kunde={report.kunde}
@@ -363,6 +373,7 @@ function ReportEditorWorkspace({
                   <Input
                     value={ansprechpartner}
                     onChange={(event) => setAnsprechpartner(event.target.value)}
+                    readOnly={!access.edit}
                     placeholder={`Standard: Ansprechpartner aus Kundenstamm`}
                   />
                 </div>
@@ -373,9 +384,11 @@ function ReportEditorWorkspace({
               <div className="flex flex-col gap-4">
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="text-base font-semibold text-foreground">Projektdaten</h3>
-                  <Button type="button" variant="outline" size="sm" onClick={() => onOpenProject(report)}>
-                    Projekt öffnen
-                  </Button>
+                  {access.openProject && (
+                    <Button type="button" variant="outline" size="sm" onClick={() => onOpenProject(report)}>
+                      Projekt öffnen
+                    </Button>
+                  )}
                 </div>
                 <div className="flex items-center gap-3 rounded-xl border border-border p-4">
                   <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -391,7 +404,7 @@ function ReportEditorWorkspace({
                   <MetaRow label="Standort" value={report.standort ?? "—"} />
                   <MetaRow label="Probe" value={report.probeId ?? "—"} />
                 </div>
-                {report.probeId && (
+                {report.probeId && access.openSample && (
                   <Button
                     type="button"
                     variant="outline"
@@ -459,6 +472,7 @@ function ReportEditorWorkspace({
                   <Textarea
                     value={bemerkungen}
                     onChange={(event) => setBemerkungen(event.target.value)}
+                    readOnly={!access.edit}
                     placeholder="Zusammenfassung, Auffälligkeiten, Hinweise für den Kunden …"
                     className="min-h-32"
                   />
@@ -472,7 +486,7 @@ function ReportEditorWorkspace({
                 icon={ImageIcon}
                 items={report.fotos}
                 addLabel="Foto hinzufügen"
-                onAdd={() => onSave(buildSnapshot())}
+                onAdd={access.edit ? () => onSave(buildSnapshot()) : undefined}
                 emptyLabel="Noch keine Fotos hinterlegt."
               />
             )}
@@ -484,7 +498,7 @@ function ReportEditorWorkspace({
                   icon={FileText}
                   items={report.dokumente}
                   addLabel="Dokument hochladen"
-                  onAdd={() => onSave(buildSnapshot())}
+                  onAdd={access.edit ? () => onSave(buildSnapshot()) : undefined}
                   emptyLabel="Noch keine Dokumente hinterlegt."
                 />
                 <RecordList
@@ -492,7 +506,7 @@ function ReportEditorWorkspace({
                   icon={Truck}
                   items={report.lieferscheine}
                   addLabel="Lieferschein hinzufügen"
-                  onAdd={() => onSave(buildSnapshot())}
+                  onAdd={access.edit ? () => onSave(buildSnapshot()) : undefined}
                   emptyLabel="Noch keine Lieferscheine hinterlegt."
                 />
               </div>
@@ -541,9 +555,12 @@ function ReportEditorWorkspace({
                   <ExportOptionsPanel
                     berichtstyp={berichtstyp}
                     onBerichtstypChange={setBerichtstyp}
-                    onExport={() => onExportPdf(buildSnapshot())}
+                    onExport={access.export ? () => onExportPdf(buildSnapshot()) : undefined}
                   />
-                  <ExcelPreviewPanel report={buildSnapshot()} onExport={() => onExportExcel(buildSnapshot())} />
+                  <ExcelPreviewPanel
+                    report={buildSnapshot()}
+                    onExport={access.export ? () => onExportExcel(buildSnapshot()) : undefined}
+                  />
                 </div>
               </div>
             )}
@@ -559,18 +576,20 @@ function ReportEditorWorkspace({
                   </div>
                   <EmailSendStatusBadge status={report.emailStatus} />
                 </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  className="w-fit"
-                  onClick={() => onSendEmail(buildSnapshot())}
-                >
-                  <Mail className="size-4" />
-                  Per E-Mail senden
-                </Button>
+                {access.edit && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="w-fit"
+                    onClick={() => onSendEmail(buildSnapshot())}
+                  >
+                    <Mail className="size-4" />
+                    Per E-Mail senden
+                  </Button>
+                )}
                 <EmailHistoryList
                   entries={report.emailHistory}
-                  onResend={(entry) => onResendEmail(buildSnapshot(), entry)}
+                  onResend={access.edit ? (entry) => onResendEmail(buildSnapshot(), entry) : undefined}
                   onCopyText={onCopyEmailText}
                 />
               </div>
@@ -583,7 +602,7 @@ function ReportEditorWorkspace({
               <SectionTitle>Berichtseinstellungen</SectionTitle>
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-foreground">Exportformat</label>
-                <Select value={format} onValueChange={(value) => setFormat(value as ReportFormat)}>
+                <Select value={format} onValueChange={(value) => setFormat(value as ReportFormat)} disabled={!access.edit}>
                   <SelectTrigger className="h-9">
                     <SelectValue />
                   </SelectTrigger>
@@ -631,52 +650,58 @@ function ReportEditorWorkspace({
             <div className="flex flex-col gap-2 border-t border-border pt-4">
               <SectionTitle>Aktionen</SectionTitle>
               <div className="flex flex-col gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={() => onSaveDraft(buildSnapshot())}>
-                  Als Entwurf speichern
-                </Button>
-                {canMarkDone && (
+                {access.edit && (
+                  <Button type="button" variant="outline" size="sm" onClick={() => onSaveDraft(buildSnapshot())}>
+                    Als Entwurf speichern
+                  </Button>
+                )}
+                {access.edit && canMarkDone && (
                   <Button type="button" variant="outline" size="sm" onClick={() => onMarkDone(buildSnapshot())}>
                     <CheckCircle2 className="size-4" />
                     Als fertig markieren
                   </Button>
                 )}
-                {canExport && (
+                {access.export && canExport && (
                   <Button type="button" size="sm" onClick={() => onExportPdf(buildSnapshot())}>
                     <Download className="size-4" />
                     PDF exportieren
                   </Button>
                 )}
-                {canExport && (
+                {access.export && canExport && (
                   <Button type="button" variant="outline" size="sm" onClick={() => onExportExcel(buildSnapshot())}>
                     <Download className="size-4" />
                     Excel exportieren
                   </Button>
                 )}
-                <Button type="button" variant="outline" size="sm" onClick={() => onDuplicate(buildSnapshot())}>
-                  <Copy className="size-4" />
-                  Duplizieren
-                </Button>
-                {canArchive && (
+                {access.duplicate && (
+                  <Button type="button" variant="outline" size="sm" onClick={() => onDuplicate(buildSnapshot())}>
+                    <Copy className="size-4" />
+                    Duplizieren
+                  </Button>
+                )}
+                {access.edit && canArchive && (
                   <Button type="button" variant="outline" size="sm" onClick={() => onArchive(buildSnapshot())}>
                     <Archive className="size-4" />
                     Archivieren
                   </Button>
                 )}
-                {canReactivate && (
+                {access.edit && canReactivate && (
                   <Button type="button" variant="outline" size="sm" onClick={() => onReactivate(buildSnapshot())}>
                     <ArchiveRestore className="size-4" />
                     Reaktivieren
                   </Button>
                 )}
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => onDelete(buildSnapshot())}
-                >
-                  <Trash2 className="size-4" />
-                  Löschen
-                </Button>
+                {access.delete && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => onDelete(buildSnapshot())}
+                  >
+                    <Trash2 className="size-4" />
+                    Löschen
+                  </Button>
+                )}
               </div>
             </div>
 

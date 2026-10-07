@@ -1,11 +1,15 @@
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/EmptyState";
+import type { TestEntryReportAction, TestEntryUiAccess } from "@/lib/permissions/domainAccess";
 import { TestEntryActionsMenu } from "@/components/shared/TestEntryActionsMenu";
 import { TestEntryStatusBadge } from "@/components/shared/TestEntryStatusBadge";
 import { TestValueCard } from "@/components/shared/TestValueCard";
 import type { TestEntry } from "@/types/testValue";
 
 interface TestEntryTableActionHandlers {
+  access: TestEntryUiAccess;
+  // Bericht-Aktion je Prüfung (öffnen/erstellen/keine), abhängig von vorhandenem Bericht und Rechten.
+  reportActionFor: (entry: TestEntry) => TestEntryReportAction;
   onOpen: (entry: TestEntry) => void;
   onStart: (entry: TestEntry) => void;
   onComplete: (entry: TestEntry) => void;
@@ -82,6 +86,8 @@ export function TestEntryTable({ entries, onResetFilters, ...handlers }: TestEnt
                   <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{entry.ergebnis}</td>
                   <td className="px-4 py-3 text-right whitespace-nowrap">
                     <TestEntryActionsMenu
+                      access={handlers.access}
+                      reportAction={handlers.reportActionFor(entry)}
                       entry={entry}
                       onOpenWorkspace={() => handlers.onOpen(entry)}
                       onStart={() => handlers.onStart(entry)}
@@ -105,6 +111,8 @@ export function TestEntryTable({ entries, onResetFilters, ...handlers }: TestEnt
           <TestValueCard
             key={entry.sampleId}
             entry={entry}
+            access={handlers.access}
+            reportAction={handlers.reportActionFor(entry)}
             onOpen={handlers.onOpen}
             onStart={handlers.onStart}
             onComplete={handlers.onComplete}

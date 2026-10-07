@@ -15,7 +15,8 @@ import type { Device } from "@/types/device";
 // Ergebnis. Fehler bei Mutationen werden bewusst NICHT hier abgefangen,
 // sondern an die aufrufende UI (Dialoge, Aktionen) weitergereicht, damit dort
 // gezielt reagiert werden kann (Dialog offen lassen, Inline-Fehler zeigen).
-export function useDevices() {
+// `enabled` (Standard true): nur mit Leserecht (*.ansehen) wird geladen, sonst keine Abfrage.
+export function useDevices(enabled = true) {
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,10 +35,11 @@ export function useDevices() {
   }, []);
 
   useEffect(() => {
+    if (!enabled) return;
     // Lädt die Geräteliste beim ersten Mount vom Service (Mock oder Firestore).
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshDevices();
-  }, [refreshDevices]);
+  }, [enabled, refreshDevices]);
 
   const {
     search,
@@ -99,8 +101,11 @@ export function useDevices() {
     devices,
     activeDevices,
     filteredDevices,
-    loading,
-    error,
+    // false, wenn der Bereich nicht gelesen werden darf: dann wurde NICHT abgefragt (kein erwarteter
+    // permission-denied), die Daten sind leer, kein Ladezustand/Fehler.
+    enabled,
+    loading: enabled && loading,
+    error: enabled ? error : null,
     refreshDevices,
     search,
     setSearch,

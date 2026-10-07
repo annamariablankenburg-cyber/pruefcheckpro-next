@@ -3,9 +3,11 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { ReportActionsMenu } from "@/components/shared/ReportActionsMenu";
 import { ReportFormatBadge } from "@/components/shared/ReportFormatBadge";
 import { ReportStatusBadge } from "@/components/shared/ReportStatusBadge";
+import type { ReportUiAccess } from "@/lib/permissions/domainAccess";
 import type { Report } from "@/types/report";
 
 interface ReportTableActionHandlers {
+  access: ReportUiAccess;
   onOpenDetails: (report: Report) => void;
   onEdit: (report: Report) => void;
   onPreview: (report: Report) => void;
@@ -93,6 +95,7 @@ export function ReportTable({ reports, onResetFilters, ...handlers }: ReportTabl
                   <td className="px-4 py-3 text-right whitespace-nowrap">
                     <ReportActionsMenu
                       report={report}
+                      access={handlers.access}
                       onOpenDetails={() => handlers.onOpenDetails(report)}
                       onEdit={() => handlers.onEdit(report)}
                       onPreview={() => handlers.onPreview(report)}
@@ -133,6 +136,7 @@ export function ReportTable({ reports, onResetFilters, ...handlers }: ReportTabl
                   <ReportStatusBadge status={report.status} />
                   <ReportActionsMenu
                     report={report}
+                    access={handlers.access}
                     onOpenDetails={() => handlers.onOpenDetails(report)}
                     onEdit={() => handlers.onEdit(report)}
                     onPreview={() => handlers.onPreview(report)}

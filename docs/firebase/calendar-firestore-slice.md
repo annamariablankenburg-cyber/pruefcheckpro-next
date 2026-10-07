@@ -2,6 +2,8 @@
 
 > **Update (Rules Phase 2):** `calendarEvents` prüft serverseitig nicht mehr nur die Membership, sondern kalender.ansehen / kalender.termine_erstellen / .bearbeiten / .loeschen (Tabelle, Tenant-Isolation, Service-Abhängigkeiten und Deployment-Hinweise: `docs/firebase/role-permission-rules-phase2.md`). Der Schlüssel zum Anlegen heißt (Legacy) `kalender.termine_erstellen`. `NewCalendarTaskDialog` lädt Proben (`proben.ansehen`), das Dashboard `useCalendar()` (`kalender.ansehen`). Aussagen unten, dass „jedes aktive Mitglied alles darf“, gelten nicht mehr.
 
+> **Update (UI Gating Phase 2):** `/kalender` ist ohne `kalender.ansehen` gesperrt (auch die Dashboard-Karten laden dann keinen Kalender); Neu/Duplizieren = `kalender.termine_erstellen`, Bearbeiten/Verschieben = `kalender.bearbeiten`, Löschen = `kalender.loeschen`; die Probenauswahl erscheint nur mit `proben.ansehen` (optional). Details: `docs/firebase/ui-permission-gating-phase2.md`.
+
 Status: **Siebter vollständiger Vertical Slice mit echter Firestore-Anbindung.** Beschreibt, wie `/kalender` Termine liest und schreibt, wie Termine mit Proben verknüpft werden, wie das Datum/die Woche berechnet wird und welche Punkte bewusst offen sind. Analog zu `docs/firebase/report-firestore-slice.md` (sechster Slice).
 
 ---

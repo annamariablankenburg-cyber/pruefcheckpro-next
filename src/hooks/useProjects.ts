@@ -15,7 +15,8 @@ import type { Project } from "@/types/project";
 // Ergebnis. Fehler bei Mutationen werden bewusst NICHT hier abgefangen,
 // sondern an die aufrufende UI (Dialoge, Aktionen) weitergereicht, damit dort
 // gezielt reagiert werden kann (Dialog offen lassen, Inline-Fehler zeigen).
-export function useProjects() {
+// `enabled` (Standard true): nur mit Leserecht (*.ansehen) wird geladen, sonst keine Abfrage.
+export function useProjects(enabled = true) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,10 +35,11 @@ export function useProjects() {
   }, []);
 
   useEffect(() => {
+    if (!enabled) return;
     // Lädt die Projektliste beim ersten Mount vom Service (Mock oder Firestore).
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshProjects();
-  }, [refreshProjects]);
+  }, [enabled, refreshProjects]);
 
   const {
     search,
@@ -125,8 +127,11 @@ export function useProjects() {
     projects,
     activeProjects,
     filteredProjects,
-    loading,
-    error,
+    // false, wenn der Bereich nicht gelesen werden darf: dann wurde NICHT abgefragt (kein erwarteter
+    // permission-denied), die Daten sind leer, kein Ladezustand/Fehler.
+    enabled,
+    loading: enabled && loading,
+    error: enabled ? error : null,
     refreshProjects,
     search,
     setSearch,

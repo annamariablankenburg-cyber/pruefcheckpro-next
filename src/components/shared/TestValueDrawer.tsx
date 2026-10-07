@@ -45,6 +45,7 @@ import {
 } from "@/config/pruefarten";
 import { computeRowFillState, computeStatsFromValues, isFilledValue, parseMeasurementNumber } from "@/lib/measurementValidation";
 import { cn } from "@/lib/utils";
+import type { TestEntryReportAction, TestEntryUiAccess } from "@/lib/permissions/domainAccess";
 import type {
   AuditEntry,
   PruefartKey,
@@ -55,6 +56,8 @@ import type {
 
 interface TestValueDrawerProps {
   entry: TestEntry | null;
+  access: TestEntryUiAccess;
+  reportAction: TestEntryReportAction;
   onOpenChange: (open: boolean) => void;
   onStart: (entry: TestEntry) => void;
   onComplete: (entry: TestEntry) => void;
@@ -117,6 +120,8 @@ export interface TestValueWorkspaceHandle {
 
 interface WorkspaceProps {
   entry: TestEntry;
+  access: TestEntryUiAccess;
+  reportAction: TestEntryReportAction;
   onStart: (entry: TestEntry) => void;
   onComplete: (entry: TestEntry) => void;
   onReopen: (entry: TestEntry) => void;
@@ -131,6 +136,8 @@ interface WorkspaceProps {
 const TestValueWorkspace = forwardRef(function TestValueWorkspace(
   {
     entry,
+    access,
+    reportAction,
     onStart,
     onComplete,
     onReopen,
@@ -467,17 +474,23 @@ const TestValueWorkspace = forwardRef(function TestValueWorkspace(
             <p className="text-sm text-muted-foreground">{entry.titel}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button type="button" variant="outline" size="sm" asChild>
-              <Link href="/probekoerper">Zur Probe</Link>
-            </Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => onCreateReport(entry)}>
-              <FileText className="size-4" />
-              Bericht erstellen
-            </Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => onExportExcel(entry)}>
-              <FileDown className="size-4" />
-              Excel exportieren
-            </Button>
+            {access.readSamples && (
+              <Button type="button" variant="outline" size="sm" asChild>
+                <Link href="/probekoerper">Zur Probe</Link>
+              </Button>
+            )}
+            {reportAction !== null && (
+              <Button type="button" variant="outline" size="sm" onClick={() => onCreateReport(entry)}>
+                <FileText className="size-4" />
+                {reportAction === "open" ? "Bericht öffnen" : "Bericht erstellen"}
+              </Button>
+            )}
+            {access.export && (
+              <Button type="button" variant="outline" size="sm" onClick={() => onExportExcel(entry)}>
+                <FileDown className="size-4" />
+                Excel exportieren
+              </Button>
+            )}
           </div>
         </div>
 
@@ -567,6 +580,7 @@ const TestValueWorkspace = forwardRef(function TestValueWorkspace(
             onResetMessreihe={() => setResetConfirm("messreihe")}
             onSaveDraft={() => handleSaveDraft(activePruefart)}
             onSaveResult={() => handleSaveResult(activePruefart)}
+            readOnly={!access.edit}
             isSavingDraft={isSavingDraft}
             isSavingResult={isSavingResult}
           />
@@ -607,6 +621,7 @@ const TestValueWorkspace = forwardRef(function TestValueWorkspace(
                   <Textarea
                     value={comment}
                     onChange={(event) => setComment(event.target.value)}
+                    readOnly={!access.edit}
                     placeholder="Beobachtungen, Auffälligkeiten beim Bruchbild …"
                   />
                 </div>
@@ -644,39 +659,47 @@ const TestValueWorkspace = forwardRef(function TestValueWorkspace(
       </DrawerBody>
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-6 py-4">
-        <Button type="button" variant="outline" asChild>
-          <Link href="/probekoerper">
-            <ArrowLeft className="size-4" />
-            Zurück zur Probe
-          </Link>
-        </Button>
+        {access.readSamples ? (
+          <Button type="button" variant="outline" asChild>
+            <Link href="/probekoerper">
+              <ArrowLeft className="size-4" />
+              Zurück zur Probe
+            </Link>
+          </Button>
+        ) : (
+          <span />
+        )}
         <div className="flex flex-wrap items-center gap-2">
-          {canStart && (
+          {access.edit && canStart && (
             <Button type="button" variant="outline" onClick={() => onStart(entry)}>
               <PlayCircle className="size-4" />
               In Bearbeitung starten
             </Button>
           )}
-          {canComplete && (
+          {access.edit && canComplete && (
             <Button type="button" variant="outline" onClick={() => onComplete(entry)}>
               <CheckCircle2 className="size-4" />
               Als abgeschlossen markieren
             </Button>
           )}
-          {canReopen && (
+          {access.edit && canReopen && (
             <Button type="button" variant="outline" onClick={() => onReopen(entry)}>
               <RotateCcw className="size-4" />
               Wieder öffnen
             </Button>
           )}
-          <Button type="button" variant="outline" onClick={() => setResetConfirm("pruefung")}>
-            <RotateCcw className="size-4" />
-            Prüfung zurücksetzen
-          </Button>
-          <Button type="button" onClick={() => onCreateReport(entry)}>
-            Weiter: Bericht erstellen
-            <ArrowRight className="size-4" />
-          </Button>
+          {access.edit && (
+            <Button type="button" variant="outline" onClick={() => setResetConfirm("pruefung")}>
+              <RotateCcw className="size-4" />
+              Prüfung zurücksetzen
+            </Button>
+          )}
+          {reportAction !== null && (
+            <Button type="button" onClick={() => onCreateReport(entry)}>
+              {reportAction === "open" ? "Weiter: Bericht öffnen" : "Weiter: Bericht erstellen"}
+              <ArrowRight className="size-4" />
+            </Button>
+          )}
         </div>
       </div>
 
@@ -720,6 +743,8 @@ const TestValueWorkspace = forwardRef(function TestValueWorkspace(
 
 export function TestValueDrawer({
   entry,
+  access,
+  reportAction,
   onOpenChange,
   onStart,
   onComplete,
@@ -750,6 +775,8 @@ export function TestValueDrawer({
             key={entry.sampleId}
             ref={workspaceRef}
             entry={entry}
+            access={access}
+            reportAction={reportAction}
             onStart={onStart}
             onComplete={onComplete}
             onReopen={onReopen}

@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 import { type EmailDraftResult, SendReportEmailDialog } from "@/components/shared/SendReportEmailDialog";
+import { DomainAccessGate } from "@/components/shared/DomainAccessGate";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { NewReportDialog } from "@/components/shared/NewReportDialog";
 import { ReportEditorDrawer, type Section } from "@/components/shared/ReportEditorDrawer";
@@ -24,6 +25,7 @@ import { ReportTable } from "@/components/shared/ReportTable";
 import { StatCard } from "@/components/shared/StatCard";
 import { HEUTE } from "@/config/reports";
 import { useReports } from "@/hooks/useReports";
+import { getReportUiAccess, type ReportUiAccess } from "@/lib/permissions/domainAccess";
 import type { Report, ReportEmailHistoryEntry, ReportStatus } from "@/types/report";
 
 type ConfirmActionType = "saveDraft" | "markDone" | "exportPdf" | "exportExcel" | "archive" | "reactivate";
@@ -78,7 +80,19 @@ const confirmCopy: Record<
   },
 };
 
+// Sperrt die Seite ohne berichte.ansehen (auch bei direktem URL-Aufruf); erst danach werden die Berichte
+// geladen. Bearbeiten/Archivieren/Als fertig markieren/E-Mail = berichte.bearbeiten; Duplizieren =
+// berichte.erstellen; PDF-/Excel-Export (Wechsel in einen Export-Status) = berichte.bearbeiten +
+// pdf.exportieren; Löschen = berichte.loeschen (Admin-only). Anlegen braucht proben.ansehen.
 export function ReportsView() {
+  return (
+    <DomainAccessGate domain="reports" label="Berichte & Exporte">
+      {(_actions, permissions) => <ReportsContent access={getReportUiAccess(permissions)} />}
+    </DomainAccessGate>
+  );
+}
+
+function ReportsContent({ access }: { access: ReportUiAccess }) {
   const router = useRouter();
   const {
     reports,
@@ -134,12 +148,26 @@ export function ReportsView() {
     [reports]
   );
 
+  // Export-Aktionen (Wechsel in einen Export-Status) brauchen pdf.exportieren, alle anderen
+  // Statusaktionen berichte.bearbeiten (Rules: exakt so).
   function requestAction(type: ConfirmActionType) {
-    return (report: Report) => setConfirmAction({ report, type });
+    return (report: Report) => {
+      const isExport = type === "exportPdf" || type === "exportExcel";
+      if (isExport ? !access.export : !access.edit) return;
+      setConfirmAction({ report, type });
+    };
+  }
+
+  function requestDelete(report: Report) {
+    if (!access.delete) return;
+    setDeleteReport(report);
   }
 
   async function handleConfirmAction(subject: Report) {
     if (!confirmAction || actionPending) return;
+    if (confirmAction.type === "exportPdf" || confirmAction.type === "exportExcel" ? !access.export : !access.edit) {
+      return;
+    }
     setActionPending(true);
     try {
       const updated = await updateReport(subject.id, {
@@ -165,6 +193,7 @@ export function ReportsView() {
   // eine Fehlermeldung – keine falsche Erfolgsmeldung bei fehlgeschlagener
   // Firestore-Mutation.
   async function handleSave(updated: Report): Promise<Report | undefined> {
+    if (!access.edit) return undefined;
     try {
       const saved = await updateReport(updated.id, updated);
       applyUpdatedReport(saved);
@@ -175,6 +204,7 @@ export function ReportsView() {
   }
 
   async function handleDuplicate(report: Report) {
+    if (!access.duplicate) return;
     if (isDuplicating) return;
     setIsDuplicating(true);
     try {
@@ -205,6 +235,7 @@ export function ReportsView() {
   }
 
   async function handleConfirmDelete(subject: Report) {
+    if (!access.delete) return;
     if (deletePending) return;
     setDeletePending(true);
     try {
@@ -224,10 +255,12 @@ export function ReportsView() {
   }
 
   function openSendEmail(report: Report) {
+    if (!access.edit) return;
     setEmailContext({ report });
   }
 
   function handleResendEmail(report: Report, entry: ReportEmailHistoryEntry) {
+    if (!access.edit) return;
     setEmailContext({ report, recipients: entry.recipients, subject: entry.subject });
   }
 
@@ -240,6 +273,7 @@ export function ReportsView() {
   }
 
   async function handleSaveEmailDraft(report: Report, draft: EmailDraftResult) {
+    if (!access.edit) return;
     try {
       const updated = await updateReport(report.id, {
         emailStatus: "Versand vorbereitet",
@@ -263,6 +297,7 @@ export function ReportsView() {
   }
 
   async function handleSendEmail(report: Report, draft: EmailDraftResult) {
+    if (!access.edit) return;
     const attachmentCount = draft.attachments.filter((attachment) => attachment.selected).length;
     const timestamp = `${HEUTE} ${new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}`;
     const newEntry: ReportEmailHistoryEntry = {
@@ -313,10 +348,12 @@ export function ReportsView() {
             Erstelle Prüfberichte, PDF-Ausgaben und Excel-Protokolle für Kunden, Projekte und Proben.
           </p>
         </div>
-        <Button onClick={() => setIsNewReportOpen(true)} className="w-fit" disabled={hasBlockingState}>
-          <Plus className="size-4" />
-          Neuer Bericht
-        </Button>
+        {access.create && (
+          <Button onClick={() => setIsNewReportOpen(true)} className="w-fit" disabled={hasBlockingState}>
+            <Plus className="size-4" />
+            Neuer Bericht
+          </Button>
+        )}
       </div>
 
       {loading ? (
@@ -352,6 +389,7 @@ export function ReportsView() {
           <ReportFilters search={search} onSearchChange={setSearch} filter={filter} onFilterChange={setFilter} />
 
           <ReportTable
+            access={access}
             reports={filteredReports}
             onResetFilters={resetFilters}
             onOpenDetails={(report) => openEditor(report)}
@@ -363,13 +401,14 @@ export function ReportsView() {
             onDuplicate={handleDuplicate}
             onArchive={requestAction("archive")}
             onReactivate={requestAction("reactivate")}
-            onDelete={setDeleteReport}
+            onDelete={requestDelete}
             onSendEmail={openSendEmail}
           />
         </>
       )}
 
       <ReportEditorDrawer
+        access={access}
         report={editorReport}
         initialSection={editorSection}
         onOpenChange={(open) => !open && setEditorReport(null)}
@@ -381,7 +420,7 @@ export function ReportsView() {
         onDuplicate={handleDuplicate}
         onArchive={requestAction("archive")}
         onReactivate={requestAction("reactivate")}
-        onDelete={setDeleteReport}
+        onDelete={requestDelete}
         onOpenProject={() => router.push("/projekte")}
         onOpenCustomer={() => router.push("/kunden")}
         onOpenSample={() => router.push("/probekoerper")}

@@ -16,7 +16,8 @@ import type { Report } from "@/types/report";
 // sondern an die aufrufende UI (ReportsView, SendReportEmailDialog, …)
 // weitergereicht, damit dort gezielt reagiert werden kann (z. B. keine
 // Erfolgsmeldung bei fehlgeschlagener Mutation).
-export function useReports() {
+// `enabled` (Standard true): nur mit Leserecht (*.ansehen) wird geladen, sonst keine Abfrage.
+export function useReports(enabled = true) {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,10 +36,11 @@ export function useReports() {
   }, []);
 
   useEffect(() => {
+    if (!enabled) return;
     // Lädt die Berichtsliste beim ersten Mount vom Service (Mock oder Firestore).
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshReports();
-  }, [refreshReports]);
+  }, [enabled, refreshReports]);
 
   const {
     search,
@@ -102,8 +104,11 @@ export function useReports() {
   return {
     reports,
     filteredReports,
-    loading,
-    error,
+    // false, wenn der Bereich nicht gelesen werden darf: dann wurde NICHT abgefragt (kein erwarteter
+    // permission-denied), die Daten sind leer, kein Ladezustand/Fehler.
+    enabled,
+    loading: enabled && loading,
+    error: enabled ? error : null,
     refreshReports,
     search,
     setSearch,

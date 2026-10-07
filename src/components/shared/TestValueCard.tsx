@@ -4,9 +4,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { TestEntryActionsMenu } from "@/components/shared/TestEntryActionsMenu";
 import { TestEntryStatusBadge } from "@/components/shared/TestEntryStatusBadge";
 import { cn } from "@/lib/utils";
+import type { TestEntryReportAction, TestEntryUiAccess } from "@/lib/permissions/domainAccess";
 import type { TestEntry } from "@/types/testValue";
 
 interface TestValueCardProps {
+  access: TestEntryUiAccess;
+  reportAction: TestEntryReportAction;
   entry: TestEntry;
   onOpen: (entry: TestEntry) => void;
   onStart: (entry: TestEntry) => void;
@@ -19,6 +22,8 @@ interface TestValueCardProps {
 
 export function TestValueCard({
   entry,
+  access,
+  reportAction,
   onOpen,
   onStart,
   onComplete,
@@ -41,6 +46,8 @@ export function TestValueCard({
             <TestEntryStatusBadge status={entry.status} />
             <TestEntryActionsMenu
               entry={entry}
+              access={access}
+              reportAction={reportAction}
               onOpenWorkspace={() => onOpen(entry)}
               onStart={() => onStart(entry)}
               onComplete={() => onComplete(entry)}

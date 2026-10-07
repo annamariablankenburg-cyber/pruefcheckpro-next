@@ -13,6 +13,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { CalendarActionMenu } from "@/components/shared/CalendarActionMenu";
+import type { CalendarUiAccess } from "@/lib/permissions/domainAccess";
 import { CalendarDeleteDialog } from "@/components/shared/CalendarDeleteDialog";
 import { CalendarEventInfo } from "@/components/shared/CalendarEventInfo";
 import { CalendarFieldBadge } from "@/components/shared/CalendarLegend";
@@ -21,6 +22,7 @@ import type { CalendarEvent } from "@/types/calendarEvent";
 
 interface CalendarEventDrawerProps {
   event: CalendarEvent | null;
+  access: CalendarUiAccess;
   onOpenChange: (open: boolean) => void;
   onOpenSample: (event: CalendarEvent) => void;
   onEnterValues: (event: CalendarEvent) => void;
@@ -35,6 +37,7 @@ interface CalendarEventDrawerProps {
 export function CalendarEventDrawer({
   event,
   onOpenChange,
+  access,
   onOpenSample,
   onEnterValues,
   onEdit,
@@ -106,22 +109,24 @@ export function CalendarEventDrawer({
                           </p>
                         )}
                       </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="shrink-0"
-                        onClick={() => onOpenSample(event)}
-                      >
-                        Probe öffnen
-                        <ArrowRight className="size-3.5" />
-                      </Button>
+                      {access.openSample && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="shrink-0"
+                          onClick={() => onOpenSample(event)}
+                        >
+                          Probe öffnen
+                          <ArrowRight className="size-3.5" />
+                        </Button>
+                      )}
                     </CardContent>
                   </Card>
                 </div>
               )}
 
-              {event.sampleId && (
+              {event.sampleId && access.enterValues && (
                 <div className="flex flex-col gap-2">
                   <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                     Prüfung
@@ -133,17 +138,20 @@ export function CalendarEventDrawer({
                 </div>
               )}
 
+              {(access.edit || access.move || access.duplicate || access.delete) && (
               <div className="flex flex-col gap-2 border-t border-border pt-5">
                 <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                   Aktionen
                 </p>
                 <CalendarActionMenu
+                  access={access}
                   onEdit={() => onEdit(event)}
                   onMove={() => onMove(event)}
                   onDuplicate={() => onDuplicate(event)}
                   onDelete={() => setIsDeleteOpen(true)}
                 />
               </div>
+              )}
             </DrawerBody>
 
             <div className="flex justify-end border-t border-border px-6 py-4">

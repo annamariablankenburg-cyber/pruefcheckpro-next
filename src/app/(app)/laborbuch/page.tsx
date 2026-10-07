@@ -6,6 +6,7 @@ import { AlertTriangle, Archive, BookOpen, CalendarClock, CalendarDays, Plus, Ti
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
+import { DomainAccessGate } from "@/components/shared/DomainAccessGate";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { LaborbookDetailDrawer } from "@/components/shared/LaborbookDetailDrawer";
 import { LaborbookFilters } from "@/components/shared/LaborbookFilters";
@@ -15,6 +16,7 @@ import { LaborbookViewSwitcher, type LaborbookView } from "@/components/shared/L
 import { NewLaborbookEntryDialog } from "@/components/shared/NewLaborbookEntryDialog";
 import { StatCard } from "@/components/shared/StatCard";
 import { useLaborbook } from "@/hooks/useLaborbook";
+import { getLaborbookUiAccess, type LaborbookUiAccess } from "@/lib/permissions/domainAccess";
 import { formatDateDE, getWeekDates } from "@/lib/calendar/calendarDates";
 import type { LaborbookFormValues } from "@/lib/laborbook/laborbookEntries";
 import type { LaborbookEntry } from "@/types/laborbook";
@@ -41,7 +43,19 @@ const confirmCopy: Record<
   },
 };
 
+// Sperrt die Seite ohne laborbuch.ansehen (auch bei direktem URL-Aufruf); erst danach werden die Einträge
+// geladen. Anlegen = laborbuch.erstellen; Bearbeiten/Archivieren/Wiederherstellen = laborbuch.bearbeiten
+// UND laborbuch.ansehen (die Aktualisierung liest in einer Transaktion); Löschen = laborbuch.loeschen
+// (Admin-only). Proben/Projekte/Kunden/Geräte sind optionale Verknüpfungen im Dialog.
 export default function LaborbuchPage() {
+  return (
+    <DomainAccessGate domain="laborbook" label="Laborbuch">
+      {(_actions, permissions) => <LaborbuchContent access={getLaborbookUiAccess(permissions)} />}
+    </DomainAccessGate>
+  );
+}
+
+function LaborbuchContent({ access }: { access: LaborbookUiAccess }) {
   const {
     entries,
     filteredEntries,
@@ -98,10 +112,24 @@ export default function LaborbuchPage() {
   }, [entries, referenceDate]);
 
   function requestAction(type: ConfirmActionType) {
-    return (entry: LaborbookEntry) => setConfirmAction({ entry, type });
+    return (entry: LaborbookEntry) => {
+      if (!access.edit) return;
+      setConfirmAction({ entry, type });
+    };
+  }
+
+  function requestEdit(entry: LaborbookEntry) {
+    if (!access.edit) return;
+    setEditId(entry.id);
+  }
+
+  function requestDelete(entry: LaborbookEntry) {
+    if (!access.delete) return;
+    setDeleteEntry(entry);
   }
 
   async function handleConfirmAction(subject: LaborbookEntry) {
+    if (!access.edit) return;
     if (!confirmAction || actionPending) return;
     const copy = confirmCopy[confirmAction.type];
     setActionPending(true);
@@ -122,6 +150,7 @@ export default function LaborbuchPage() {
   }
 
   async function handleConfirmDelete(subject: LaborbookEntry) {
+    if (!access.delete) return;
     if (deletePending) return;
     setDeletePending(true);
     try {
@@ -143,6 +172,7 @@ export default function LaborbuchPage() {
 
   // Liefern true nur bei bestätigtem Service-Ergebnis; sonst bleibt der Dialog offen.
   async function handleCreate(values: LaborbookFormValues): Promise<boolean> {
+    if (!access.create) return false;
     try {
       await createEntry(values);
       showFeedback("Eintrag angelegt.");
@@ -153,6 +183,7 @@ export default function LaborbuchPage() {
   }
 
   async function handleUpdate(id: string, values: LaborbookFormValues): Promise<boolean> {
+    if (!access.edit) return false;
     try {
       const updated = await updateEntry(id, values);
       if (!updated) return false;
@@ -174,10 +205,12 @@ export default function LaborbuchPage() {
             Dokumentiere alle Laboraktivitäten, Prüfungen und Ereignisse chronologisch.
           </p>
         </div>
-        <Button onClick={() => setIsNewEntryOpen(true)} className="w-fit" disabled={isBlocking}>
-          <Plus className="size-4" />
-          Neuer Eintrag
-        </Button>
+        {access.create && (
+          <Button onClick={() => setIsNewEntryOpen(true)} className="w-fit" disabled={isBlocking}>
+            <Plus className="size-4" />
+            Neuer Eintrag
+          </Button>
+        )}
       </div>
 
       {loading ? (
@@ -221,13 +254,14 @@ export default function LaborbuchPage() {
 
           {view === "Tabelle" ? (
             <LaborbookTable
+              access={access}
               entries={filteredEntries}
               onResetFilters={resetFilters}
               onViewDetails={(entry) => setDetailId(entry.id)}
-              onEdit={(entry) => setEditId(entry.id)}
+              onEdit={requestEdit}
               onArchive={requestAction("archive")}
               onReactivate={requestAction("reactivate")}
-              onDelete={setDeleteEntry}
+              onDelete={requestDelete}
             />
           ) : (
             <LaborbookTimeline
@@ -240,19 +274,26 @@ export default function LaborbuchPage() {
       )}
 
       <LaborbookDetailDrawer
+        access={access}
         entry={detailEntry}
         onOpenChange={(open) => !open && setDetailId(null)}
-        onEdit={(entry) => setEditId(entry.id)}
+        onEdit={requestEdit}
         onArchive={requestAction("archive")}
         onReactivate={requestAction("reactivate")}
-        onDelete={setDeleteEntry}
+        onDelete={requestDelete}
         onAddPhoto={() => showFeedback("Diese Funktion wird später angebunden.")}
         onAddDocument={() => showFeedback("Diese Funktion wird später angebunden.")}
       />
 
-      <NewLaborbookEntryDialog open={isNewEntryOpen} onOpenChange={setIsNewEntryOpen} onSubmit={handleCreate} />
+      <NewLaborbookEntryDialog
+        refs={access.refs}
+        open={isNewEntryOpen}
+        onOpenChange={setIsNewEntryOpen}
+        onSubmit={handleCreate}
+      />
 
       <NewLaborbookEntryDialog
+        refs={access.refs}
         open={editEntry !== null}
         onOpenChange={(open) => !open && setEditId(null)}
         entry={editEntry}

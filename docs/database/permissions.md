@@ -234,7 +234,7 @@ Für **jede** Domäne existiert Archiv/Status – endgültiges Löschen ist die 
 |---|---|
 | Config (Taxonomie, Matrix, Risikoklassen) | ✅ umgesetzt und getestet (`npm run test:permissions`) |
 | UI-Marker (`Nur Administrator`/`Löschen` im Rollen-Editor) | ✅ nur Anzeige |
-| UI-Gating (Buttons/Seiten nach Rechten) | 🟡 (Fachseiten: nächster Slice „UI Permission Gating Phase 2“) Company-Verwaltung (Tabs, Mitarbeiter, Einladungen, Standorte, Rollen) und `AdminView`-Rollenübersicht über `usePermissions()` (`docs/firebase/ui-permission-gating.md`); Fachseiten (Kunden, Projekte, Geräte, …) noch nicht |
+| UI-Gating (Buttons/Seiten nach Rechten) | ✅ Company-Verwaltung (`docs/firebase/ui-permission-gating.md`) sowie Fachseiten (Kunden, Projekte, Geräte, Proben, Prüfungen, Berichte, Kalender, Laborbuch), Navigation und Dashboard (`docs/firebase/ui-permission-gating-phase2.md`); nicht gated: KI, Statistiken, Baustellenmodus |
 | Firestore Rules (rollenbasiert) | ✅ **Phase 1** (`roles`, `employees`, `invitations`, `locations`) und **Phase 2** (die acht Fach-Collections) implementiert und im Emulator getestet (`docs/firebase/role-permission-rules-phase1.md`, `docs/firebase/role-permission-rules-phase2.md`); **nicht deployt** – vorher Rollen-Migration 31→45 (Abschnitt 7) |
 | Server (Rollenzuweisung, Status, Letzter-Admin-Schutz) | ✅ `assignRole`/`setMemberStatus` (Admin SDK, `docs/firebase/member-security-actions.md`); Provisionierung (Einladung annehmen, Firma anlegen) ❌ noch nicht |
 

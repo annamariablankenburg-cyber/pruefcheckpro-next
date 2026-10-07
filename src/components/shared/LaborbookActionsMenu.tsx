@@ -8,10 +8,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { LaborbookUiAccess } from "@/lib/permissions/domainAccess";
 import type { LaborbookEntry } from "@/types/laborbook";
 
 interface LaborbookActionsMenuProps {
   entry: LaborbookEntry;
+  // Rechte des Nutzers (UX-Gating; die Firestore Rules bleiben die Sicherheitsgrenze).
+  access: LaborbookUiAccess;
   onViewDetails: () => void;
   onEdit: () => void;
   onArchive: () => void;
@@ -21,6 +24,7 @@ interface LaborbookActionsMenuProps {
 
 export function LaborbookActionsMenu({
   entry,
+  access,
   onViewDetails,
   onEdit,
   onArchive,
@@ -42,31 +46,39 @@ export function LaborbookActionsMenu({
           <Eye />
           Details öffnen
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onEdit}>
-          <Pencil />
-          Bearbeiten
-        </DropdownMenuItem>
+        {access.edit && (
+          <>
+            <DropdownMenuItem onSelect={onEdit}>
+              <Pencil />
+              Bearbeiten
+            </DropdownMenuItem>
 
-        <DropdownMenuSeparator />
+            <DropdownMenuSeparator />
 
-        {canArchive && (
-          <DropdownMenuItem onSelect={onArchive}>
-            <Archive />
-            Archivieren
-          </DropdownMenuItem>
+            {canArchive && (
+              <DropdownMenuItem onSelect={onArchive}>
+                <Archive />
+                Archivieren
+              </DropdownMenuItem>
+            )}
+            {canReactivate && (
+              <DropdownMenuItem onSelect={onReactivate}>
+                <ArchiveRestore />
+                Reaktivieren
+              </DropdownMenuItem>
+            )}
+          </>
         )}
-        {canReactivate && (
-          <DropdownMenuItem onSelect={onReactivate}>
-            <ArchiveRestore />
-            Reaktivieren
-          </DropdownMenuItem>
-        )}
 
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onSelect={onDelete}>
-          <Trash2 />
-          Löschen
-        </DropdownMenuItem>
+        {access.delete && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onSelect={onDelete}>
+              <Trash2 />
+              Löschen
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

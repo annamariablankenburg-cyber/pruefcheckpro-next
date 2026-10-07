@@ -9,9 +9,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { navGroups } from "@/config/navigation";
+import { useDomainPermissions } from "@/hooks/useDomainPermissions";
+import { filterNavGroups } from "@/lib/permissions/domainAccess";
 
 export function Sidebar() {
   const pathname = usePathname();
+  // Fachbereiche ohne *.ansehen erscheinen nicht (fail-closed, solange die Rechte laden).
+  const { permissions } = useDomainPermissions();
+  const visibleGroups = filterNavGroups(navGroups, permissions);
 
   return (
     <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-border bg-sidebar md:flex">
@@ -27,7 +32,7 @@ export function Sidebar() {
 
       <nav aria-label="Hauptnavigation" className="flex-1 overflow-y-auto px-3 py-5">
         <div className="flex flex-col gap-6">
-          {navGroups.map((group) => (
+          {visibleGroups.map((group) => (
             <div key={group.label} className="flex flex-col gap-0.5">
               <p className="label-caps mb-1 flex items-center gap-2 px-3">
                 {group.label}

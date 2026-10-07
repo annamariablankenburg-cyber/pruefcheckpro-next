@@ -26,6 +26,8 @@ import type { Customer } from "@/types/customer";
 
 interface CustomerDetailDrawerProps {
   customer: Customer | null;
+  canEdit: boolean;
+  canCreateProject: boolean;
   onOpenChange: (open: boolean) => void;
   onEdit: (customer: Customer) => void;
   onCreateProject: (customer: Customer) => void;
@@ -57,6 +59,8 @@ function SectionTitle({ children }: { children: string }) {
 
 export function CustomerDetailDrawer({
   customer,
+  canEdit,
+  canCreateProject,
   onOpenChange,
   onEdit,
   onCreateProject,
@@ -146,7 +150,7 @@ export function CustomerDetailDrawer({
                 icon={Receipt}
                 items={customer.invoices}
                 addLabel="Rechnung hinzufügen"
-                onAdd={() => onAddInvoice(customer)}
+                onAdd={canEdit ? () => onAddInvoice(customer) : undefined}
                 emptyLabel="Noch keine Rechnungen hinterlegt."
               />
 
@@ -155,7 +159,7 @@ export function CustomerDetailDrawer({
                 icon={Truck}
                 items={customer.deliveryNotes}
                 addLabel="Lieferschein hinzufügen"
-                onAdd={() => onAddDeliveryNote(customer)}
+                onAdd={canEdit ? () => onAddDeliveryNote(customer) : undefined}
                 emptyLabel="Noch keine Lieferscheine hinterlegt."
               />
 
@@ -198,31 +202,37 @@ export function CustomerDetailDrawer({
 
             <div className="flex flex-col gap-2 border-t border-border px-6 py-4">
               <div className="grid grid-cols-2 gap-2">
-                <Button type="button" variant="outline" onClick={() => onEdit(customer)}>
-                  <Pencil className="size-4" />
-                  Bearbeiten
-                </Button>
-                <Button type="button" variant="outline" onClick={() => onCreateProject(customer)}>
-                  <FolderKanban className="size-4" />
-                  Projekt erstellen
-                </Button>
-                <Button type="button" variant="outline" onClick={() => onUploadDocument(customer)}>
-                  <Upload className="size-4" />
-                  Dokument hochladen
-                </Button>
-                {canDeactivate && (
+                {canEdit && (
+                  <Button type="button" variant="outline" onClick={() => onEdit(customer)}>
+                    <Pencil className="size-4" />
+                    Bearbeiten
+                  </Button>
+                )}
+                {canCreateProject && (
+                  <Button type="button" variant="outline" onClick={() => onCreateProject(customer)}>
+                    <FolderKanban className="size-4" />
+                    Projekt erstellen
+                  </Button>
+                )}
+                {canEdit && (
+                  <Button type="button" variant="outline" onClick={() => onUploadDocument(customer)}>
+                    <Upload className="size-4" />
+                    Dokument hochladen
+                  </Button>
+                )}
+                {canEdit && canDeactivate && (
                   <Button type="button" variant="outline" onClick={() => onDeactivate(customer)}>
                     <UserX className="size-4" />
                     Deaktivieren
                   </Button>
                 )}
-                {canReactivate && (
+                {canEdit && canReactivate && (
                   <Button type="button" variant="outline" onClick={() => onReactivate(customer)}>
                     <UserCheck className="size-4" />
                     Reaktivieren
                   </Button>
                 )}
-                {canArchive && (
+                {canEdit && canArchive && (
                   <Button
                     type="button"
                     variant="destructive"

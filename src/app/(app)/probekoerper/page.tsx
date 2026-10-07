@@ -19,6 +19,7 @@ import { BulkActionsToolbar } from "@/components/shared/BulkActionsToolbar";
 import { BulkFieldDialog } from "@/components/shared/BulkFieldDialog";
 import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 import { DeleteSampleDialog } from "@/components/shared/DeleteSampleDialog";
+import { DomainAccessGate } from "@/components/shared/DomainAccessGate";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { NewSampleDialog } from "@/components/shared/NewSampleDialog";
 import { SampleDetailDrawer } from "@/components/shared/SampleDetailDrawer";
@@ -27,6 +28,7 @@ import { SampleTable } from "@/components/shared/SampleTable";
 import { StatCard } from "@/components/shared/StatCard";
 import { employees } from "@/config/employees";
 import { useSamples } from "@/hooks/useSamples";
+import { getSampleUiAccess, type SampleUiAccess } from "@/lib/permissions/domainAccess";
 import type { Sample, SampleStatus } from "@/types/sample";
 
 type ConfirmActionType = "start" | "complete" | "reopen" | "archive" | "reactivate";
@@ -113,7 +115,19 @@ function bulkResultMessage(action: string, succeeded: number, failed: number): s
   return `${succeeded} von ${succeeded + failed} Proben ${action}, ${failed} fehlgeschlagen.`;
 }
 
+// Sperrt die Seite ohne proben.ansehen (auch bei direktem URL-Aufruf); erst danach werden die Proben
+// geladen. Anlegen/Bearbeiten-Dialog: proben.erstellen/-bearbeiten + Projekte/Kunden lesen
+// (Pflicht-Referenzen); Status, Archiv und Bulk-Updates = proben.bearbeiten; Duplizieren =
+// proben.erstellen; Löschen (einzeln und Bulk) = proben.loeschen.
 export default function ProbekoerperPage() {
+  return (
+    <DomainAccessGate domain="samples" label="Probenmanager">
+      {(_actions, permissions) => <ProbekoerperContent access={getSampleUiAccess(permissions)} />}
+    </DomainAccessGate>
+  );
+}
+
+function ProbekoerperContent({ access }: { access: SampleUiAccess }) {
   const router = useRouter();
   const {
     samples,
@@ -178,14 +192,24 @@ export default function ProbekoerperPage() {
   );
 
   function requestAction(type: ConfirmActionType) {
-    return (sample: Sample) => setConfirmAction({ sample, type });
+    return (sample: Sample) => {
+      if (!access.edit) return;
+      setConfirmAction({ sample, type });
+    };
   }
 
   function openEditDialog(sample: Sample) {
+    if (!access.editDialog) return;
     setSampleDialog({ mode: "edit", sample });
   }
 
+  function requestDelete(sample: Sample) {
+    if (!access.delete) return;
+    setDeleteSample(sample);
+  }
+
   async function handleConfirmAction(subject: Sample) {
+    if (!access.edit) return;
     if (!confirmAction || actionPending) return;
     setActionPending(true);
     try {
@@ -218,6 +242,7 @@ export default function ProbekoerperPage() {
   }
 
   async function handleConfirmDelete() {
+    if (!access.delete) return;
     if (!deleteSample || deletePending) return;
     setDeletePending(true);
     try {
@@ -237,6 +262,7 @@ export default function ProbekoerperPage() {
   }
 
   async function handleDuplicate(sample: Sample) {
+    if (!access.duplicate) return;
     if (isDuplicating) return;
     setIsDuplicating(true);
     try {
@@ -251,6 +277,8 @@ export default function ProbekoerperPage() {
 
   async function handleBulkConfirm() {
     if (!bulkConfirm || bulkPending) return;
+    // Bulk-Löschen = proben.loeschen, Bulk-Archivieren = proben.bearbeiten.
+    if (bulkConfirm === "delete" ? !access.bulkDelete : !access.bulkEdit) return;
     setBulkPending(true);
     try {
       const ids = Array.from(selectedIds);
@@ -270,6 +298,7 @@ export default function ProbekoerperPage() {
   }
 
   async function handleBulkTesterConfirm(value: string) {
+    if (!access.bulkEdit) return;
     if (bulkPending) return;
     setBulkPending(true);
     try {
@@ -287,6 +316,7 @@ export default function ProbekoerperPage() {
   }
 
   async function handleBulkStatusConfirm(value: string) {
+    if (!access.bulkEdit) return;
     if (bulkPending) return;
     setBulkPending(true);
     try {
@@ -316,14 +346,16 @@ export default function ProbekoerperPage() {
             Verwalte Proben, Prüfungen und Laborstatus an einem Ort.
           </p>
         </div>
-        <Button
-          onClick={() => setSampleDialog({ mode: "create" })}
-          className="w-fit"
-          disabled={hasBlockingState}
-        >
-          <Plus className="size-4" />
-          Neue Probe
-        </Button>
+        {access.create && (
+          <Button
+            onClick={() => setSampleDialog({ mode: "create" })}
+            className="w-fit"
+            disabled={hasBlockingState}
+          >
+            <Plus className="size-4" />
+            Neue Probe
+          </Button>
+        )}
       </div>
 
       {loading ? (
@@ -368,6 +400,8 @@ export default function ProbekoerperPage() {
 
           <BulkActionsToolbar
             count={selectedSamples.length}
+            canEdit={access.bulkEdit}
+            canDelete={access.bulkDelete}
             onClear={clearSelection}
             onDelete={() => setBulkConfirm("delete")}
             onArchive={() => setBulkConfirm("archive")}
@@ -377,6 +411,7 @@ export default function ProbekoerperPage() {
           />
 
           <SampleTable
+            access={access}
             samples={filteredSamples}
             onResetFilters={resetFilters}
             selectedIds={selectedIds}
@@ -391,12 +426,13 @@ export default function ProbekoerperPage() {
             onArchive={requestAction("archive")}
             onReactivate={requestAction("reactivate")}
             onDuplicate={handleDuplicate}
-            onDelete={setDeleteSample}
+            onDelete={requestDelete}
           />
         </>
       )}
 
       <SampleDetailDrawer
+        access={access}
         sample={detailSample}
         onOpenChange={(open) => !open && setDetailSample(null)}
         onEdit={openEditDialog}
@@ -407,7 +443,7 @@ export default function ProbekoerperPage() {
         onArchive={requestAction("archive")}
         onReactivate={requestAction("reactivate")}
         onDuplicate={handleDuplicate}
-        onDelete={setDeleteSample}
+        onDelete={requestDelete}
         onAddAttachment={() => showFeedback("Diese Funktion wird später angebunden.")}
         onAddDocument={() => showFeedback("Diese Funktion wird später angebunden.")}
         onAddDeliveryNote={() => showFeedback("Diese Funktion wird später angebunden.")}

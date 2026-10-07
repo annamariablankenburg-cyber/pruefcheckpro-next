@@ -7,6 +7,9 @@ import { Card, CardContent } from "@/components/ui/card";
 
 interface BulkActionsToolbarProps {
   count: number;
+  // proben.bearbeiten (Prüfer/Status/Archiv) bzw. proben.loeschen (Löschen).
+  canEdit: boolean;
+  canDelete: boolean;
   onClear: () => void;
   onDelete: () => void;
   onArchive: () => void;
@@ -44,6 +47,8 @@ function ToolbarButton({
 // markiert wurde. Alle Aktionen wirken auf die gesamte Auswahl.
 export function BulkActionsToolbar({
   count,
+  canEdit,
+  canDelete,
   onClear,
   onDelete,
   onArchive,
@@ -60,11 +65,11 @@ export function BulkActionsToolbar({
           {count} ausgewählt
         </Badge>
         <div className="flex flex-wrap items-center gap-2">
-          <ToolbarButton icon={UserCog} label="Prüfer ändern" onClick={onChangeTester} />
-          <ToolbarButton icon={RefreshCcw} label="Status ändern" onClick={onChangeStatus} />
-          <ToolbarButton icon={Archive} label="Archivieren" onClick={onArchive} />
+          {canEdit && <ToolbarButton icon={UserCog} label="Prüfer ändern" onClick={onChangeTester} />}
+          {canEdit && <ToolbarButton icon={RefreshCcw} label="Status ändern" onClick={onChangeStatus} />}
+          {canEdit && <ToolbarButton icon={Archive} label="Archivieren" onClick={onArchive} />}
           <ToolbarButton icon={Download} label="Export" onClick={onExport} />
-          <ToolbarButton icon={Trash2} label="Löschen" onClick={onDelete} destructive />
+          {canDelete && <ToolbarButton icon={Trash2} label="Löschen" onClick={onDelete} destructive />}
         </div>
         <Button
           type="button"

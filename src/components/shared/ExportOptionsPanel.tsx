@@ -39,7 +39,8 @@ const contentOptions = [
 interface ExportOptionsPanelProps {
   berichtstyp: ReportTemplate;
   onBerichtstypChange: (value: ReportTemplate) => void;
-  onExport: () => void;
+  // Ohne onExport (kein pdf.exportieren) wird der Export-Button nicht angeboten.
+  onExport?: () => void;
 }
 
 export function ExportOptionsPanel({ berichtstyp, onBerichtstypChange, onExport }: ExportOptionsPanelProps) {
@@ -89,10 +90,12 @@ export function ExportOptionsPanel({ berichtstyp, onBerichtstypChange, onExport 
         ))}
       </div>
 
-      <Button type="button" onClick={onExport} className="w-fit">
-        <Download className="size-4" />
-        PDF exportieren
-      </Button>
+      {onExport && (
+        <Button type="button" onClick={onExport} className="w-fit">
+          <Download className="size-4" />
+          PDF exportieren
+        </Button>
+      )}
     </div>
   );
 }

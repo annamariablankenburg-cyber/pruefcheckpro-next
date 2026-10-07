@@ -6,6 +6,8 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import type { Device } from "@/types/device";
 
 interface DeviceTableActionHandlers {
+  // geraete.bearbeiten (UX-Gating, Rules bleiben die Grenze).
+  canEdit: boolean;
   onViewDetails: (device: Device) => void;
   onEdit: (device: Device) => void;
   onDocumentCalibration: (device: Device) => void;
@@ -92,6 +94,7 @@ export function DeviceTable({ devices, onResetFilters, ...handlers }: DeviceTabl
                   <td className="px-4 py-3 text-right whitespace-nowrap">
                     <DeviceActionsMenu
                       device={device}
+                      canEdit={handlers.canEdit}
                       onViewDetails={() => handlers.onViewDetails(device)}
                       onEdit={() => handlers.onEdit(device)}
                       onDocumentCalibration={() => handlers.onDocumentCalibration(device)}
@@ -131,6 +134,7 @@ export function DeviceTable({ devices, onResetFilters, ...handlers }: DeviceTabl
                   <DeviceStatusBadge status={device.status} />
                   <DeviceActionsMenu
                     device={device}
+                    canEdit={handlers.canEdit}
                     onViewDetails={() => handlers.onViewDetails(device)}
                     onEdit={() => handlers.onEdit(device)}
                     onDocumentCalibration={() => handlers.onDocumentCalibration(device)}

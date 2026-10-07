@@ -7,15 +7,21 @@ import { MoreHorizontal, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { allNavItems, primaryMobileNavItems } from "@/config/navigation";
+import { useDomainPermissions } from "@/hooks/useDomainPermissions";
+import { filterNavItems } from "@/lib/permissions/domainAccess";
 
 export function BottomNav() {
   const pathname = usePathname();
   const [showMore, setShowMore] = useState(false);
+  // Nur Bereiche mit *.ansehen (fail-closed, solange die Rechte laden).
+  const { permissions } = useDomainPermissions();
+  const primaryItems = filterNavItems(primaryMobileNavItems, permissions);
+  const moreItems = filterNavItems(allNavItems, permissions);
 
   return (
     <>
       <nav aria-label="Hauptnavigation" className="fixed inset-x-0 bottom-0 z-30 flex items-stretch justify-around border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
-        {primaryMobileNavItems.map((item) => {
+        {primaryItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
           return (
@@ -66,7 +72,7 @@ export function BottomNav() {
           </div>
           <nav className="flex-1 overflow-y-auto px-4 py-4">
             <div className="flex flex-col gap-1">
-              {allNavItems.map((item) => {
+              {moreItems.map((item) => {
                 const Icon = item.icon;
                 return (
                   <Link

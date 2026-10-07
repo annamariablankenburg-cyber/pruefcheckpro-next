@@ -2,11 +2,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { EmployeeAvatar } from "@/components/shared/EmployeeAvatar";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { LaborbookActionsMenu } from "@/components/shared/LaborbookActionsMenu";
+import type { LaborbookUiAccess } from "@/lib/permissions/domainAccess";
 import { LaborbookStatusBadge } from "@/components/shared/LaborbookStatusBadge";
 import { LaborbookTypeBadge } from "@/components/shared/LaborbookTypeBadge";
 import type { LaborbookEntry } from "@/types/laborbook";
 
 interface LaborbookTableActionHandlers {
+  access: LaborbookUiAccess;
   onViewDetails: (entry: LaborbookEntry) => void;
   onEdit: (entry: LaborbookEntry) => void;
   onArchive: (entry: LaborbookEntry) => void;
@@ -103,6 +105,7 @@ export function LaborbookTable({ entries, onResetFilters, ...handlers }: Laborbo
                   <td className="px-4 py-3 text-right whitespace-nowrap">
                     <LaborbookActionsMenu
                       entry={entry}
+                      access={handlers.access}
                       onViewDetails={() => handlers.onViewDetails(entry)}
                       onEdit={() => handlers.onEdit(entry)}
                       onArchive={() => handlers.onArchive(entry)}
@@ -137,6 +140,7 @@ export function LaborbookTable({ entries, onResetFilters, ...handlers }: Laborbo
                   <LaborbookStatusBadge status={entry.status} />
                   <LaborbookActionsMenu
                     entry={entry}
+                    access={handlers.access}
                     onViewDetails={() => handlers.onViewDetails(entry)}
                     onEdit={() => handlers.onEdit(entry)}
                     onArchive={() => handlers.onArchive(entry)}

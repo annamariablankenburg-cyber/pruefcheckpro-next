@@ -30,6 +30,8 @@ interface MeasurementWorkspacePanelProps {
   onResetMessreihe: () => void;
   onSaveDraft: () => void;
   onSaveResult: () => void;
+  // Ohne pruefungen.bearbeiten: nur Ansicht (keine Eingabe, kein Speichern).
+  readOnly?: boolean;
   isSavingDraft?: boolean;
   isSavingResult?: boolean;
 }
@@ -67,6 +69,7 @@ export function MeasurementWorkspacePanel({
   onResetMessreihe,
   onSaveDraft,
   onSaveResult,
+  readOnly = false,
   isSavingDraft = false,
   isSavingResult = false,
 }: MeasurementWorkspacePanelProps) {
@@ -143,8 +146,10 @@ export function MeasurementWorkspacePanel({
           if (row) onRequestDeleteRow(row);
         }}
         outlierRowIds={outlierRowIds}
+        readOnly={readOnly}
       />
 
+      {!readOnly && (
       <div className="flex flex-wrap items-center gap-2">
         <Button type="button" variant="outline" size="sm" className="w-fit" onClick={onAddRow} disabled={isSaving}>
           <Plus className="size-3.5" />
@@ -169,6 +174,7 @@ export function MeasurementWorkspacePanel({
           </Button>
         </div>
       </div>
+      )}
 
       {chartData.length > 0 && calcField && (
         <div className="flex flex-col gap-2">

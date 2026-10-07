@@ -10,7 +10,8 @@ import type { ReportEmailHistoryEntry } from "@/types/report";
 
 interface EmailHistoryListProps {
   entries: ReportEmailHistoryEntry[];
-  onResend: (entry: ReportEmailHistoryEntry) => void;
+  // Ohne onResend (kein berichte.bearbeiten) wird "Erneut senden" nicht angeboten.
+  onResend?: (entry: ReportEmailHistoryEntry) => void;
   onCopyText: (entry: ReportEmailHistoryEntry) => void;
 }
 
@@ -58,10 +59,12 @@ export function EmailHistoryList({ entries, onResend, onCopyText }: EmailHistory
                   <ChevronDown className={cn("size-4 transition-transform", isExpanded && "rotate-180")} />
                   Details anzeigen
                 </Button>
-                <Button type="button" variant="ghost" size="sm" onClick={() => onResend(entry)}>
-                  <Send className="size-4" />
-                  Erneut senden
-                </Button>
+                {onResend && (
+                  <Button type="button" variant="ghost" size="sm" onClick={() => onResend(entry)}>
+                    <Send className="size-4" />
+                    Erneut senden
+                  </Button>
+                )}
                 <Button type="button" variant="ghost" size="sm" onClick={() => onCopyText(entry)}>
                   <Copy className="size-4" />
                   Text kopieren

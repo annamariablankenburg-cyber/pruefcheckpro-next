@@ -23,6 +23,9 @@ import type { Customer } from "@/types/customer";
 
 interface CustomerActionsMenuProps {
   customer: Customer;
+  // kunden.bearbeiten (Bearbeiten, Status/Archiv, Rechnungen/Lieferscheine/Dokumente) bzw. projekte.erstellen (+ kunden.ansehen).
+  canEdit: boolean;
+  canCreateProject: boolean;
   onViewDetails: () => void;
   onEdit: () => void;
   onCreateProject: () => void;
@@ -36,6 +39,8 @@ interface CustomerActionsMenuProps {
 
 export function CustomerActionsMenu({
   customer,
+  canEdit,
+  canCreateProject,
   onViewDetails,
   onEdit,
   onCreateProject,
@@ -68,49 +73,57 @@ export function CustomerActionsMenu({
           <Eye />
           Details öffnen
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onEdit}>
-          <Pencil />
-          Bearbeiten
-        </DropdownMenuItem>
-
-        <DropdownMenuSeparator />
-
-        <DropdownMenuItem onSelect={onCreateProject}>
-          <FolderPlus />
-          Projekt erstellen
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onAddInvoice}>
-          <Receipt />
-          Rechnung hinzufügen
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onAddDeliveryNote}>
-          <Truck />
-          Lieferschein hinzufügen
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onUploadDocument}>
-          <Upload />
-          Dokument hochladen
-        </DropdownMenuItem>
-
-        <DropdownMenuSeparator />
-
-        {canDeactivate && (
-          <DropdownMenuItem onSelect={onDeactivate}>
-            <UserX />
-            Deaktivieren
+        {canEdit && (
+          <DropdownMenuItem onSelect={onEdit}>
+            <Pencil />
+            Bearbeiten
           </DropdownMenuItem>
         )}
-        {canReactivate && (
-          <DropdownMenuItem onSelect={onReactivate}>
-            <UserCheck />
-            Reaktivieren
+
+        {(canCreateProject || canEdit) && <DropdownMenuSeparator />}
+
+        {canCreateProject && (
+          <DropdownMenuItem onSelect={onCreateProject}>
+            <FolderPlus />
+            Projekt erstellen
           </DropdownMenuItem>
         )}
-        {canArchive && (
-          <DropdownMenuItem onSelect={onArchive}>
-            <Archive />
-            Archivieren
-          </DropdownMenuItem>
+        {canEdit && (
+          <>
+            <DropdownMenuItem onSelect={onAddInvoice}>
+              <Receipt />
+              Rechnung hinzufügen
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={onAddDeliveryNote}>
+              <Truck />
+              Lieferschein hinzufügen
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={onUploadDocument}>
+              <Upload />
+              Dokument hochladen
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
+            {canDeactivate && (
+              <DropdownMenuItem onSelect={onDeactivate}>
+                <UserX />
+                Deaktivieren
+              </DropdownMenuItem>
+            )}
+            {canReactivate && (
+              <DropdownMenuItem onSelect={onReactivate}>
+                <UserCheck />
+                Reaktivieren
+              </DropdownMenuItem>
+            )}
+            {canArchive && (
+              <DropdownMenuItem onSelect={onArchive}>
+                <Archive />
+                Archivieren
+              </DropdownMenuItem>
+            )}
+          </>
         )}
       </DropdownMenuContent>
     </DropdownMenu>

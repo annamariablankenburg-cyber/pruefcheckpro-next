@@ -1,6 +1,6 @@
 # Rollenbasierte Firestore Rules – Phase 2 (Fach-Collections)
 
-Status: **Rules und Emulator-Tests sind implementiert** (Ergebnis siehe Abschnitt 10). **Nicht deployt** – siehe Abschnitt 9 (Deployment-Voraussetzungen). Die UI der Fachseiten ist noch **nicht** angepasst (UI Permission Gating Phase 2 ist der nächste Slice, Abschnitt 8).
+Status: **Rules und Emulator-Tests sind implementiert** (Ergebnis siehe Abschnitt 10). **Nicht deployt** – siehe Abschnitt 9 (Deployment-Voraussetzungen). Die UI der Fachseiten wurde im Folge-Slice angepasst (UI Permission Gating Phase 2: `docs/firebase/ui-permission-gating-phase2.md`); Abschnitt 8 beschreibt den Stand davor.
 
 Phase 2 erzwingt serverseitig Lesen, Erstellen, Bearbeiten und Löschen für die acht Fach-Collections `customers`, `projects`, `devices`, `samples`, `testValues`, `reports`, `calendarEvents`, `laborbook`. Bisher prüften sie nur „aktive Membership der Firma“ (`belongsToCompany`). Phase 1 (`roles`, `employees`, `invitations`, `locations`) bleibt unverändert, siehe `docs/firebase/role-permission-rules-phase1.md`. **Damit hängt keine Company-Collection mehr im Nur-Membership-Block; `belongsToCompany` ist aus den Rules entfernt.**
 
@@ -84,9 +84,9 @@ Die Rules verlangen für Schreibvorgänge **kein** `*.ansehen`. Der Client liest
 | `removeX`, Bulk-Delete/-Update | nichts | funktioniert mit dem Schlüssel allein |
 | Dialoge | siehe Abschnitt 8 (Referenzdaten laden) | Dropdowns leer/Fehlerzustand |
 
-## 8. UI Permission Gating Phase 2 (offen, nächster Slice)
+## 8. UI Permission Gating Phase 2 (inzwischen umgesetzt)
 
-Nicht umgebaut. Folgende Stellen können jetzt `permission-denied` bekommen (je nach Rolle; Systemrollen laut Matrix):
+> **Erledigt:** `docs/firebase/ui-permission-gating-phase2.md`. *Stand beim Abschluss von Rules Phase 2 (historisch):* Folgende Stellen konnten `permission-denied` bekommen (je nach Rolle; Systemrollen laut Matrix):
 
 - **Alle acht Seiten/Listen** laden ihre Collection mit `getDocs` und zeigen bei fehlendem `*.ansehen` einen Fehlerzustand: `/kunden` (CustomersView), `/projekte`, `/geraete`, `/probekoerper`, `/pruefungen` (zusätzlich `useSamples` + `useReports`), `/berichte`, `/kalender`, `/laborbuch`; **Dashboard** lädt `useCalendar()` (`kalender.ansehen`).
 - **Referenzdaten in Dialogen:** NewProjectDialog (Kunden), NewSampleDialog (Projekte, Kunden), NewTestEntryDialog (Proben), NewReportDialog (Proben), NewCalendarTaskDialog (Proben), NewLaborbookEntryDialog (Proben, Projekte, Kunden, Geräte) brauchen die jeweiligen `*.ansehen`.

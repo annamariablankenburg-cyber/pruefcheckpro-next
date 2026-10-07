@@ -19,10 +19,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { ReportUiAccess } from "@/lib/permissions/domainAccess";
 import type { Report } from "@/types/report";
 
 interface ReportActionsMenuProps {
   report: Report;
+  // Rechte des Nutzers (UX-Gating; die Firestore Rules bleiben die Sicherheitsgrenze).
+  access: ReportUiAccess;
   onOpenDetails: () => void;
   onEdit: () => void;
   onPreview: () => void;
@@ -38,6 +41,7 @@ interface ReportActionsMenuProps {
 
 export function ReportActionsMenu({
   report,
+  access,
   onOpenDetails,
   onEdit,
   onPreview,
@@ -68,64 +72,78 @@ export function ReportActionsMenu({
           <Eye />
           Details öffnen
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onEdit}>
-          <FileEdit />
-          Bearbeiten
-        </DropdownMenuItem>
+        {access.edit && (
+          <DropdownMenuItem onSelect={onEdit}>
+            <FileEdit />
+            Bearbeiten
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onSelect={onPreview}>
           <Eye />
           Vorschau öffnen
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onSendEmail}>
-          <Mail />
-          Per E-Mail senden
-        </DropdownMenuItem>
+        {access.edit && (
+          <DropdownMenuItem onSelect={onSendEmail}>
+            <Mail />
+            Per E-Mail senden
+          </DropdownMenuItem>
+        )}
 
-        <DropdownMenuSeparator />
+        {(access.edit || access.export || access.duplicate) && <DropdownMenuSeparator />}
 
-        {canMarkDone && (
+        {access.edit && canMarkDone && (
           <DropdownMenuItem onSelect={onMarkDone}>
             <CheckCircle2 />
             Als fertig markieren
           </DropdownMenuItem>
         )}
-        {canExport && (
+        {access.export && canExport && (
           <DropdownMenuItem onSelect={onExportPdf}>
             <Download />
             PDF exportieren
           </DropdownMenuItem>
         )}
-        {canExport && (
+        {access.export && canExport && (
           <DropdownMenuItem onSelect={onExportExcel}>
             <Download />
             Excel exportieren
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem onSelect={onDuplicate}>
-          <Copy />
-          Duplizieren
-        </DropdownMenuItem>
-
-        <DropdownMenuSeparator />
-
-        {canArchive && (
-          <DropdownMenuItem onSelect={onArchive}>
-            <Archive />
-            Archivieren
-          </DropdownMenuItem>
-        )}
-        {canReactivate && (
-          <DropdownMenuItem onSelect={onReactivate}>
-            <ArchiveRestore />
-            Reaktivieren
+        {access.duplicate && (
+          <DropdownMenuItem onSelect={onDuplicate}>
+            <Copy />
+            Duplizieren
           </DropdownMenuItem>
         )}
 
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onSelect={onDelete}>
-          <Trash2 />
-          Löschen
-        </DropdownMenuItem>
+        {access.edit && (
+          <>
+            <DropdownMenuSeparator />
+
+            {canArchive && (
+              <DropdownMenuItem onSelect={onArchive}>
+                <Archive />
+                Archivieren
+              </DropdownMenuItem>
+            )}
+            {canReactivate && (
+              <DropdownMenuItem onSelect={onReactivate}>
+                <ArchiveRestore />
+                Reaktivieren
+              </DropdownMenuItem>
+            )}
+          </>
+        )}
+
+        {access.delete && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onSelect={onDelete}>
+              <Trash2 />
+              Löschen
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

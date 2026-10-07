@@ -38,6 +38,8 @@ interface NewCalendarTaskDialogProps {
   onOpenChange: (open: boolean) => void;
   // Gesetzt = Bearbeitungsmodus für diesen Termin.
   editingEvent?: CalendarEvent | null;
+  // proben.ansehen: Probenauswahl anbieten (optionale Verknüpfung). Standard: ja.
+  canSelectSample?: boolean;
   // Vorbelegtes Datum (DD.MM.YYYY) für neue Termine.
   defaultDate?: string;
   // Gibt true zurück, wenn der Termin gespeichert wurde. Der Dialog schließt
@@ -135,17 +137,21 @@ function ReadOnlyValue({ value }: { value: string }) {
 
 interface CalendarTaskFormProps {
   editingEvent: CalendarEvent | null;
+  // proben.ansehen: Probenauswahl (optional im Termin). Ohne Recht wird nichts geladen und eine
+  // bestehende Probenverknüpfung unverändert beibehalten.
+  canSelectSample: boolean;
   defaultDate?: string;
   onOpenChange: (open: boolean) => void;
   onSubmit: (input: NewCalendarEventInput) => Promise<boolean>;
 }
 
-function CalendarTaskForm({ editingEvent, defaultDate, onOpenChange, onSubmit }: CalendarTaskFormProps) {
+function CalendarTaskForm({ editingEvent, canSelectSample, defaultDate, onOpenChange, onSubmit }: CalendarTaskFormProps) {
   const [form, setForm] = useState<TaskFormState>(() => initialFormState(editingEvent, defaultDate));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const { samples, activeSamples, loading: samplesLoading, error: samplesError, refreshSamples } = useSamples();
+  const { samples, activeSamples, loading: samplesLoading, error: samplesError, refreshSamples } = useSamples(canSelectSample);
+  const keepLink = !canSelectSample && editingEvent !== null;
 
   // Die verknüpfte Probe wird aus der echten Probenliste gelesen – nie aus
   // Freitext. Ist sie inzwischen archiviert, bleibt sie trotzdem auswählbar,
@@ -172,14 +178,14 @@ function CalendarTaskForm({ editingEvent, defaultDate, onOpenChange, onSubmit }:
       field: sample ? sample.fachbereich : form.field,
       status: editingEvent?.status ?? "geplant",
       priority: form.priority,
-      sampleId: sample?.id,
-      bezeichnung: sample?.bezeichnung,
-      projectId: sample?.projectId,
-      projekt: sample?.projekt,
-      kunde: sample?.kunde,
+      sampleId: keepLink ? editingEvent.sampleId : sample?.id,
+      bezeichnung: keepLink ? editingEvent.bezeichnung : sample?.bezeichnung,
+      projectId: keepLink ? editingEvent.projectId : sample?.projectId,
+      projekt: keepLink ? editingEvent.projekt : sample?.projekt,
+      kunde: keepLink ? editingEvent.kunde : sample?.kunde,
       pruefer: sample ? sample.pruefer : (form.pruefer.trim() || undefined),
       description: form.description.trim() || undefined,
-      testValueId: sameSample ? editingEvent?.testValueId : undefined,
+      testValueId: keepLink || sameSample ? editingEvent?.testValueId : undefined,
       deviceId: editingEvent?.deviceId,
     };
   }
@@ -199,7 +205,7 @@ function CalendarTaskForm({ editingEvent, defaultDate, onOpenChange, onSubmit }:
       setErrorMessage("Bitte „Uhrzeit“ ausfüllen.");
       return;
     }
-    if (form.sampleId && !linkedSample) {
+    if (canSelectSample && form.sampleId && !linkedSample) {
       setErrorMessage(
         samplesLoading
           ? "Proben werden noch geladen. Bitte kurz warten."
@@ -271,6 +277,7 @@ function CalendarTaskForm({ editingEvent, defaultDate, onOpenChange, onSubmit }:
         </div>
 
         <div className="grid gap-4 border-t border-border pt-5 sm:grid-cols-2">
+          {canSelectSample && (
           <div className="flex flex-col gap-1.5 sm:col-span-2">
             <FieldLabel>Probe</FieldLabel>
             {samplesError ? (
@@ -302,10 +309,11 @@ function CalendarTaskForm({ editingEvent, defaultDate, onOpenChange, onSubmit }:
               </Select>
             )}
           </div>
+          )}
 
           <div className="flex flex-col gap-1.5">
             <FieldLabel>Projekt</FieldLabel>
-            <ReadOnlyValue value={linkedSample ? linkedSample.projekt : "—"} />
+            <ReadOnlyValue value={linkedSample ? linkedSample.projekt : keepLink ? (editingEvent.projekt ?? "—") : "—"} />
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -361,6 +369,7 @@ export function NewCalendarTaskDialog({
   open,
   onOpenChange,
   editingEvent = null,
+  canSelectSample = true,
   defaultDate,
   onSubmit,
 }: NewCalendarTaskDialogProps) {
@@ -372,6 +381,7 @@ export function NewCalendarTaskDialog({
           <CalendarTaskForm
             key={editingEvent?.id ?? "new"}
             editingEvent={editingEvent}
+            canSelectSample={canSelectSample}
             defaultDate={defaultDate}
             onOpenChange={onOpenChange}
             onSubmit={onSubmit}

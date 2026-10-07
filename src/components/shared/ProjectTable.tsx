@@ -5,9 +5,11 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { ProjectActionsMenu } from "@/components/shared/ProjectActionsMenu";
 import { ProjectFieldBadge } from "@/components/shared/ProjectFieldBadge";
 import { ProjectStatusBadge } from "@/components/shared/ProjectStatusBadge";
+import type { ProjectUiAccess } from "@/lib/permissions/domainAccess";
 import type { Project } from "@/types/project";
 
 interface ProjectTableActionHandlers {
+  access: ProjectUiAccess;
   onViewDetails: (project: Project) => void;
   onEdit: (project: Project) => void;
   onViewSamples: (project: Project) => void;
@@ -121,6 +123,7 @@ export function ProjectTable({ projects, onResetFilters, ...handlers }: ProjectT
                   <td className="px-4 py-3 text-right whitespace-nowrap">
                     <ProjectActionsMenu
                       project={project}
+                      access={handlers.access}
                       onViewDetails={() => handlers.onViewDetails(project)}
                       onEdit={() => handlers.onEdit(project)}
                       onViewSamples={() => handlers.onViewSamples(project)}
@@ -162,6 +165,7 @@ export function ProjectTable({ projects, onResetFilters, ...handlers }: ProjectT
                   <ProjectStatusBadge status={project.status} overdue={project.overdue} />
                   <ProjectActionsMenu
                     project={project}
+                    access={handlers.access}
                     onViewDetails={() => handlers.onViewDetails(project)}
                     onEdit={() => handlers.onEdit(project)}
                     onViewSamples={() => handlers.onViewSamples(project)}

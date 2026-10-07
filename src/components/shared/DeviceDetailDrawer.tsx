@@ -26,6 +26,7 @@ import type { Device } from "@/types/device";
 
 interface DeviceDetailDrawerProps {
   device: Device | null;
+  canEdit: boolean;
   onOpenChange: (open: boolean) => void;
   onEdit: (device: Device) => void;
   onDocumentCalibration: (device: Device) => void;
@@ -55,6 +56,7 @@ function SectionTitle({ children }: { children: string }) {
 
 export function DeviceDetailDrawer({
   device,
+  canEdit,
   onOpenChange,
   onEdit,
   onDocumentCalibration,
@@ -114,14 +116,16 @@ export function DeviceDetailDrawer({
                     <Gauge className="size-4 text-muted-foreground" />
                     <SectionTitle>Kalibrierungen</SectionTitle>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onDocumentCalibration(device)}
-                  >
-                    Kalibrierung dokumentieren
-                  </Button>
+                  {canEdit && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onDocumentCalibration(device)}
+                    >
+                      Kalibrierung dokumentieren
+                    </Button>
+                  )}
                 </div>
                 <div className="divide-y divide-border rounded-xl border border-border px-3.5">
                   <DetailRow label="Letzte Kalibrierung" value={device.lastCalibration ?? "—"} />
@@ -136,14 +140,16 @@ export function DeviceDetailDrawer({
                     <Wrench className="size-4 text-muted-foreground" />
                     <SectionTitle>Wartungen</SectionTitle>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onDocumentMaintenance(device)}
-                  >
-                    Wartung dokumentieren
-                  </Button>
+                  {canEdit && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onDocumentMaintenance(device)}
+                    >
+                      Wartung dokumentieren
+                    </Button>
+                  )}
                 </div>
                 <div className="divide-y divide-border rounded-xl border border-border px-3.5">
                   <DetailRow label="Letzte Wartung" value={device.lastMaintenance ?? "—"} />
@@ -157,7 +163,7 @@ export function DeviceDetailDrawer({
                 icon={FileText}
                 items={device.documents}
                 addLabel="Dokument hochladen"
-                onAdd={() => onUploadDocument(device)}
+                onAdd={canEdit ? () => onUploadDocument(device) : undefined}
                 emptyLabel="Noch keine Dokumente hinterlegt."
               />
 
@@ -190,27 +196,31 @@ export function DeviceDetailDrawer({
 
             <div className="flex flex-col gap-2 border-t border-border px-6 py-4">
               <div className="grid grid-cols-2 gap-2">
-                <Button type="button" variant="outline" onClick={() => onEdit(device)}>
-                  <Pencil className="size-4" />
-                  Bearbeiten
-                </Button>
-                <Button type="button" variant="outline" onClick={() => onUploadDocument(device)}>
-                  <Upload className="size-4" />
-                  Dokument hochladen
-                </Button>
-                {canDeactivate && (
+                {canEdit && (
+                  <Button type="button" variant="outline" onClick={() => onEdit(device)}>
+                    <Pencil className="size-4" />
+                    Bearbeiten
+                  </Button>
+                )}
+                {canEdit && (
+                  <Button type="button" variant="outline" onClick={() => onUploadDocument(device)}>
+                    <Upload className="size-4" />
+                    Dokument hochladen
+                  </Button>
+                )}
+                {canEdit && canDeactivate && (
                   <Button type="button" variant="outline" onClick={() => onDeactivate(device)}>
                     <PowerOff className="size-4" />
                     Außer Betrieb setzen
                   </Button>
                 )}
-                {canReactivate && (
+                {canEdit && canReactivate && (
                   <Button type="button" variant="outline" onClick={() => onReactivate(device)}>
                     <Power className="size-4" />
                     Reaktivieren
                   </Button>
                 )}
-                {canArchive && (
+                {canEdit && canArchive && (
                   <Button
                     type="button"
                     variant="destructive"

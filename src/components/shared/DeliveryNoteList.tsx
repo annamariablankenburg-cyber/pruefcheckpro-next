@@ -5,7 +5,8 @@ import type { DeliveryNote } from "@/types/project";
 
 interface DeliveryNoteListProps {
   notes: DeliveryNote[];
-  onAdd: () => void;
+  // Ohne onAdd (fehlendes Bearbeiten-Recht) wird die Schaltfläche nicht angeboten.
+  onAdd?: () => void;
 }
 
 export function DeliveryNoteList({ notes, onAdd }: DeliveryNoteListProps) {
@@ -15,10 +16,12 @@ export function DeliveryNoteList({ notes, onAdd }: DeliveryNoteListProps) {
         <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
           Lieferscheine
         </p>
-        <Button type="button" variant="outline" size="sm" onClick={onAdd}>
-          <Plus className="size-3.5" />
-          Lieferschein hinzufügen
-        </Button>
+        {onAdd && (
+          <Button type="button" variant="outline" size="sm" onClick={onAdd}>
+            <Plus className="size-3.5" />
+            Lieferschein hinzufügen
+          </Button>
+        )}
       </div>
 
       {notes.length > 0 ? (

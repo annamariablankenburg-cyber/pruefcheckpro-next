@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
+import { DomainAccessGate } from "@/components/shared/DomainAccessGate";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { NewTestEntryDialog } from "@/components/shared/NewTestEntryDialog";
 import { StatCard } from "@/components/shared/StatCard";
@@ -25,6 +26,12 @@ import { buildTestEntryFromSample, HEUTE } from "@/config/testValues";
 import { useReports } from "@/hooks/useReports";
 import { useSamples } from "@/hooks/useSamples";
 import { useTestEntries } from "@/hooks/useTestEntries";
+import {
+  getTestEntryReportAction,
+  getTestEntryUiAccess,
+  type TestEntryReportAction,
+  type TestEntryUiAccess,
+} from "@/lib/permissions/domainAccess";
 import type { TestEntry } from "@/types/testValue";
 
 type ConfirmActionType = "start" | "complete" | "reopen";
@@ -58,11 +65,24 @@ const confirmCopy: Record<
   },
 };
 
+// Defensiv: ohne pruefungen.bearbeiten ist das Speichern nicht erreichbar (readOnly); falls doch
+// aufgerufen, wird nichts geschrieben.
+async function denyTestEntrySave(): Promise<undefined> {
+  return undefined;
+}
+
+// Sperrt die Seite ohne pruefungen.ansehen (auch bei direktem URL-Aufruf); erst danach werden die
+// Prüfungen geladen. Proben (für "?sampleId=" und den Anlegen-Dialog) und Berichte (Verknüpfung)
+// werden nur mit proben.ansehen bzw. berichte.ansehen geladen.
 export default function PruefungenPage() {
   return (
-    <Suspense fallback={null}>
-      <PruefungenPageContent />
-    </Suspense>
+    <DomainAccessGate domain="testValues" label="Prüfungen">
+      {(_actions, permissions) => (
+        <Suspense fallback={null}>
+          <PruefungenPageContent access={getTestEntryUiAccess(permissions)} />
+        </Suspense>
+      )}
+    </DomainAccessGate>
   );
 }
 
@@ -70,7 +90,7 @@ export default function PruefungenPage() {
 // da die Route über "?sampleId=" geöffnet werden kann (Abschnitt 7 des
 // Auftrags) – deshalb der schlanke Wrapper oben statt eines einzigen
 // Komponenten-Exports.
-function PruefungenPageContent() {
+function PruefungenPageContent({ access }: { access: TestEntryUiAccess }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const {
@@ -97,12 +117,12 @@ function PruefungenPageContent() {
   // Read-only Probenzugriff: nur um beim Öffnen über "?sampleId=" eine neue
   // Prüfung aus einer gültigen, nicht archivierten Probe abzuleiten (siehe
   // Abschnitt 7 des Auftrags). Keine Schreibzugriffe auf Probendaten.
-  const { samples, loading: samplesLoading } = useSamples();
+  const { samples, loading: samplesLoading } = useSamples(access.readSamples);
   // Read-only Zugriff auf Berichte: nur um zu prüfen, ob für eine Probe
   // bereits ein Bericht existiert ("Bericht erstellen"-Aktion unten). Kein
   // direkter Zugriff auf reportRepository/reportService, damit diese Seite
   // unabhängig vom aktiven NEXT_PUBLIC_DATA_SOURCE funktioniert.
-  const { reports } = useReports();
+  const { reports } = useReports(access.readReports);
 
   const [isNewEntryOpen, setIsNewEntryOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmActionState | null>(null);
@@ -128,6 +148,11 @@ function PruefungenPageContent() {
     const existing = testEntries.find((entry) => entry.sampleId === requestedSampleId);
     if (existing) {
       setActiveTestEntry(existing);
+      return;
+    }
+
+    if (!access.create) {
+      showFeedback("Für diese Probe existiert noch keine Prüfung, und du darfst keine anlegen.");
       return;
     }
 
@@ -164,12 +189,31 @@ function PruefungenPageContent() {
   );
 
   function requestAction(type: ConfirmActionType) {
-    return (entry: TestEntry) => setConfirmAction({ entry, type });
+    return (entry: TestEntry) => {
+      if (!access.edit) return;
+      setConfirmAction({ entry, type });
+    };
+  }
+
+  function requestDelete(entry: TestEntry) {
+    if (!access.delete) return;
+    setDeleteEntry(entry);
+  }
+
+  // Existiert zur Probe schon ein Bericht, gilt nur "öffnen" (berichte.ansehen), sonst nur "erstellen"
+  // (Berichtsformular-Rechte). Die Berichtsliste wird nur mit berichte.ansehen geladen; ohne dieses Recht
+  // ist nicht feststellbar, ob ein Bericht existiert – dann wird keine Bericht-Aktion angeboten.
+  function reportActionFor(entry: TestEntry): TestEntryReportAction {
+    return getTestEntryReportAction(
+      access,
+      reports.some((report) => report.probeId === entry.sampleId)
+    );
   }
 
   function handleCreateReport(entry: TestEntry) {
-    const hasLinkedReport = reports.some((report) => report.probeId === entry.sampleId);
-    if (hasLinkedReport) {
+    const action = reportActionFor(entry);
+    if (action === null) return;
+    if (action === "open") {
       showFeedback("Verknüpfter Bericht wird geöffnet.");
       router.push("/pdf-export");
       return;
@@ -178,6 +222,7 @@ function PruefungenPageContent() {
   }
 
   async function handleConfirmAction(subject: TestEntry) {
+    if (!access.edit) return;
     if (!confirmAction || actionPending) return;
     setActionPending(true);
     try {
@@ -207,6 +252,7 @@ function PruefungenPageContent() {
   }
 
   async function handleConfirmDelete(entry: TestEntry) {
+    if (!access.delete) return;
     if (deletePending) return;
     setDeletePending(true);
     try {
@@ -237,10 +283,12 @@ function PruefungenPageContent() {
             Erfasse Messwerte, bereite Berechnungen vor und dokumentiere Ergebnisse.
           </p>
         </div>
-        <Button onClick={() => setIsNewEntryOpen(true)} className="w-fit" disabled={hasBlockingState}>
-          <Plus className="size-4" />
-          Neue Prüfung
-        </Button>
+        {access.create && (
+          <Button onClick={() => setIsNewEntryOpen(true)} className="w-fit" disabled={hasBlockingState}>
+            <Plus className="size-4" />
+            Neue Prüfung
+          </Button>
+        )}
       </div>
 
       {loading || isPreparingEntry ? (
@@ -275,6 +323,8 @@ function PruefungenPageContent() {
           <TestEntryFilters search={search} onSearchChange={setSearch} filter={filter} onFilterChange={setFilter} />
 
           <TestEntryTable
+            access={access}
+            reportActionFor={reportActionFor}
             entries={filteredTestEntries}
             onResetFilters={resetFilters}
             onOpen={setActiveTestEntry}
@@ -283,12 +333,14 @@ function PruefungenPageContent() {
             onReopen={requestAction("reopen")}
             onCreateReport={handleCreateReport}
             onExportExcel={() => showFeedback("Diese Funktion wird später angebunden.")}
-            onDelete={setDeleteEntry}
+            onDelete={requestDelete}
           />
         </>
       )}
 
       <TestValueDrawer
+        access={access}
+        reportAction={activeTestEntry ? reportActionFor(activeTestEntry) : null}
         entry={activeTestEntry}
         onOpenChange={(open) => !open && setActiveTestEntry(null)}
         onStart={requestAction("start")}
@@ -297,8 +349,8 @@ function PruefungenPageContent() {
         onCreateReport={handleCreateReport}
         onExportExcel={() => showFeedback("Diese Funktion wird später angebunden.")}
         onFeedback={showFeedback}
-        onSaveDraft={saveDraft}
-        onSaveResult={saveResult}
+        onSaveDraft={access.edit ? saveDraft : denyTestEntrySave}
+        onSaveResult={access.edit ? saveResult : denyTestEntrySave}
       />
 
       <NewTestEntryDialog

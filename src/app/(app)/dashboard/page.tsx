@@ -32,6 +32,8 @@ import { buildWeekDays, formatDateDE } from "@/lib/calendar/calendarDates";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/AuthProvider";
 import { useCalendar } from "@/hooks/useCalendar";
+import { useDomainPermissions } from "@/hooks/useDomainPermissions";
+import { getDomainAccess, getSampleFormAccess } from "@/lib/permissions/domainAccess";
 import type { CalendarEvent } from "@/types/calendarEvent";
 
 function parseGermanDate(ddmmyyyy: string): Date {
@@ -206,13 +208,26 @@ const activeProjectsCount = projects.filter((project) => project.status === "Akt
 
 export default function DashboardPage() {
   const { appUser } = useAuth();
-  const { events, referenceDate, loading, error, refreshCalendarEvents } = useCalendar();
+  // Effektive Rechte (fail-closed: solange sie laden, wird nichts abgefragt). Ohne kalender.ansehen
+  // wird der Kalender nicht geladen; Karten aus Bereichen ohne *.ansehen erscheinen nicht (auch keine
+  // Zählwerte, die den Bestand offenlegen).
+  const { permissions, ready } = useDomainPermissions();
+  const canCalendar = getDomainAccess("calendarEvents", permissions).view;
+  const canSamples = getDomainAccess("samples", permissions).view;
+  const canProjects = getDomainAccess("projects", permissions).view;
+  const canTestValues = getDomainAccess("testValues", permissions).view;
+  const canLaborbook = getDomainAccess("laborbook", permissions).view;
+  const canCreateSample = getSampleFormAccess(permissions).create;
+  const { events, referenceDate, loading, error, refreshCalendarEvents } = useCalendar(ready && canCalendar);
 
   // Kalenderwerte erst, wenn Termine und Bezugsdatum vorliegen. Solange (oder bei
   // Fehler) bleibt calendar null und die Karten zeigen Platzhalter.
   const calendar = useMemo(
-    () => (!error && !loading && referenceDate ? buildCalendarDashboardData(events, referenceDate) : null),
-    [events, referenceDate, loading, error]
+    () =>
+      canCalendar && !error && !loading && referenceDate
+        ? buildCalendarDashboardData(events, referenceDate)
+        : null,
+    [canCalendar, events, referenceDate, loading, error]
   );
   const placeholderState: "loading" | "error" = error ? "error" : "loading";
 
@@ -223,6 +238,21 @@ export default function DashboardPage() {
   });
 
   const firstName = appUser?.firstName ?? "Laborleiter";
+  // Schnellaktionen nur für erreichbare Bereiche (die Zielseiten sperren sich zusätzlich selbst).
+  const visibleQuickActions = quickActions.filter((action) => {
+    switch (action.href) {
+      case "/probekoerper":
+        return canCreateSample;
+      case "/pruefungen":
+        return canTestValues;
+      case "/kalender":
+        return canCalendar;
+      case "/laborbuch":
+        return canLaborbook;
+      default:
+        return true;
+    }
+  });
 
   return (
     <div className="flex flex-col gap-6 p-4 sm:p-6 lg:p-8">
@@ -239,41 +269,50 @@ export default function DashboardPage() {
 
       <FadeIn delay={0.05}>
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-[1.45fr_1fr_1fr_1fr]">
-          <DashboardStatCard
-            icon={AlertTriangle}
-            label="Überfällige Aufgaben"
-            value={calendar ? calendar.overdueTasks.length : "—"}
-            meta="Jetzt erledigen"
-            tone="danger"
-            actionHref="#ueberfaellig"
-            featured
-            className="col-span-2 lg:col-span-1"
-          />
-          <DashboardStatCard
-            icon={FlaskConical}
-            label="Geplante Prüfungen"
-            value={calendar ? calendar.scheduledThisWeek : "—"}
-            meta="diese Woche"
-            tone="default"
-          />
-          <DashboardStatCard
-            icon={Package}
-            label="Offene Proben"
-            value={activeSamples.length}
-            meta="in Bearbeitung"
-            tone="warning"
-          />
-          <DashboardStatCard
-            icon={ClipboardList}
-            label="Projekte"
-            value={activeProjectsCount}
-            meta="aktiv"
-            tone="success"
-            className="col-span-2 lg:col-span-1"
-          />
+          {canCalendar && (
+            <DashboardStatCard
+              icon={AlertTriangle}
+              label="Überfällige Aufgaben"
+              value={calendar ? calendar.overdueTasks.length : "—"}
+              meta="Jetzt erledigen"
+              tone="danger"
+              actionHref="#ueberfaellig"
+              featured
+              className="col-span-2 lg:col-span-1"
+            />
+          )}
+          {canCalendar && (
+            <DashboardStatCard
+              icon={FlaskConical}
+              label="Geplante Prüfungen"
+              value={calendar ? calendar.scheduledThisWeek : "—"}
+              meta="diese Woche"
+              tone="default"
+            />
+          )}
+          {canSamples && (
+            <DashboardStatCard
+              icon={Package}
+              label="Offene Proben"
+              value={activeSamples.length}
+              meta="in Bearbeitung"
+              tone="warning"
+            />
+          )}
+          {canProjects && (
+            <DashboardStatCard
+              icon={ClipboardList}
+              label="Projekte"
+              value={activeProjectsCount}
+              meta="aktiv"
+              tone="success"
+              className="col-span-2 lg:col-span-1"
+            />
+          )}
         </div>
       </FadeIn>
 
+      {canCalendar && (
       <div className="grid gap-6 lg:grid-cols-2">
         <FadeIn delay={0.1}>
           {calendar ? (
@@ -308,9 +347,11 @@ export default function DashboardPage() {
           </div>
         </FadeIn>
       </div>
+      )}
 
       {/* Kalender und Wochenübersicht stehen nebeneinander: Termine links, die
           Wochenlast (Balken) direkt daneben. */}
+      {canCalendar && (
       <div className="grid gap-6 lg:grid-cols-5">
         <FadeIn delay={0.2} className="lg:col-span-3">
           {calendar ? (
@@ -321,7 +362,7 @@ export default function DashboardPage() {
         </FadeIn>
 
         <FadeIn delay={0.25} className="lg:col-span-2">
-          {calendar ? (
+          {canSamples && calendar ? (
             <LabStatusCard
               capacity={labCapacity}
               activeSamples={activeSamples.length}
@@ -329,16 +370,19 @@ export default function DashboardPage() {
               trend={`${calendar.completedThisWeek} Prüfungen diese Woche`}
               week={calendar.weekOverview}
             />
-          ) : (
+          ) : canSamples ? (
             <CalendarPlaceholder state={placeholderState} heightClass="h-96" onRetry={refreshCalendarEvents} />
-          )}
+          ) : null}
         </FadeIn>
       </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-5">
-        <FadeIn delay={0.3} className="lg:col-span-3">
-          <SampleStatusCard samples={currentSamples} footerHref="/probekoerper" />
-        </FadeIn>
+        {canSamples && (
+          <FadeIn delay={0.3} className="lg:col-span-3">
+            <SampleStatusCard samples={currentSamples} footerHref="/probekoerper" />
+          </FadeIn>
+        )}
 
         <FadeIn delay={0.35} className="lg:col-span-2">
           <AiAssistantCard
@@ -354,7 +398,7 @@ export default function DashboardPage() {
         <div className="flex flex-col gap-4">
           <h2 className="section-title">Schnellaktionen</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            {quickActions.map((action) => (
+            {visibleQuickActions.map((action) => (
               <QuickActionCard key={action.label} {...action} />
             ))}
           </div>

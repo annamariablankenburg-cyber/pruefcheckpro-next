@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { dateDEToIsoInput, isoInputToDateDE } from "@/lib/calendar/calendarDates";
 import type { LaborbookFormValues } from "@/lib/laborbook/laborbookEntries";
 import { useSamples } from "@/hooks/useSamples";
+import type { LaborbookUiAccess } from "@/lib/permissions/domainAccess";
 import { useProjects } from "@/hooks/useProjects";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useDevices } from "@/hooks/useDevices";
@@ -43,6 +44,9 @@ const NONE = "__none__";
 const LEGACY = "__legacy__";
 
 interface NewLaborbookEntryDialogProps {
+  // Leserechte für die optionalen Verknüpfungen (Standard: alle). Nicht lesbare Listen werden weder
+  // geladen noch angeboten; bestehende Verknüpfungen bleiben beim Bearbeiten erhalten.
+  refs?: LaborbookUiAccess["refs"];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   // Gesetzt = Bearbeitungsmodus für diesen Eintrag.
@@ -196,21 +200,29 @@ function RelationSelect({
 
 interface LaborbookEntryFormProps {
   entry: LaborbookEntry | null;
+  refs: LaborbookUiAccess["refs"];
   onOpenChange: (open: boolean) => void;
   onSubmit: (values: LaborbookFormValues) => Promise<boolean>;
 }
 
-function LaborbookEntryForm({ entry, onOpenChange, onSubmit }: LaborbookEntryFormProps) {
+function LaborbookEntryForm({ entry, refs, onOpenChange, onSubmit }: LaborbookEntryFormProps) {
   const isEditMode = entry !== null;
   const [form, setForm] = useState<LaborbookFormState>(() => initialFormState(entry));
   const [legacy] = useState<LegacyTexts>(() => initialLegacy(entry));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const samplesData = useSamples();
-  const projectsData = useProjects();
-  const customersData = useCustomers();
-  const devicesData = useDevices();
+  // Jede Liste nur mit Leserecht (kein erwarteter permission-denied); deaktivierte Hooks liefern
+  // weder Ladezustand noch Fehler.
+  const samplesData = useSamples(refs.samples);
+  const projectsData = useProjects(refs.projects);
+  const customersData = useCustomers(refs.customers);
+  const devicesData = useDevices(refs.devices);
+  // Beim Bearbeiten bleibt eine bestehende Verknüpfung erhalten, wenn ihre Liste nicht lesbar ist.
+  const keepSample = !refs.samples && entry !== null;
+  const keepProject = !refs.projects && entry !== null;
+  const keepCustomer = !refs.customers && entry !== null;
+  const keepDevice = !refs.devices && entry !== null;
 
   const relationsLoading =
     samplesData.loading || projectsData.loading || customersData.loading || devicesData.loading;
@@ -264,9 +276,16 @@ function LaborbookEntryForm({ entry, onOpenChange, onSubmit }: LaborbookEntryFor
       customerId = sample.customerId;
       kunde = sample.kunde;
     } else {
-      if (form.probeId !== NONE) return { error: unavailable };
+      if (keepSample) {
+        probeId = entry.probeId;
+      } else if (form.probeId !== NONE) {
+        return { error: unavailable };
+      }
       if (form.projectId === LEGACY) {
         projekt = legacy.projekt;
+      } else if (keepProject) {
+        projectId = entry.projectId;
+        projekt = entry.projekt;
       } else if (form.projectId !== NONE) {
         if (!projectFromForm) return { error: unavailable };
         projectId = projectFromForm.id;
@@ -278,6 +297,9 @@ function LaborbookEntryForm({ entry, onOpenChange, onSubmit }: LaborbookEntryFor
         kunde = customerDerivedFromProject;
       } else if (form.customerId === LEGACY) {
         kunde = legacy.kunde;
+      } else if (keepCustomer) {
+        customerId = entry.customerId;
+        kunde = entry.kunde;
       } else if (form.customerId !== NONE) {
         const customer = customersData.customers.find((candidate) => candidate.id === form.customerId);
         if (!customer) return { error: unavailable };
@@ -290,6 +312,9 @@ function LaborbookEntryForm({ entry, onOpenChange, onSubmit }: LaborbookEntryFor
     let geraet: string | undefined;
     if (form.deviceId === LEGACY) {
       geraet = legacy.geraet;
+    } else if (keepDevice) {
+      deviceId = entry.deviceId;
+      geraet = entry.geraet;
     } else if (form.deviceId !== NONE) {
       const device: Device | undefined = devicesData.devices.find((candidate) => candidate.id === form.deviceId);
       if (!device) return { error: unavailable };
@@ -459,17 +484,19 @@ function LaborbookEntryForm({ entry, onOpenChange, onSubmit }: LaborbookEntryFor
         </div>
 
         <div className="grid gap-4 border-t border-border pt-5 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5 sm:col-span-2">
-            <FieldLabel>Probe</FieldLabel>
-            <RelationSelect
-              label="Probe"
-              showLabel={false}
-              value={form.probeId}
-              onValueChange={(value) => update("probeId", value)}
-              disabled={relationsLoading || Boolean(relationsError)}
-              options={probeItems}
-            />
-          </div>
+          {refs.samples && (
+            <div className="flex flex-col gap-1.5 sm:col-span-2">
+              <FieldLabel>Probe</FieldLabel>
+              <RelationSelect
+                label="Probe"
+                showLabel={false}
+                value={form.probeId}
+                onValueChange={(value) => update("probeId", value)}
+                disabled={relationsLoading || Boolean(relationsError)}
+                options={probeItems}
+              />
+            </div>
+          )}
 
           <div className="flex flex-col gap-1.5">
             <FieldLabel>Fachbereich</FieldLabel>
@@ -499,6 +526,8 @@ function LaborbookEntryForm({ entry, onOpenChange, onSubmit }: LaborbookEntryFor
             <FieldLabel>Projekt/Baustelle</FieldLabel>
             {sample ? (
               <ReadOnlyValue value={sample.projekt} hint="Aus der Probe übernommen." />
+            ) : !refs.projects ? (
+              <ReadOnlyValue value={entry?.projekt ?? "—"} hint="Projekte sind für dich nicht einsehbar." />
             ) : (
               <RelationSelect
                 label="Projekt/Baustelle"
@@ -518,6 +547,8 @@ function LaborbookEntryForm({ entry, onOpenChange, onSubmit }: LaborbookEntryFor
               <ReadOnlyValue value={sample.kunde} hint="Aus der Probe übernommen." />
             ) : customerDerivedFromProject !== undefined ? (
               <ReadOnlyValue value={customerDerivedFromProject} hint="Aus dem Projekt übernommen." />
+            ) : !refs.customers ? (
+              <ReadOnlyValue value={entry?.kunde ?? "—"} hint="Kunden sind für dich nicht einsehbar." />
             ) : (
               <RelationSelect
                 label="Kunde"
@@ -532,14 +563,21 @@ function LaborbookEntryForm({ entry, onOpenChange, onSubmit }: LaborbookEntryFor
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <RelationSelect
-              label="Gerät"
-              value={form.deviceId}
-              onValueChange={(value) => update("deviceId", value)}
-              disabled={relationsLoading || Boolean(relationsError)}
-              legacyLabel={legacy.geraet ? `Bisheriger Eintrag: ${legacy.geraet}` : undefined}
-              options={deviceItems}
-            />
+            {refs.devices ? (
+              <RelationSelect
+                label="Gerät"
+                value={form.deviceId}
+                onValueChange={(value) => update("deviceId", value)}
+                disabled={relationsLoading || Boolean(relationsError)}
+                legacyLabel={legacy.geraet ? `Bisheriger Eintrag: ${legacy.geraet}` : undefined}
+                options={deviceItems}
+              />
+            ) : (
+              <>
+                <FieldLabel>Gerät</FieldLabel>
+                <ReadOnlyValue value={entry?.geraet ?? "—"} hint="Geräte sind für dich nicht einsehbar." />
+              </>
+            )}
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -593,7 +631,15 @@ function LaborbookEntryForm({ entry, onOpenChange, onSubmit }: LaborbookEntryFor
   );
 }
 
-export function NewLaborbookEntryDialog({ open, onOpenChange, entry = null, onSubmit }: NewLaborbookEntryDialogProps) {
+const ALL_REFS: LaborbookUiAccess["refs"] = { samples: true, projects: true, customers: true, devices: true };
+
+export function NewLaborbookEntryDialog({
+  refs = ALL_REFS,
+  open,
+  onOpenChange,
+  entry = null,
+  onSubmit,
+}: NewLaborbookEntryDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
@@ -602,6 +648,7 @@ export function NewLaborbookEntryDialog({ open, onOpenChange, entry = null, onSu
           <LaborbookEntryForm
             key={entry?.id ?? "new"}
             entry={entry}
+            refs={refs}
             onOpenChange={onOpenChange}
             onSubmit={onSubmit}
           />

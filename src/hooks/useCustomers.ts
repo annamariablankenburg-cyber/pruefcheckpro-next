@@ -15,7 +15,8 @@ import type { Customer } from "@/types/customer";
 // Ergebnis. Fehler bei Mutationen werden bewusst NICHT hier abgefangen,
 // sondern an die aufrufende UI (Dialoge, Aktionen) weitergereicht, damit dort
 // gezielt reagiert werden kann (Dialog offen lassen, Inline-Fehler zeigen).
-export function useCustomers() {
+// `enabled` (Standard true): nur mit Leserecht (*.ansehen) wird geladen, sonst keine Abfrage.
+export function useCustomers(enabled = true) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,10 +35,11 @@ export function useCustomers() {
   }, []);
 
   useEffect(() => {
+    if (!enabled) return;
     // Lädt die Kundenliste beim ersten Mount vom Service (Mock oder Firestore).
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshCustomers();
-  }, [refreshCustomers]);
+  }, [enabled, refreshCustomers]);
 
   const {
     search,
@@ -118,8 +120,11 @@ export function useCustomers() {
     customers,
     activeCustomers,
     filteredCustomers,
-    loading,
-    error,
+    // false, wenn der Bereich nicht gelesen werden darf: dann wurde NICHT abgefragt (kein erwarteter
+    // permission-denied), die Daten sind leer, kein Ladezustand/Fehler.
+    enabled,
+    loading: enabled && loading,
+    error: enabled ? error : null,
     refreshCustomers,
     search,
     setSearch,

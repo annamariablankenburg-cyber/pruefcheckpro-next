@@ -22,10 +22,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { ProjectUiAccess } from "@/lib/permissions/domainAccess";
 import type { Project } from "@/types/project";
 
 interface ProjectActionsMenuProps {
   project: Project;
+  // Rechte des Nutzers (UX-Gating; die Firestore Rules bleiben die Sicherheitsgrenze).
+  access: ProjectUiAccess;
   onViewDetails: () => void;
   onEdit: () => void;
   onViewSamples: () => void;
@@ -42,6 +45,7 @@ interface ProjectActionsMenuProps {
 
 export function ProjectActionsMenu({
   project,
+  access,
   onViewDetails,
   onEdit,
   onViewSamples,
@@ -75,67 +79,81 @@ export function ProjectActionsMenu({
           <Eye />
           Details öffnen
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onEdit}>
-          <Pencil />
-          Bearbeiten
-        </DropdownMenuItem>
+        {access.editDialog && (
+          <DropdownMenuItem onSelect={onEdit}>
+            <Pencil />
+            Bearbeiten
+          </DropdownMenuItem>
+        )}
 
         <DropdownMenuSeparator />
 
-        <DropdownMenuItem onSelect={onViewSamples}>
-          <FlaskConical />
-          Proben anzeigen
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onNewSample}>
-          <Plus />
-          Neue Probe
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onAddDeliveryNote}>
-          <Truck />
-          Lieferschein hinzufügen
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onOpenCustomer}>
-          <Users />
-          Kunden öffnen
-        </DropdownMenuItem>
+        {access.viewSamples && (
+          <DropdownMenuItem onSelect={onViewSamples}>
+            <FlaskConical />
+            Proben anzeigen
+          </DropdownMenuItem>
+        )}
+        {access.newSample && (
+          <DropdownMenuItem onSelect={onNewSample}>
+            <Plus />
+            Neue Probe
+          </DropdownMenuItem>
+        )}
+        {access.edit && (
+          <DropdownMenuItem onSelect={onAddDeliveryNote}>
+            <Truck />
+            Lieferschein hinzufügen
+          </DropdownMenuItem>
+        )}
+        {access.openCustomer && (
+          <DropdownMenuItem onSelect={onOpenCustomer}>
+            <Users />
+            Kunden öffnen
+          </DropdownMenuItem>
+        )}
 
-        <DropdownMenuSeparator />
+        {access.edit && (
+          <>
+            <DropdownMenuSeparator />
 
-        {canPause && (
-          <DropdownMenuItem onSelect={onPause}>
-            <Pause />
-            Pausieren
-          </DropdownMenuItem>
-        )}
-        {canResume && (
-          <DropdownMenuItem onSelect={onResume}>
-            <Play />
-            Projekt fortsetzen
-          </DropdownMenuItem>
-        )}
-        {canComplete && (
-          <DropdownMenuItem onSelect={onComplete}>
-            <CheckCircle2 />
-            Abschließen
-          </DropdownMenuItem>
-        )}
-        {canReopen && (
-          <DropdownMenuItem onSelect={onReopen}>
-            <RotateCcw />
-            Wieder öffnen
-          </DropdownMenuItem>
-        )}
-        {canArchive && (
-          <DropdownMenuItem onSelect={onArchive}>
-            <Archive />
-            Archivieren
-          </DropdownMenuItem>
-        )}
-        {canReactivate && (
-          <DropdownMenuItem onSelect={onReactivate}>
-            <ArchiveRestore />
-            Reaktivieren
-          </DropdownMenuItem>
+            {canPause && (
+              <DropdownMenuItem onSelect={onPause}>
+                <Pause />
+                Pausieren
+              </DropdownMenuItem>
+            )}
+            {canResume && (
+              <DropdownMenuItem onSelect={onResume}>
+                <Play />
+                Projekt fortsetzen
+              </DropdownMenuItem>
+            )}
+            {canComplete && (
+              <DropdownMenuItem onSelect={onComplete}>
+                <CheckCircle2 />
+                Abschließen
+              </DropdownMenuItem>
+            )}
+            {canReopen && (
+              <DropdownMenuItem onSelect={onReopen}>
+                <RotateCcw />
+                Wieder öffnen
+              </DropdownMenuItem>
+            )}
+            {canArchive && (
+              <DropdownMenuItem onSelect={onArchive}>
+                <Archive />
+                Archivieren
+              </DropdownMenuItem>
+            )}
+            {canReactivate && (
+              <DropdownMenuItem onSelect={onReactivate}>
+                <ArchiveRestore />
+                Reaktivieren
+              </DropdownMenuItem>
+            )}
+          </>
         )}
       </DropdownMenuContent>
     </DropdownMenu>
