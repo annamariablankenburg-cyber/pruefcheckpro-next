@@ -4,6 +4,8 @@
 
 > **Update (serverseitige Mitglieder-Aktionen):** `userMemberships` bleibt client-read-only; Rolle und Status der Membership ändern jetzt die Server-Aktionen `assignRole`/`setMemberStatus` (Admin SDK, Route Handler, Employee + Membership atomar; Actor-Autorisierung, geschützte Rollen, Eigenänderung, letzter Administrator) – siehe `docs/firebase/member-security-actions.md`. Die Provisionierung (Einladung annehmen, Firma anlegen) fehlt weiterhin.
 
+> **Update (Einladung annehmen / Membership-Provisionierung):** Die Provisionierung per Einladung ist serverseitig umgesetzt: `POST /api/invitation-actions/accept` (Admin SDK, eine Transaktion) legt Mitarbeiter, `userMemberships/{uid}` und den angenommenen Einladungsstatus atomar an. Voraussetzung ist eine **bestätigte Auth-E-Mail**, die der E-Mail der Einladung entspricht (die Einladung selbst hat keinen geheimen Token). Das Autorisierungsmodell (Autorisierungsquelle, Rollenprüfung) bleibt unverändert; die einzige Rules-Änderung dieses Slices ist die Invitation-Create-Härtung für die Server-only-Acceptance-Felder (`acceptedByUid`, `employeeId`) – siehe `docs/firebase/invitation-acceptance.md`. Weiterhin offen: Firmen-Anlage (`createCompany`).
+
 > **Update (UI-Gating):** Die Oberfläche liest die effektiven Rechte (`usePermissions()`: Membership → Rolle → `permissions`) und blendet Tabs/Aktionen entsprechend aus (`docs/firebase/ui-permission-gating.md`). Das ist Komfort, keine Sicherheitsgrenze.
 
 > **Update (Rules Phase 1):** Für `roles`, `employees`, `invitations` und `locations` gilt jetzt eine rollenbasierte Durchsetzung (siehe `docs/firebase/role-permission-rules-phase1.md`; im Emulator getestet). Für die übrigen acht Company-Collections gilt weiterhin nur dieses Fundament.

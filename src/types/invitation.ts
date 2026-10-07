@@ -8,9 +8,9 @@ export type PersistedInvitationStatus = "Ausstehend" | "Angenommen" | "Widerrufe
 // (Status "Ausstehend" und expiresAt liegt in der Vergangenheit).
 export type InvitationStatus = PersistedInvitationStatus | "Abgelaufen";
 
-// Eine Einladung ist ein reiner Metadatensatz. Sie löst heute weder einen
-// E-Mail-Versand noch einen Firebase-Auth-Account aus; es gibt keinen
-// Einladungslink und (noch) keinen Annahmeflow.
+// Eine Einladung ist ein Metadatensatz. Sie löst weder einen E-Mail-Versand noch einen
+// Firebase-Auth-Account aus. Angenommen wird sie serverseitig (Einladungslink
+// /einladung?c=<companyId>&i=<invitationId> + verifizierte E-Mail des Auth-Kontos).
 export interface Invitation {
   // Firestore: Dokument-ID, nie als Datenfeld geschrieben.
   id: string;
@@ -31,8 +31,12 @@ export interface Invitation {
   createdAt?: string;
   updatedAt?: string;
   revokedAt?: string;
-  // Nur über Seed/Mock-Daten befüllt, bis ein echter Annahmeflow existiert.
+  // Von der serverseitigen Einladungsannahme gesetzt (POST /api/invitation-actions/accept, siehe
+  // docs/firebase/invitation-acceptance.md); in Seed/Mock-Daten ebenfalls befüllbar.
   acceptedAt?: string;
+  // Nur serverseitig bei der Annahme: UID des annehmenden Auth-Kontos und die angelegte Mitarbeiter-ID.
+  acceptedByUid?: string;
+  employeeId?: string;
   message?: string;
   // Vormerkung für das spätere Onboarding (heute ohne Wirkung).
   activateImmediately: boolean;

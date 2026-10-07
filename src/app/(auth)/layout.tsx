@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
 import Logo from "@/components/shared/Logo";
+import { safeNextPath } from "@/lib/auth/postLoginTarget";
 import { AuthProvider, useAuth } from "@/providers/AuthProvider";
 
 function AuthGate({ children }: { children: ReactNode }) {
@@ -14,7 +15,8 @@ function AuthGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!loading && currentUser) {
-      router.replace("/dashboard");
+      // Angemeldet: zur Einladungsseite (falls als next angegeben und erlaubt), sonst ins Dashboard.
+      router.replace(safeNextPath(new URLSearchParams(window.location.search).get("next")));
     }
   }, [loading, currentUser, router]);
 

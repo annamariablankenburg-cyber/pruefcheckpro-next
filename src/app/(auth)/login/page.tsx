@@ -19,9 +19,13 @@ import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToa
 import { GoogleIcon } from "@/components/shared/GoogleIcon";
 import { getAuthErrorMessage, loginWithEmail } from "@/lib/firebase/auth";
 import { updateLastLogin } from "@/lib/firebase/users";
+import { safeNextPath, withNext } from "@/lib/auth/postLoginTarget";
+import { useNextParam } from "@/lib/auth/useNextParam";
 
 export default function LoginPage() {
   const router = useRouter();
+  // Ziel nach dem Login (nur die Einladungsseite ist als Ziel erlaubt, sonst Dashboard).
+  const next = useNextParam();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -36,7 +40,7 @@ export default function LoginPage() {
     try {
       const credential = await loginWithEmail(email, password);
       await updateLastLogin(credential.user.uid);
-      router.push("/dashboard");
+      router.push(safeNextPath(next));
     } catch (err) {
       setError(getAuthErrorMessage(err));
       setIsLoading(false);
@@ -117,7 +121,7 @@ export default function LoginPage() {
 
         <p className="text-center text-sm text-muted-foreground">
           Noch keinen Account?{" "}
-          <Link href="/registrieren" className="font-medium text-primary hover:underline">
+          <Link href={withNext("/registrieren", next)} className="font-medium text-primary hover:underline">
             Jetzt registrieren
           </Link>
         </p>

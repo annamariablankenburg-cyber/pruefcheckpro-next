@@ -13,6 +13,8 @@ interface InvitationTableProps {
   onSendReminder: (invitation: InvitationRow) => void;
   onResend: (invitation: InvitationRow) => void;
   onRevoke: (invitation: InvitationRow) => void;
+  // Einladungslink kopieren (nur mit Link-Unterstützung, siehe InvitationsView).
+  onCopyLink?: (invitation: InvitationRow) => void;
   onResetFilters?: () => void;
 }
 
@@ -24,6 +26,7 @@ export function InvitationTable({
   onSendReminder,
   onResend,
   onRevoke,
+  onCopyLink,
   onResetFilters,
 }: InvitationTableProps) {
   if (invitations.length === 0) {
@@ -95,6 +98,7 @@ export function InvitationTable({
                       onSendReminder={() => onSendReminder(invitation)}
                       onResend={() => onResend(invitation)}
                       onRevoke={() => onRevoke(invitation)}
+                      onCopyLink={onCopyLink ? () => onCopyLink(invitation) : undefined}
                     />
                   </td>
                 </tr>
@@ -139,6 +143,7 @@ export function InvitationTable({
                     onSendReminder={() => onSendReminder(invitation)}
                     onResend={() => onResend(invitation)}
                     onRevoke={() => onRevoke(invitation)}
+                    onCopyLink={onCopyLink ? () => onCopyLink(invitation) : undefined}
                   />
                 </div>
               </div>

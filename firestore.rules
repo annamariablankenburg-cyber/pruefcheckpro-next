@@ -468,13 +468,14 @@ service cloud.firestore {
       allow get, list: if hasPermission(companyId, "administration.mitarbeiter_verwalten");
 
       // Anlegen: nur als "Ausstehend" (Annahme gibt es nur serverseitig), ohne
-      // acceptedAt/revokedAt. Eine Einladung für die Administrator-Rolle, eine
+      // acceptedAt/acceptedByUid/employeeId/revokedAt (die Annahme-Felder setzt nur der
+      // Admin-SDK-Annahmeflow, docs/firebase/invitation-acceptance.md). Eine Einladung für die Administrator-Rolle, eine
       // Rolle mit geschütztem Schlüssel (Restricted oder Admin-only-Löschrecht) oder
       // eine nicht auflösbare Rolle erfordert
       // zusätzlich rollen.admin_verwalten.
       allow create: if hasPermission(companyId, "administration.mitarbeiter_verwalten") &&
         request.resource.data.get("status", "") == "Ausstehend" &&
-        !request.resource.data.keys().hasAny(["acceptedAt", "revokedAt"]) &&
+        !request.resource.data.keys().hasAny(["acceptedAt", "acceptedByUid", "employeeId", "revokedAt"]) &&
         (hasPermission(companyId, "rollen.admin_verwalten") ||
           !roleIdIsProtected(companyId, request.resource.data.get("roleId", "")));
 

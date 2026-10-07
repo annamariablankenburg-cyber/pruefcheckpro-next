@@ -1,4 +1,4 @@
-import { Ban, BellRing, Eye, MoreHorizontal, Send } from "lucide-react";
+import { Ban, BellRing, Eye, Link2, MoreHorizontal, Send } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +16,8 @@ interface InvitationActionsMenuProps {
   onSendReminder: () => void;
   onResend: () => void;
   onRevoke: () => void;
+  // Kopiert den Einladungslink (nur gesetzt, wenn ein Link gebaut werden kann: Firestore-Modus + Firma).
+  onCopyLink?: () => void;
 }
 
 // Widerrufen ist echt (Firestore-Metadatum). Erinnerung und erneut senden
@@ -27,6 +29,7 @@ export function InvitationActionsMenu({
   onSendReminder,
   onResend,
   onRevoke,
+  onCopyLink,
 }: InvitationActionsMenuProps) {
   const isPending = invitation.displayStatus === "Ausstehend";
   const canResend = invitation.displayStatus !== "Angenommen";
@@ -51,6 +54,12 @@ export function InvitationActionsMenu({
 
         {(isPending || canResend) && <DropdownMenuSeparator />}
 
+        {isPending && onCopyLink && (
+          <DropdownMenuItem onSelect={onCopyLink}>
+            <Link2 />
+            Einladungslink kopieren
+          </DropdownMenuItem>
+        )}
         {isPending && (
           <DropdownMenuItem onSelect={onSendReminder}>
             <BellRing />

@@ -86,6 +86,7 @@ tests/firestore/
 ### Testfall-Kategorien (1786 Testfälle nach Rules Phase 2, alle grün; 797 nach Server-Slice inkl. Last-Admin-Race; 711 nach Phase 1; vor Phase 1: 189)
 
 > **Server-Slice:** `tests/firestore/member-actions.test.ts` (69 Tests, inkl. der Last-Admin-Race-Tests) nutzt zusätzlich das **Admin SDK** gegen denselben Firestore-Emulator (Transaktionen, Atomizität, HTTP-Schicht; `docs/firebase/member-security-actions.md`). Die Employee-Tests in `phase1-employees.test.ts` wurden auf das Client-Verbot von `roleId`/`role`/`status` umgestellt.
+> **Einladungs-Slice:** `tests/firestore/invitation-acceptance.test.ts` (53 Tests, Admin SDK gegen den Emulator: Transaktion, Rollback, Parallelität, HTTP-Schicht; `docs/firebase/invitation-acceptance.md`) plus 2 Rules-Tests in `phase1-invitations-locations.test.ts` (Server-only-Felder `acceptedByUid`/`employeeId` bei Create und Update → DENY). `firestore.rules`: einzige Änderung ist diese Invitation-Create-Härtung. Die reinen Tests liegen in `tests/config/invitation-acceptance-rules.test.ts`.
 
 1. **Membership (`userMemberships/{uid}`)** – eigene lesen (inkl. fehlend/gesperrt: für die App-Zustände nötig), fremde/anonym/Liste/gefilterte Query verboten; Create (auch Selbst-Zuweisung), Update (`companyId`, `roleId`, `role`, `status`, Selbst-Entsperren, Überschreiben, fremde), Delete – jeweils DENY; abgelehnte Writes lassen das Dokument unverändert.
 2. **Tenant-Isolation** (Beispiel `customers`) – richtige Firma ALLOW (Ist-Stand: auch Schreiben/Löschen), falsche Firma, gesperrt, ohne Membership, anonym: DENY.

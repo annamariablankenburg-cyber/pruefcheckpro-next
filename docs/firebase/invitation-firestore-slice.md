@@ -4,6 +4,8 @@ Status: **Elfter Vertical Slice mit echter Firestore-Anbindung.** Beschreibt den
 
 > **Wichtig:** Eine Einladung ist ausschließlich ein **Metadatensatz** in Firestore. Dieser Slice versendet **keine E-Mail**, legt **keinen Firebase-Auth-Benutzer** an, nutzt **kein Admin SDK** und **keine Cloud Function**, erzeugt **keinen Einladungs-/Magic-Link** und enthält **keinen Annahmeflow**. UI und Texte sagen das ausdrücklich. Erfolgsmeldung: „Einladung gespeichert. Der E-Mail-Versand wird später serverseitig angebunden.“ – nie „verschickt“.
 
+> **Update (Einladung annehmen):** Die Annahme ist inzwischen serverseitig umgesetzt (`/einladung`, `POST /api/invitation-actions/accept`, Admin SDK; siehe `docs/firebase/invitation-acceptance.md`). Einladungen bekommen dabei die Server-Felder `acceptedByUid` und `employeeId`; der Einladungslink (`/einladung?c=…&i=…`) kann im Einladungen-Tab kopiert werden (kein Mailversand, kein geheimer Token – die Sicherheit liegt in der verifizierten E-Mail). Der obige Hinweis „kein Annahmeflow“ beschreibt den Stand dieses Slices.
+
 ---
 
 ## 1. Datenfluss

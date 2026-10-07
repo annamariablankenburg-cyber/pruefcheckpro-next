@@ -15,6 +15,7 @@ import { StatCard } from "@/components/shared/StatCard";
 import type { InvitationsData } from "@/hooks/useInvitations";
 import { isRoleActive } from "@/lib/roles/roleRules";
 import type { InvitationRow } from "@/types/invitation";
+import { useAuth } from "@/providers/AuthProvider";
 
 interface InvitationsViewProps {
   // Gemeinsame Einladungsdaten der Company-Seite (derselbe State wie im
@@ -52,6 +53,7 @@ export function InvitationsView({ invitationsData, onInvite, canInvite, inviteMi
   const [detailId, setDetailId] = useState<string | null>(null);
   const [revokeId, setRevokeId] = useState<string | null>(null);
   const { message: feedback, showFeedback } = useFeedbackToast();
+  const { membership } = useAuth();
   // Rollen-Filter aus den echten (nicht archivierten) Rollen der Company-Seite.
   const roles = useRoleList();
   const roleFilterOptions = useMemo(
@@ -74,6 +76,21 @@ export function InvitationsView({ invitationsData, onInvite, canInvite, inviteMi
 
   function handleResend() {
     showFeedback("Erneutes Senden wird später serverseitig angebunden. Es wurde nichts gesendet.");
+  }
+
+  // Einladungslink: /einladung?c=<companyId>&i=<invitationId>. Die Firma stammt aus der eigenen Membership; der
+  // Link enthält weder Rolle noch E-Mail noch ein Geheimnis – angenommen wird nur mit der verifizierten E-Mail
+  // der eingeladenen Person (Server). Es wird nichts versendet; der Link wird manuell weitergegeben.
+  const companyId = membership.status === "valid" ? membership.membership.companyId : null;
+  async function handleCopyLink(invitation: InvitationRow) {
+    if (!companyId) return;
+    const link = `${window.location.origin}/einladung?c=${encodeURIComponent(companyId)}&i=${encodeURIComponent(invitation.id)}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      showFeedback("Einladungslink kopiert. Er funktioniert nur mit der eingeladenen E-Mail-Adresse.");
+    } catch {
+      showFeedback("Der Link konnte nicht kopiert werden.");
+    }
   }
 
   async function handleRevokeConfirm(invitation: InvitationRow) {
@@ -175,6 +192,7 @@ export function InvitationsView({ invitationsData, onInvite, canInvite, inviteMi
               onSendReminder={handleSendReminder}
               onResend={handleResend}
               onRevoke={(invitation) => setRevokeId(invitation.id)}
+              onCopyLink={companyId ? handleCopyLink : undefined}
             />
           )}
         </>

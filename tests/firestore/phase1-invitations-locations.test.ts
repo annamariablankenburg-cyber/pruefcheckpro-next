@@ -110,6 +110,17 @@ describe("Phase 1: invitations", () => {
       await assertFails(setDoc(ref(P.admin, "i-5"), withoutField(invitationData("Ausstehend"), "status")));
     });
 
+    it("Server-only-Felder acceptedByUid/employeeId beim Anlegen → DENY (einzeln und zusammen), auch für den Administrator; normale Einladung → ALLOW", async () => {
+      await assertFails(setDoc(ref(P.admin, "i-1"), invitationData("Ausstehend", { acceptedByUid: "u-x" })));
+      await assertFails(setDoc(ref(P.admin, "i-2"), invitationData("Ausstehend", { employeeId: "emp-x" })));
+      await assertFails(setDoc(ref(P.admin, "i-3"), invitationData("Ausstehend", { acceptedByUid: "u-x", employeeId: "emp-x" })));
+      await assertFails(setDoc(ref(P.laborleiter, "i-4"), invitationData("Ausstehend", { employeeId: "emp-x" })));
+      await assertFails(
+        setDoc(ref(P.admin, "i-5"), invitationData("Ausstehend", { acceptedAt: T, acceptedByUid: "u-x", employeeId: "emp-x", revokedAt: T }))
+      );
+      await assertSucceeds(setDoc(ref(P.admin, "i-6"), invitationData("Ausstehend")));
+    });
+
     it("Custom Role mit mitarbeiter_verwalten (HR) lädt ein → ALLOW; für Administrator → DENY", async () => {
       await assertSucceeds(setDoc(ref(P.hr, "i-1"), invitationData("Ausstehend")));
       await assertFails(setDoc(ref(P.hr, "i-2"), invitationData("Ausstehend", { roleId: "admin" })));
@@ -138,6 +149,17 @@ describe("Phase 1: invitations", () => {
     it("Einladung wieder aktivieren (Widerrufen → Ausstehend) oder als Angenommen markieren → DENY", async () => {
       await assertFails(updateDoc(ref(P.admin, "inv-revoked"), { status: "Ausstehend", updatedAt: T }));
       await assertFails(updateDoc(ref(P.admin, "inv-pending"), { status: "Angenommen", acceptedAt: T, updatedAt: T }));
+    });
+
+    it("Server-only-Felder acceptedByUid/employeeId nachträglich setzen (allein oder beim Widerruf) → DENY", async () => {
+      for (const uid of [P.admin, P.laborleiter]) {
+        await assertFails(updateDoc(ref(uid, "inv-pending"), { acceptedByUid: "u-x", updatedAt: T }));
+        await assertFails(updateDoc(ref(uid, "inv-pending"), { employeeId: "emp-x", updatedAt: T }));
+        await assertFails(updateDoc(ref(uid, "inv-pending"), { acceptedByUid: "u-x", employeeId: "emp-x", updatedAt: T }));
+        await assertFails(updateDoc(ref(uid, "inv-pending"), { ...revoke, acceptedByUid: "u-x" }));
+        await assertFails(updateDoc(ref(uid, "inv-pending"), { ...revoke, employeeId: "emp-x" }));
+      }
+      await assertFails(updateDoc(ref(P.admin, "inv-accepted"), { acceptedByUid: "u-x", employeeId: "emp-x", updatedAt: T }));
     });
 
     it("beim Widerruf weitere Felder ändern (E-Mail, Rolle, Ablauf) → DENY", async () => {

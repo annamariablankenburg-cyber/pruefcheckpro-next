@@ -170,6 +170,8 @@ Befunde: `membership-without-employee-id`, `membership-employee-missing`, `emplo
 - `tests/firestore/member-actions.test.ts` – **Admin SDK gegen den Firestore-Emulator**: `assignRole`, `setMemberStatus` (Erfolgs-/Ablehnungsfälle, Teiländerungs-Prüfung, Atomizität über erzwungenen Fehler), HTTP-Schicht (kein/ungültiges Token – auch mit der echten Admin-SDK-Prüfung –, gesperrte Membership, falsche Firma, ignorierte Client-Felder, Fehlercodes, kein Leak interner Fehler).
 - Auth: Für die meisten Tests ersetzt ein Fake-Verifier die Token-Prüfung (`token-<uid>`); ein kaputtes Token wird mit der echten Admin-SDK-Prüfung getestet (scheitert beim Dekodieren, ohne Netzwerk). Eine **gültige Signaturprüfung** braucht echte Schlüssel oder den Auth-Emulator und ist nicht Teil dieser Tests.
 
+> **Update:** Einladung annehmen ist inzwischen umgesetzt (`docs/firebase/invitation-acceptance.md`); `verifyFirebaseIdToken` bleibt für diese Aktionen unverändert (nur UID), die Annahme nutzt `verifyFirebaseIdPrincipal` (UID + E-Mail + `email_verified`).
+
 ## 15. Nicht Teil dieses Slices
 
 Einladung annehmen (Employee/Membership entstehen), Firmen-Provisionierung/`createCompany`, Rules Phase 2 (Fach-Collections), Fachseiten-Gating, Custom Claims, Auth-Benutzer sperren/anlegen, Passwort-Reset, Billing, E-Mail-Versand, Audit-Log.

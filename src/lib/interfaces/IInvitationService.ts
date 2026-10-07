@@ -1,10 +1,12 @@
 import type { Invitation } from "@/types/invitation";
 
 // Eingabe für Neuanlagen. Status ("Ausstehend") sowie createdAt/updatedAt setzt
-// der Service; die id vergibt die jeweilige Implementierung.
+// der Service; die id vergibt die jeweilige Implementierung. acceptedAt, acceptedByUid und
+// employeeId setzt ausschließlich die serverseitige Einladungsannahme (Admin SDK) – sie sind
+// nie Teil eines Client-Inputs (die Rules verbieten sie beim Anlegen zusätzlich).
 export type NewInvitationInput = Omit<
   Invitation,
-  "id" | "status" | "createdAt" | "updatedAt" | "revokedAt" | "acceptedAt"
+  "id" | "status" | "createdAt" | "updatedAt" | "revokedAt" | "acceptedAt" | "acceptedByUid" | "employeeId"
 >;
 
 // Promise-basiert. Eine Einladung ist ein reiner Metadatensatz: kein

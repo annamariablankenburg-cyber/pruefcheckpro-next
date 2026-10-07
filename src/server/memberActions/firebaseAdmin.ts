@@ -62,3 +62,14 @@ export async function verifyFirebaseIdToken(idToken: string): Promise<{ uid: str
   const decoded = await getAuth(getAdminApp()).verifyIdToken(idToken, true);
   return { uid: decoded.uid };
 }
+
+// Verifiziertes Principal für die Einladungsannahme: zusätzlich zur UID die E-Mail-Adresse des
+// Auth-Kontos und ob Firebase sie bestätigt hat (email_verified). Beides stammt aus dem geprüften
+// Token (Signatur, Ablauf, Projekt, Widerruf), nie aus dem Request. verifyFirebaseIdToken() (Member-
+// Actions) bleibt unverändert: es liefert weiterhin nur die UID.
+export async function verifyFirebaseIdPrincipal(
+  idToken: string
+): Promise<{ uid: string; email?: string; emailVerified: boolean }> {
+  const decoded = await getAuth(getAdminApp()).verifyIdToken(idToken, true);
+  return { uid: decoded.uid, email: decoded.email, emailVerified: decoded.email_verified === true };
+}

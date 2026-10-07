@@ -17,8 +17,10 @@ import { Input } from "@/components/ui/input";
 import { AuthDivider } from "@/components/shared/AuthDivider";
 import { FeedbackToast, useFeedbackToast } from "@/components/shared/FeedbackToast";
 import { GoogleIcon } from "@/components/shared/GoogleIcon";
-import { getAuthErrorMessage, registerWithEmail } from "@/lib/firebase/auth";
+import { getAuthErrorMessage, registerWithEmail, sendVerificationEmail } from "@/lib/firebase/auth";
 import { createUserProfile } from "@/lib/firebase/users";
+import { DEFAULT_POST_LOGIN_PATH, safeNextPath, withNext } from "@/lib/auth/postLoginTarget";
+import { useNextParam } from "@/lib/auth/useNextParam";
 
 function splitName(fullName: string): { firstName: string; lastName: string } {
   const parts = fullName.trim().split(/\s+/);
@@ -27,6 +29,8 @@ function splitName(fullName: string): { firstName: string; lastName: string } {
 
 export default function RegisterPage() {
   const router = useRouter();
+  // Ziel nach der Registrierung (nur die Einladungsseite ist als Ziel erlaubt, sonst Dashboard).
+  const next = useNextParam();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,7 +47,14 @@ export default function RegisterPage() {
       const credential = await registerWithEmail(email, password);
       const { firstName, lastName } = splitName(name);
       await createUserProfile(credential.user.uid, { firstName, lastName, email });
-      router.push("/dashboard");
+      const target = safeNextPath(next);
+      if (target !== DEFAULT_POST_LOGIN_PATH) {
+        // Über eine Einladung registriert: die Annahme verlangt eine bestätigte E-Mail – Bestätigungs-Mail
+        // gleich senden (ein Fehler hier stoppt die Registrierung nicht; auf der Einladungsseite lässt sie
+        // sich erneut anfordern).
+        await sendVerificationEmail().catch(() => undefined);
+      }
+      router.push(target);
     } catch (err) {
       setError(getAuthErrorMessage(err));
       setIsLoading(false);
@@ -130,7 +141,7 @@ export default function RegisterPage() {
 
         <p className="text-center text-sm text-muted-foreground">
           Bereits ein Konto?{" "}
-          <Link href="/login" className="font-medium text-primary hover:underline">
+          <Link href={withNext("/login", next)} className="font-medium text-primary hover:underline">
             Anmelden
           </Link>
         </p>

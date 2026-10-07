@@ -2,6 +2,7 @@ import { FirebaseError } from "firebase/app";
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
@@ -20,6 +21,24 @@ export function onAuthChange(callback: (user: FirebaseAuthUser | null) => void) 
 
 export function registerWithEmail(email: string, password: string) {
   return createUserWithEmailAndPassword(auth, email, password);
+}
+
+// E-Mail-Bestätigung (Firebase-eigener Mechanismus): Die Einladungsannahme verlangt eine bestätigte
+// Auth-E-Mail. Sendet die Bestätigungs-Mail an das aktuell angemeldete Konto.
+export async function sendVerificationEmail(): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) throw new Error("not-signed-in");
+  await sendEmailVerification(user);
+}
+
+// Lädt den Auth-User neu (nach Klick auf den Bestätigungslink) und erneuert das ID-Token, damit die
+// Bestätigung im Token steht. Gibt zurück, ob die E-Mail jetzt bestätigt ist.
+export async function refreshEmailVerification(): Promise<boolean> {
+  const user = auth.currentUser;
+  if (!user) return false;
+  await user.reload();
+  await user.getIdToken(true);
+  return user.emailVerified;
 }
 
 export function logout() {
